@@ -3,16 +3,30 @@ Maintainer: Software Heritage developers <swh-devel@inria.fr>
 Section: python
 Priority: optional
 Build-Depends: debhelper (>= 9),
-               dh-python,
+               dh-python (>= 2),
                python3-all,
-               python3-nose,
+               python3-arrow,
+               python3-celery,
+               python3-click,
+               python3-elasticsearch (>= 5.4.0),
+               python3-flask,
+               python3-hypothesis,
+               python3-kombu,
+               python3-pytest,
+               python3-psycopg2,
                python3-setuptools,
-               python3-swh.core,
+               python3-swh.core (>= 0.0.44~),
                python3-vcversioner
 Standards-Version: 3.9.6
 Homepage: https://forge.softwareheritage.org/diffusion/DSCH/
 
 Package: python3-swh.scheduler
 Architecture: all
-Depends: ${misc:Depends}, ${python3:Depends}
+Depends: python3-swh.core (>= 0.0.44~), ${misc:Depends}, ${python3:Depends}
 Description: Software Heritage Scheduler
+
+Package: python3-swh.scheduler.updater
+Architecture: all
+Depends: python3-swh.scheduler (= ${binary:Version}),
+         ${misc:Depends}, ${python3:Depends}
+Description: Software Heritage Scheduler Updater

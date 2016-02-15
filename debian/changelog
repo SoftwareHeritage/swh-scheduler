@@ -1,5 +1,7 @@
-swh-scheduler (0.0.1-1) unstable; urgency=low
+swh-scheduler (0.0.1-1~swh1) unstable-swh; urgency=medium
 
-  [ Nicolas Dandrimont ]
+  * Initial release
+  * Release swh.scheduler v0.0.1
+  * Move swh.core.scheduling and swh.core.worker to swh.scheduler
 
- -- Nicolas Dandrimont <olasd@debian.org>  Mon, 15 Feb 2016 10:36:00 +0100
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Mon, 15 Feb 2016 11:07:30 +0100
