@@ -8,5 +8,5 @@ export PYBUILD_NAME=swh-scheduler
 
 override_dh_auto_test:
 	PYBUILD_SYSTEM=custom \
-	PYBUILD_TEST_ARGS="python{version} -m nose -sv swh.core -a '!db'" \
+	PYBUILD_TEST_ARGS="python{version} -m nose -sv swh.scheduler -a '!db'" \
 	dh_auto_test
