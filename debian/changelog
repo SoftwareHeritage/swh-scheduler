@@ -1,5 +1,5 @@
-<module-name> (0.0.1-1) unstable; urgency=low
+swh-scheduler (0.0.1-1) unstable; urgency=low
 
-  *
+  [ Nicolas Dandrimont ]
 
- -- AUTHOR-NAME <AUTHOR-EMAIL>  <UTC-DATE>
+ -- Nicolas Dandrimont <olasd@debian.org>  Mon, 15 Feb 2016 10:36:00 +0100
