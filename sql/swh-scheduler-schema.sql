@@ -208,7 +208,7 @@ create or replace function swh_scheduler_update_task_interval ()
 as $$
 begin
   update task
-    set status = 'pending',
+    set status = 'next_run_not_scheduled',
         current_interval = swh_scheduler_compute_new_task_interval(type, current_interval, new.eventful),
         next_run = now () + swh_scheduler_compute_new_task_interval(type, current_interval, new.eventful)
     where id = new.task;
