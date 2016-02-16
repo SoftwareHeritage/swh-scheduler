@@ -139,19 +139,3 @@ app.conf.update(
     CELERY_SEND_EVENTS=True,
     CELERY_SEND_TASK_SENT_EVENT=True,
 )
-
-
-def monitor_events(app):
-    state = app.events.State()
-
-    def announce_event(event, state=state):
-        state.event(event)
-
-        print(state)
-        print(event)
-
-    with app.connection() as connection:
-        recv = app.events.Receiver(connection, handlers={
-            '*': announce_event,
-        })
-        recv.capture(limit=None, timeout=None, wakeup=True)
