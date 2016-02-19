@@ -275,13 +275,13 @@ class SchedulerBackend(SWHConfig):
         return cursor.fetchone()
 
     @autocommit
-    def end_task_run(self, backend_id, eventful, metadata=None, cursor=None):
+    def end_task_run(self, backend_id, status, metadata=None, cursor=None):
         """Mark a given task as ended, updating the corresponding task_run
            entry in the database.
 
         Args:
             backend_id (str): the identifier of the job in the backend
-            eventful (bool): whether the task run was eventful
+            status ('eventful', 'uneventful', 'failed'): how the task ended
             metadata (dict): metadata to add to the task_run entry
         Returns:
             the updated task_run entry
@@ -292,7 +292,7 @@ class SchedulerBackend(SWHConfig):
 
         cursor.execute(
             'select * from swh_scheduler_end_task_run(%s, %s, %s)',
-            (backend_id, eventful, metadata)
+            (backend_id, status, metadata)
         )
 
         return cursor.fetchone()

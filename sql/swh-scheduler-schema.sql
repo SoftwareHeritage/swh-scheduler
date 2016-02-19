@@ -52,6 +52,9 @@ create index on task(next_run);
 create index task_args on task using btree ((arguments -> 'args'));
 create index task_kwargs on task using gin ((arguments -> 'kwargs'));
 
+create type task_run_status as enum ('scheduled', 'started', 'eventful', 'uneventful', 'failed', 'lost');
+comment on type task_run_status is 'Status of a given task run';
+
 create table task_run (
   id bigserial primary key,
   task bigint not null references task(id),
@@ -60,15 +63,13 @@ create table task_run (
   started timestamptz,
   ended timestamptz,
   metadata jsonb,
-  eventful boolean
+  status task_run_status not null default 'scheduled'
 );
 comment on table task_run is 'History of task runs sent to the job-running backend';
 comment on column task_run.backend_id is 'id of the task run in the job-running backend';
 comment on column task_run.metadata is 'Useful metadata for the given task run. '
                                        'For instance, the worker that took on the job, '
                                        'or the logs for the run.';
-comment on column task_run.eventful is 'Whether the task run has seen an update (and the '
-                                       'task running interval should be reduced)';
 
 create index on task_run(task);
 create index on task_run(backend_id);
@@ -139,36 +140,40 @@ $$;
 
 create or replace function swh_scheduler_schedule_task_run (task_id bigint,
                                                             backend_id text,
-                                                            metadata jsonb default '{}'::jsonb)
+                                                            metadata jsonb default '{}'::jsonb,
+                                                            ts timestamptz default now())
   returns task_run
   language sql
 as $$
-  insert into task_run (task, backend_id, metadata, scheduled)
-    values (task_id, backend_id, metadata, now())
+  insert into task_run (task, backend_id, metadata, scheduled, status)
+    values (task_id, backend_id, metadata, ts, 'scheduled')
   returning *;
 $$;
 
 create or replace function swh_scheduler_start_task_run (backend_id text,
-                                                         metadata jsonb default '{}'::jsonb)
+                                                         metadata jsonb default '{}'::jsonb,
+                                                         ts timestamptz default now())
   returns task_run
   language sql
 as $$
   update task_run
-    set started = now (),
+    set started = ts,
+        status = 'started',
         metadata = task_run.metadata || swh_scheduler_start_task_run.metadata
     where task_run.backend_id = swh_scheduler_start_task_run.backend_id
   returning *;
 $$;
 
 create or replace function swh_scheduler_end_task_run (backend_id text,
-                                                       eventful boolean,
-                                                       metadata jsonb default '{}'::jsonb)
+                                                       status task_run_status,
+                                                       metadata jsonb default '{}'::jsonb,
+                                                       ts timestamptz default now())
   returns task_run
   language sql
 as $$
   update task_run
-    set ended = now (),
-        eventful = swh_scheduler_end_task_run.eventful,
+    set ended = ts,
+        status = swh_scheduler_end_task_run.status,
         metadata = task_run.metadata || swh_scheduler_end_task_run.metadata
     where task_run.backend_id = swh_scheduler_end_task_run.backend_id
   returning *;
@@ -176,7 +181,7 @@ $$;
 
 create or replace function swh_scheduler_compute_new_task_interval (task_type text,
                                                                     current_interval interval,
-                                                                    eventful boolean)
+                                                                    end_status task_run_status)
   returns interval
   language plpgsql
   stable
@@ -190,11 +195,15 @@ begin
     where type = swh_scheduler_compute_new_task_interval.task_type
   into task_type_row;
 
-  if eventful then
+  case end_status
+  when 'eventful' then
     adjustment_factor := 1/task_type_row.backoff_factor;
-  else
+  when 'uneventful' then
     adjustment_factor := task_type_row.backoff_factor;
-  end if;
+  else
+    -- failed or lost task: no backoff.
+    adjustment_factor := 1;
+  end case;
 
   return greatest(task_type_row.min_interval,
                   least(task_type_row.max_interval,
@@ -209,14 +218,15 @@ as $$
 begin
   update task
     set status = 'next_run_not_scheduled',
-        current_interval = swh_scheduler_compute_new_task_interval(type, current_interval, new.eventful),
-        next_run = now () + swh_scheduler_compute_new_task_interval(type, current_interval, new.eventful)
+        current_interval = swh_scheduler_compute_new_task_interval(type, current_interval, new.status),
+        next_run = now () + swh_scheduler_compute_new_task_interval(type, current_interval, new.status)
     where id = new.task;
   return null;
 end;
 $$;
 
 create trigger update_interval_on_task_end
-  after update of ended, eventful on task_run
+  after update of status on task_run
   for each row
+  when (new.status IN ('eventful', 'uneventful', 'failed', 'lost'))
   execute procedure swh_scheduler_update_task_interval ();

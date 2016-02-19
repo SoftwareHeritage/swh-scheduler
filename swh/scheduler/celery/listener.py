@@ -23,13 +23,18 @@ def event_monitor(app, backend):
 
     def task_succeeded(event, backend=backend):
         catchall_event(event, backend)
+        status = 'uneventful'
+        if 'True' in event['result']:
+            status = 'eventful'
         backend.end_task_run(event['uuid'],
-                             eventful='True' in event['result'],
+                             status=status,
                              metadata={})
 
     def task_failed(event, backend=backend):
         catchall_event(event, backend)
-        # backend.fail_task_run(event['uuid'])
+        backend.end_task_run(event['uuid'],
+                             status='failed',
+                             metadata={})
 
     with app.connection() as connection:
         recv = app.events.Receiver(connection, handlers={
