@@ -20,7 +20,7 @@ setup(
     author_email='swh-devel@inria.fr',
     url='https://forge.softwareheritage.org/diffusion/DSCH/',
     packages=[
-        'swh.scheduler', 'swh.scheduler.celery', 'swh.scheduler.tests'
+        'swh.scheduler', 'swh.scheduler.celery_backend', 'swh.scheduler.tests'
     ],
     scripts=[],   # scripts to package
     install_requires=parse_requirements(),
