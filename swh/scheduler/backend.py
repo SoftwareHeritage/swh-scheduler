@@ -300,18 +300,24 @@ class SchedulerBackend(SWHConfig):
 
 if __name__ == '__main__':
     backend = SchedulerBackend()
-    backend.create_task_type({
-        'type': "origin-update-git",
-        'description': 'Update an origin git repository',
-        'backend_name': 'swh.loader.git.tasks.UpdateGitRepository',
-        'default_interval': datetime.timedelta(days=8),
-        'min_interval': datetime.timedelta(hours=12),
-        'max_interval': datetime.timedelta(days=32),
-        'backoff_factor': 2,
-    })
+    if not backend.get_task_type('origin-update-git'):
+        backend.create_task_type({
+            'type': "origin-update-git",
+            'description': 'Update an origin git repository',
+            'backend_name': 'swh.loader.git.tasks.UpdateGitRepository',
+            'default_interval': datetime.timedelta(days=8),
+            'min_interval': datetime.timedelta(hours=12),
+            'max_interval': datetime.timedelta(days=32),
+            'backoff_factor': 2,
+        })
 
     print(backend.get_task_type('origin-update-git'))
-    args = ['foo', 'bar', 'baz', 'quux', 'bla']
+    args = '''
+    https://github.com/hylang/hy
+    https://github.com/torvalds/linux
+    '''.strip().split()
+    args = [arg.strip() for arg in args]
+
     tasks = [
         {
             'type': 'origin-update-git',
@@ -325,22 +331,23 @@ if __name__ == '__main__':
     ]
     print(backend.create_tasks(tasks))
     print(backend.peek_ready_tasks())
-    cur = backend.cursor()
-    ready_tasks = backend.grab_ready_tasks(cursor=cur)
-    print(ready_tasks)
 
-    for task in ready_tasks:
-        backend.schedule_task_run(task['id'], 'task-%s' % task['id'],
-                                  {'foo': 'bar'}, cursor=cur)
+    # cur = backend.cursor()
+    # ready_tasks = backend.grab_ready_tasks(cursor=cur)
+    # print(ready_tasks)
 
-    backend.commit()
+    # for task in ready_tasks:
+    #     backend.schedule_task_run(task['id'], 'task-%s' % task['id'],
+    #                               {'foo': 'bar'}, cursor=cur)
 
-    for task in ready_tasks:
-        backend.start_task_run('task-%s' % task['id'],
-                               {'worker': 'the-worker'})
+    # backend.commit()
 
-    eventful = True
-    for task in ready_tasks:
-        eventful = not eventful
-        backend.end_task_run('task-%s' % task['id'], eventful,
-                             {'ended': 'ack'})
+    # for task in ready_tasks:
+    #     backend.start_task_run('task-%s' % task['id'],
+    #                            {'worker': 'the-worker'})
+
+    # eventful = True
+    # for task in ready_tasks:
+    #     eventful = not eventful
+    #     backend.end_task_run('task-%s' % task['id'], eventful,
+    #                          {'ended': 'ack'})
