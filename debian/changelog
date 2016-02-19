@@ -1,8 +1,10 @@
-swh-scheduler (0.0.1-1~swh1~bpo9+1) stretch-swh; urgency=medium
+swh-scheduler (0.0.2-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for stretch-backports.
+  * Release swh.scheduler v0.0.2
+  * Multiple schema changes
+  * Initial releases for the celery job runner and the event listener
 
- -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Mon, 15 Feb 2016 11:07:30 +0100
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Fri, 19 Feb 2016 18:50:47 +0100
 
 swh-scheduler (0.0.1-1~swh1) unstable-swh; urgency=medium
 
