@@ -38,6 +38,10 @@ def autocommit(fn):
     return wrapped
 
 
+def utcnow():
+    return datetime.datetime.now(tz=datetime.timezone.utc)
+
+
 class SchedulerBackend(SWHConfig):
     """
     Backend for the Software Heritage scheduling database.
@@ -201,7 +205,7 @@ class SchedulerBackend(SWHConfig):
         """
 
         if timestamp is None:
-            timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
+            timestamp = utcnow()
 
         cursor.execute('select * from swh_scheduler_peek_ready_tasks(%s, %s)',
                        (timestamp, num_tasks))
@@ -222,7 +226,7 @@ class SchedulerBackend(SWHConfig):
         """
 
         if timestamp is None:
-            timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
+            timestamp = utcnow()
 
         cursor.execute('select * from swh_scheduler_grab_ready_tasks(%s, %s)',
                        (timestamp, num_tasks))
@@ -231,13 +235,14 @@ class SchedulerBackend(SWHConfig):
 
     @autocommit
     def schedule_task_run(self, task_id, backend_id, metadata=None,
-                          cursor=None):
+                          timestamp=None, cursor=None):
         """Mark a given task as scheduled, adding a task_run entry in the database.
 
         Args:
             task_id (int): the identifier for the task being scheduled
             backend_id (str): the identifier of the job in the backend
             metadata (dict): metadata to add to the task_run entry
+            timestamp (datetime.datetime): the instant the event occurred
         Returns:
             a fresh task_run entry
         """
@@ -245,21 +250,26 @@ class SchedulerBackend(SWHConfig):
         if metadata is None:
             metadata = {}
 
+        if timestamp is None:
+            timestamp = utcnow()
+
         cursor.execute(
-            'select * from swh_scheduler_schedule_task_run(%s, %s, %s)',
-            (task_id, backend_id, metadata)
+            'select * from swh_scheduler_schedule_task_run(%s, %s, %s, %s)',
+            (task_id, backend_id, metadata, timestamp)
         )
 
         return cursor.fetchone()
 
     @autocommit
-    def start_task_run(self, backend_id, metadata=None, cursor=None):
+    def start_task_run(self, backend_id, metadata=None, timestamp=None,
+                       cursor=None):
         """Mark a given task as started, updating the corresponding task_run
            entry in the database.
 
         Args:
             backend_id (str): the identifier of the job in the backend
             metadata (dict): metadata to add to the task_run entry
+            timestamp (datetime.datetime): the instant the event occurred
         Returns:
             the updated task_run entry
         """
@@ -267,15 +277,19 @@ class SchedulerBackend(SWHConfig):
         if metadata is None:
             metadata = {}
 
+        if timestamp is None:
+            timestamp = utcnow()
+
         cursor.execute(
-            'select * from swh_scheduler_start_task_run(%s, %s)',
-            (backend_id, metadata)
+            'select * from swh_scheduler_start_task_run(%s, %s, %s)',
+            (backend_id, metadata, timestamp)
         )
 
         return cursor.fetchone()
 
     @autocommit
-    def end_task_run(self, backend_id, status, metadata=None, cursor=None):
+    def end_task_run(self, backend_id, status, metadata=None, timestamp=None,
+                     cursor=None):
         """Mark a given task as ended, updating the corresponding task_run
            entry in the database.
 
@@ -283,6 +297,7 @@ class SchedulerBackend(SWHConfig):
             backend_id (str): the identifier of the job in the backend
             status ('eventful', 'uneventful', 'failed'): how the task ended
             metadata (dict): metadata to add to the task_run entry
+            timestamp (datetime.datetime): the instant the event occurred
         Returns:
             the updated task_run entry
         """
@@ -290,9 +305,12 @@ class SchedulerBackend(SWHConfig):
         if metadata is None:
             metadata = {}
 
+        if timestamp is None:
+            timestamp = utcnow()
+
         cursor.execute(
-            'select * from swh_scheduler_end_task_run(%s, %s, %s)',
-            (backend_id, status, metadata)
+            'select * from swh_scheduler_end_task_run(%s, %s, %s, %s)',
+            (backend_id, status, metadata, timestamp)
         )
 
         return cursor.fetchone()
