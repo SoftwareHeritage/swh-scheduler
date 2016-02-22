@@ -32,7 +32,7 @@ def run_ready_tasks(backend, app):
             backend.schedule_task_run(task['id'], celery_task.id,
                                       cursor=cursor)
 
-            backend.commit()
+        backend.commit()
 
 if __name__ == '__main__':
     for module in main_app.conf.CELERY_IMPORTS:
