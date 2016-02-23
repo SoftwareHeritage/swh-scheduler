@@ -6,16 +6,13 @@
 import datetime
 import socket
 
+from arrow import utcnow
 from kombu import Queue
 from kombu.mixins import ConsumerMixin
 from celery.events import get_exchange
 
 from .config import app as main_app
 from ..backend import SchedulerBackend
-
-
-def utcnow():
-    return datetime.datetime.now(tz=datetime.timezone.utc)
 
 
 # This is a simplified version of celery.events.Receiver, with a persistent
@@ -82,14 +79,13 @@ ACTION_QUEUE_MAX_LENGTH = 1000
 
 def event_monitor(app, backend):
     actions = {
-        'last_send': utcnow(),
+        'last_send': utcnow() - 2*ACTION_SEND_DELAY,
         'queue': [],
     }
 
     def try_perform_actions(actions=actions):
         if not actions['queue']:
             return
-
         if utcnow() - actions['last_send'] > ACTION_SEND_DELAY or \
            len(actions['queue']) > ACTION_QUEUE_MAX_LENGTH:
             perform_actions(actions)
@@ -124,7 +120,7 @@ def event_monitor(app, backend):
         message.ack()
         try_perform_actions()
 
-    def task_started(event, message, actions=actions):
+    def task_started(event, message):
         queue_action({
             'action': 'start_task_run',
             'args': [event['uuid']],
@@ -137,7 +133,7 @@ def event_monitor(app, backend):
             'message': message,
         })
 
-    def task_succeeded(event, message, actions=actions):
+    def task_succeeded(event, message):
         status = 'uneventful'
         if 'True' in event['result']:
             status = 'eventful'
@@ -152,7 +148,7 @@ def event_monitor(app, backend):
             'message': message,
         })
 
-    def task_failed(event, message, actions=actions):
+    def task_failed(event, message):
         queue_action({
             'action': 'end_task_run',
             'args': [event['uuid']],

@@ -1,3 +1,6 @@
+Click
+arrow
 celery
+psycopg2
 swh.core
 vcversioner
