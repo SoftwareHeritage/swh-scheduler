@@ -54,8 +54,9 @@ class SchedulerBackend(SWHConfig):
         'scheduling_db': ('str', 'dbname=swh-scheduler'),
     }
 
-    def __init__(self):
+    def __init__(self, **override_config):
         self.config = self.parse_config_file(global_config=False)
+        self.config.update(override_config)
 
         self.db = None
 
