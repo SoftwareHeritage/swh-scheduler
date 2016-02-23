@@ -82,14 +82,13 @@ ACTION_QUEUE_MAX_LENGTH = 1000
 
 def event_monitor(app, backend):
     actions = {
-        'last_send': utcnow(),
+        'last_send': utcnow() - 2*ACTION_SEND_DELAY,
         'queue': [],
     }
 
     def try_perform_actions(actions=actions):
         if not actions['queue']:
             return
-
         if utcnow() - actions['last_send'] > ACTION_SEND_DELAY or \
            len(actions['queue']) > ACTION_QUEUE_MAX_LENGTH:
             perform_actions(actions)
