@@ -123,7 +123,7 @@ def event_monitor(app, backend):
         message.ack()
         try_perform_actions()
 
-    def task_started(event, message, actions=actions):
+    def task_started(event, message):
         queue_action({
             'action': 'start_task_run',
             'args': [event['uuid']],
@@ -136,7 +136,7 @@ def event_monitor(app, backend):
             'message': message,
         })
 
-    def task_succeeded(event, message, actions=actions):
+    def task_succeeded(event, message):
         status = 'uneventful'
         if 'True' in event['result']:
             status = 'eventful'
@@ -151,7 +151,7 @@ def event_monitor(app, backend):
             'message': message,
         })
 
-    def task_failed(event, message, actions=actions):
+    def task_failed(event, message):
         queue_action({
             'action': 'end_task_run',
             'args': [event['uuid']],
