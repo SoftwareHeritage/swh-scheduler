@@ -3,16 +3,22 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import datetime
 from functools import wraps
 
+from arrow import Arrow, utcnow
 import psycopg2
 import psycopg2.extras
+from psycopg2.extensions import AsIs
 
 from swh.core.config import SWHConfig
 
 
+def adapt_arrow(arrow):
+    return AsIs("'%s'::timestamptz" % arrow.isoformat())
+
+
 psycopg2.extensions.register_adapter(dict, psycopg2.extras.Json)
+psycopg2.extensions.register_adapter(Arrow, adapt_arrow)
 
 
 def autocommit(fn):
@@ -38,10 +44,6 @@ def autocommit(fn):
     return wrapped
 
 
-def utcnow():
-    return datetime.datetime.now(tz=datetime.timezone.utc)
-
-
 class SchedulerBackend(SWHConfig):
     """
     Backend for the Software Heritage scheduling database.
@@ -52,8 +54,9 @@ class SchedulerBackend(SWHConfig):
         'scheduling_db': ('str', 'dbname=swh-scheduler'),
     }
 
-    def __init__(self):
+    def __init__(self, **override_config):
         self.config = self.parse_config_file(global_config=False)
+        self.config.update(override_config)
 
         self.db = None
 
@@ -314,58 +317,3 @@ class SchedulerBackend(SWHConfig):
         )
 
         return cursor.fetchone()
-
-
-if __name__ == '__main__':
-    backend = SchedulerBackend()
-    if not backend.get_task_type('origin-update-git'):
-        backend.create_task_type({
-            'type': "origin-update-git",
-            'description': 'Update an origin git repository',
-            'backend_name': 'swh.loader.git.tasks.UpdateGitRepository',
-            'default_interval': datetime.timedelta(days=8),
-            'min_interval': datetime.timedelta(hours=12),
-            'max_interval': datetime.timedelta(days=32),
-            'backoff_factor': 2,
-        })
-
-    print(backend.get_task_type('origin-update-git'))
-    args = '''
-    https://github.com/hylang/hy
-    https://github.com/torvalds/linux
-    '''.strip().split()
-    args = [arg.strip() for arg in args]
-
-    tasks = [
-        {
-            'type': 'origin-update-git',
-            'next_run': datetime.datetime.now(tz=datetime.timezone.utc),
-            'arguments': {
-                'args': [arg],
-                'kwargs': {},
-            }
-        }
-        for arg in args
-    ]
-    print(backend.create_tasks(tasks))
-    print(backend.peek_ready_tasks())
-
-    # cur = backend.cursor()
-    # ready_tasks = backend.grab_ready_tasks(cursor=cur)
-    # print(ready_tasks)
-
-    # for task in ready_tasks:
-    #     backend.schedule_task_run(task['id'], 'task-%s' % task['id'],
-    #                               {'foo': 'bar'}, cursor=cur)
-
-    # backend.commit()
-
-    # for task in ready_tasks:
-    #     backend.start_task_run('task-%s' % task['id'],
-    #                            {'worker': 'the-worker'})
-
-    # eventful = True
-    # for task in ready_tasks:
-    #     eventful = not eventful
-    #     backend.end_task_run('task-%s' % task['id'], eventful,
-    #                          {'ended': 'ack'})

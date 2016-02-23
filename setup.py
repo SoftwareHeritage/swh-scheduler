@@ -24,6 +24,10 @@ setup(
     ],
     scripts=[],   # scripts to package
     install_requires=parse_requirements(),
+    entry_points='''
+        [console_scripts]
+        swh-scheduler=swh.scheduler.cli:cli
+    ''',
     setup_requires=['vcversioner'],
     vcversioner={},
     include_package_data=True,

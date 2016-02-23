@@ -1,6 +1,7 @@
 .gitignore
 AUTHORS
 LICENSE
+LICENSE.Celery
 MANIFEST.in
 Makefile
 requirements.txt
@@ -17,9 +18,11 @@ sql/swh-scheduler-testdata.sql
 swh.scheduler.egg-info/PKG-INFO
 swh.scheduler.egg-info/SOURCES.txt
 swh.scheduler.egg-info/dependency_links.txt
+swh.scheduler.egg-info/entry_points.txt
 swh.scheduler.egg-info/requires.txt
 swh.scheduler.egg-info/top_level.txt
 swh/scheduler/backend.py
+swh/scheduler/cli.py
 swh/scheduler/task.py
 swh/scheduler/celery_backend/__init__.py
 swh/scheduler/celery_backend/config.py
