@@ -6,16 +6,13 @@
 import datetime
 import socket
 
+from arrow import utcnow
 from kombu import Queue
 from kombu.mixins import ConsumerMixin
 from celery.events import get_exchange
 
 from .config import app as main_app
 from ..backend import SchedulerBackend
-
-
-def utcnow():
-    return datetime.datetime.now(tz=datetime.timezone.utc)
 
 
 # This is a simplified version of celery.events.Receiver, with a persistent
