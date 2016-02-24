@@ -137,5 +137,6 @@ app.conf.update(
     CELERYD_PREFETCH_MULTIPLIER=1,
     # Send events
     CELERY_SEND_EVENTS=True,
-    CELERY_SEND_TASK_SENT_EVENT=True,
+    # Do not send useless task_sent events
+    CELERY_SEND_TASK_SENT_EVENT=False,
 )

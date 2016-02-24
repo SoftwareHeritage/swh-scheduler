@@ -3,6 +3,9 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import arrow
+from celery import group
+
 from ..backend import SchedulerBackend
 from .config import app as main_app
 
@@ -14,10 +17,12 @@ def run_ready_tasks(backend, app):
 
     while True:
         cursor = backend.cursor()
-        pending_tasks = backend.grab_ready_tasks(num_tasks=100, cursor=cursor)
+        pending_tasks = backend.grab_ready_tasks(num_tasks=10000,
+                                                 cursor=cursor)
         if not pending_tasks:
             break
 
+        celery_tasks = []
         for task in pending_tasks:
             backend_name = backend_names.get(task['type'])
             if not backend_name:
@@ -28,9 +33,19 @@ def run_ready_tasks(backend, app):
             args = task['arguments']['args']
             kwargs = task['arguments']['kwargs']
 
-            celery_task = app.tasks[backend_name].delay(*args, **kwargs)
-            backend.schedule_task_run(task['id'], celery_task.id,
-                                      cursor=cursor)
+            celery_task = app.tasks[backend_name].s(*args, **kwargs)
+
+            celery_tasks.append(celery_task)
+
+        group_result = group(celery_tasks).delay()
+
+        backend_tasks = [{
+            'task': task['id'],
+            'backend_id': group_result.results[i].id,
+            'scheduled': arrow.utcnow(),
+        } for i, task in enumerate(pending_tasks)]
+
+        backend.mass_schedule_task_runs(backend_tasks, cursor=cursor)
 
         backend.commit()
 
