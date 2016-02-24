@@ -1,3 +1,10 @@
+swh-scheduler (0.0.6-1~swh1) unstable-swh; urgency=medium
+
+  * Release swh-scheduler v0.0.6
+  * More reliability and efficiency when scheduling a lot ot tasks
+
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Wed, 24 Feb 2016 18:46:57 +0100
+
 swh-scheduler (0.0.5-1~swh1) unstable-swh; urgency=medium
 
   * Release swh.scheduler v0.0.5
