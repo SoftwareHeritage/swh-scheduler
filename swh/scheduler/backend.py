@@ -275,6 +275,8 @@ class SchedulerBackend(SWHConfig):
 
         return cursor.fetchall()
 
+    task_run_create_keys = ['task', 'backend_id', 'scheduled', 'metadata']
+
     @autocommit
     def schedule_task_run(self, task_id, backend_id, metadata=None,
                           timestamp=None, cursor=None):
@@ -301,6 +303,24 @@ class SchedulerBackend(SWHConfig):
         )
 
         return cursor.fetchone()
+
+    @autocommit
+    def mass_schedule_task_runs(self, task_runs, cursor=None):
+        """Schedule a bunch of task runs.
+
+        Args:
+            task_runs: a list of dicts with keys:
+                task (int): the identifier for the task being scheduled
+                backend_id (str): the identifier of the job in the backend
+                metadata (dict): metadata to add to the task_run entry
+                scheduled (datetime.datetime): the instant the event occurred
+        Returns:
+            None
+        """
+        cursor.execute('select swh_scheduler_mktemp_task_run()')
+        self.copy_to(task_runs, 'tmp_task_run', self.task_run_create_keys,
+                     cursor)
+        cursor.execute('select swh_scheduler_schedule_task_run_from_temp()')
 
     @autocommit
     def start_task_run(self, backend_id, metadata=None, timestamp=None,
