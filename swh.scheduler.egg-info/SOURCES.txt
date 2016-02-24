@@ -15,6 +15,7 @@ debian/rules
 debian/source/format
 sql/swh-scheduler-schema.sql
 sql/swh-scheduler-testdata.sql
+sql/updates/02.sql
 swh.scheduler.egg-info/PKG-INFO
 swh.scheduler.egg-info/SOURCES.txt
 swh.scheduler.egg-info/dependency_links.txt
