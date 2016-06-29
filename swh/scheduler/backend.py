@@ -1,4 +1,4 @@
-# Copyright (C) 2015  The Software Heritage developers
+# Copyright (C) 2015-2016  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -48,11 +48,9 @@ def autocommit(fn):
     return wrapped
 
 
-class SchedulerBackend(SWHConfig):
+class BaseSchedulerBackend(SWHConfig):
+    """Base scheduler backend.
     """
-    Backend for the Software Heritage scheduling database.
-    """
-
     CONFIG_BASE_FILENAME = 'scheduler.ini'
     DEFAULT_CONFIG = {
         'scheduling_db': ('str', 'dbname=swh-scheduler'),
@@ -143,11 +141,6 @@ class SchedulerBackend(SWHConfig):
             cursor.copy_expert('COPY %s (%s) FROM STDIN CSV' % (
                 tblname, ', '.join(columns)), f)
 
-    task_type_keys = [
-        'type', 'description', 'backend_name', 'default_interval',
-        'min_interval', 'max_interval', 'backoff_factor',
-    ]
-
     def _format_query(self, query, keys):
         """Format a query with the given keys"""
 
@@ -180,6 +173,9 @@ class SchedulerBackend(SWHConfig):
                 does
             backend_name (str): the name of the task in the job-scheduling
                 backend
+
+        Depending on the nature of the task, this could also
+        defines the following keys:
             default_interval (datetime.timedelta): the default interval
                 between two task runs
             min_interval (datetime.timedelta): the minimum interval between
@@ -188,9 +184,11 @@ class SchedulerBackend(SWHConfig):
                 two task runs
             backoff_factor (float): the factor by which the interval changes
                 at each run
+
         """
         query = self._format_query(
-            """insert into task_type ({keys}) values ({placeholders})""",
+            """insert into %s ({keys}) values ({placeholders})""" % (
+                self.task_type_table, ),
             self.task_type_keys,
         )
         cursor.execute(query, [task_type[key] for key in self.task_type_keys])
@@ -198,19 +196,33 @@ class SchedulerBackend(SWHConfig):
     @autocommit
     def get_task_type(self, task_type_name, cursor=None):
         """Retrieve the task type with id task_type_name"""
+        query = "select {keys} from %s" % self.task_type_table
         query = self._format_query(
-            "select {keys} from task_type where type=%s",
-            self.task_type_keys,
+            query + " where type=%s",
+            self.task_type_keys
         )
-        cursor.execute(query, (task_type_name,))
-
+        cursor.execute(query, (task_type_name, ))
         ret = cursor.fetchone()
 
         return ret
 
+
+class SchedulerBackend(BaseSchedulerBackend):
+    """
+    Backend for the Software Heritage scheduling database.
+    """
+    task_type_table = 'task_type'
+    task_type_keys = [
+        'type', 'description', 'backend_name', 'default_interval',
+        'min_interval', 'max_interval', 'backoff_factor',
+    ]
+
     task_keys = ['id', 'type', 'arguments', 'next_run', 'current_interval',
                  'status']
     task_create_keys = ['type', 'arguments', 'next_run']
+
+    def __init__(self, **override_config):
+        super().__init__(**override_config)
 
     @autocommit
     def create_tasks(self, tasks, cursor=None):
@@ -376,3 +388,62 @@ class SchedulerBackend(SWHConfig):
         )
 
         return cursor.fetchone()
+
+
+class OneShotSchedulerBackend(BaseSchedulerBackend):
+    """Another backend scheduler oriented for one-shot task.
+
+    """
+    # oneshot_task_type
+    task_type_table = 'oneshot_task_type'
+    task_type_keys = ['type', 'description', 'backend_name']
+    # oneshot_task table
+    task_keys = ['id', 'type', 'arguments', 'next_run']
+    task_table = 'oneshot_task'
+    task_create_keys = ['type', 'arguments']
+
+    def __init__(self, **override_config):
+        super().__init__(**override_config)
+
+    @autocommit
+    def create_task(self, task, cursor=None):
+        """Create a oneshot task and returns its identifier.
+
+        """
+        query = self._format_query(
+            """INSERT INTO %s({keys})
+               VALUES({placeholders})
+               RETURNING ID""" % self.task_table,
+            self.task_create_keys)
+        values = [task[key] for key in self.task_create_keys]
+
+        cursor.execute(query, values)
+        r = cursor.fetchone()
+        if r:
+            return r['id']
+
+    @autocommit
+    def delete_task(self, id, cursor=None):
+        """Delete an entry in  oneshot_task.
+
+        """
+        query = "DELETE FROM oneshot_task where id = %s"
+        cursor.execute(query, (id, ))
+
+    @autocommit
+    def grab_ready_tasks(self, num_tasks, cursor=None):
+        """Fetch the list of ready tasks order by their run_next.
+
+        Args:
+            timestamp (datetime.datetime): grab tasks that need to be executed
+                before that timestamp
+            num_tasks (int): only grab num_tasks tasks
+
+        Yields:
+            a list of tasks
+
+        """
+        cursor.execute('select * from oneshot_task order by next_run limit %s',
+                       (num_tasks, ))
+
+        return cursor.fetchall()
