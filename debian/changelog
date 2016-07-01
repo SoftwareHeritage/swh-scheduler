@@ -1,3 +1,10 @@
+swh-scheduler (0.0.7-1~swh1) unstable-swh; urgency=medium
+
+  * v0.0.7
+  * Add oneshot task
+
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Fri, 01 Jul 2016 16:42:45 +0200
+
 swh-scheduler (0.0.6-1~swh1) unstable-swh; urgency=medium
 
   * Release swh-scheduler v0.0.6
