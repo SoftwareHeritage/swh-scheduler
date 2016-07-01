@@ -91,7 +91,7 @@ create table oneshot_task (
   id bigserial primary key,
   type text not null references oneshot_task_type(type),
   arguments jsonb not null,
-  next_run timestamptz not null default now() + interval '60 s'
+  next_run timestamptz not null default now()
 );
 
 comment on table oneshot_task is 'One shot tasks to be scheduled as soon as possible.';
