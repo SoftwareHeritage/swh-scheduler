@@ -4,6 +4,7 @@
 # See top-level LICENSE file for more information
 
 import logging
+import os
 
 from celery import Celery
 from celery.signals import setup_logging
@@ -13,7 +14,10 @@ from kombu import Exchange, Queue
 from swh.core.config import load_named_config
 from swh.core.logger import PostgresHandler
 
-CONFIG_NAME = 'worker.ini'
+DEFAULT_CONFIG_NAME = 'worker'
+CONFIG_NAME_ENVVAR = 'SWH_WORKER_INSTANCE'
+CONFIG_NAME_TEMPLATE = 'worker/%s'
+
 DEFAULT_CONFIG = {
     'task_broker': ('str', 'amqp://guest@localhost//'),
     'task_modules': ('list[str]', []),
@@ -78,6 +82,12 @@ class TaskRouter:
             return {'queue': task_class.task_queue}
         return None
 
+
+INSTANCE_NAME = os.environ.get(CONFIG_NAME_ENVVAR)
+if INSTANCE_NAME:
+    CONFIG_NAME = CONFIG_NAME_TEMPLATE % INSTANCE_NAME
+else:
+    CONFIG_NAME = DEFAULT_CONFIG_NAME
 
 # Load the Celery config
 CONFIG = load_named_config(CONFIG_NAME, DEFAULT_CONFIG)
