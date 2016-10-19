@@ -234,6 +234,13 @@ class SchedulerBackend(SWHConfig):
         return cursor.fetchall()
 
     @autocommit
+    def disable_tasks(self, task_ids, cursor=None):
+        """Disable the tasks whose ids are listed."""
+        query = "UPDATE task SET task_status = 'disabled' WHERE id IN %s"
+        cursor.execute(query, (tuple(task_ids),))
+        return None
+
+    @autocommit
     def peek_ready_tasks(self, timestamp=None, num_tasks=None, cursor=None):
         """Fetch the list of ready tasks
 
