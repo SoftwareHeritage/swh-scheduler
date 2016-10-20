@@ -236,7 +236,7 @@ class SchedulerBackend(SWHConfig):
     @autocommit
     def disable_tasks(self, task_ids, cursor=None):
         """Disable the tasks whose ids are listed."""
-        query = "UPDATE task SET task_status = 'disabled' WHERE id IN %s"
+        query = "UPDATE task SET status = 'disabled' WHERE id IN %s"
         cursor.execute(query, (tuple(task_ids),))
         return None
 
