@@ -104,7 +104,7 @@ def schedule_tasks(ctx, columns, file):
        list)
 
      - kwargs: the keyword arguments passed to the task (JSON object, defaults
-       to an empty duct)
+       to an empty dict)
 
      - next_run: the date at which the task should run (datetime, defaults to
        now)
