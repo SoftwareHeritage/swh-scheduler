@@ -1,8 +1,9 @@
-swh-scheduler (0.0.9-1~swh1~bpo9+1) stretch-swh; urgency=medium
+swh-scheduler (0.0.10-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for stretch-backports.
+  * Release swh.scheduler v0.0.10
+  * Allow disabling tasks
 
- -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Fri, 02 Sep 2016 17:09:17 +0200
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Thu, 20 Oct 2016 17:20:17 +0200
 
 swh-scheduler (0.0.9-1~swh1) unstable-swh; urgency=medium
 
