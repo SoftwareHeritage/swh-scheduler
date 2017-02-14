@@ -8,5 +8,4 @@ Click
 psycopg2
 vcversioner
 
-swh.core
 

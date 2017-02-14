@@ -8,7 +8,7 @@ create table dbversion
 comment on table dbversion is 'Schema update tracking';
 
 insert into dbversion (version, release, description)
-       values (2, now(), 'Work In Progress');
+       values (3, now(), 'Work In Progress');
 
 create table task_type (
   type text primary key,
@@ -98,7 +98,7 @@ begin
   return query
   insert into task (type, arguments, next_run, status, current_interval)
     select type, arguments, next_run, 'next_run_not_scheduled',
-           (select default_interval from task_type tt where tt.type = type)
+           (select default_interval from task_type tt where tt.type = tmp_task.type)
       from tmp_task
   returning task.*;
 end;
