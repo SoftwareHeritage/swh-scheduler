@@ -172,6 +172,7 @@ def event_monitor(app, backend):
 
     recv.capture(limit=None, timeout=None, wakeup=True)
 
+
 if __name__ == '__main__':
     main_backend = SchedulerBackend()
     event_monitor(main_app, main_backend)
