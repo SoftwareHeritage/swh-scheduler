@@ -4,6 +4,7 @@ LICENSE
 LICENSE.Celery
 MANIFEST.in
 Makefile
+requirements-swh.txt
 requirements.txt
 setup.py
 version.txt
@@ -16,6 +17,7 @@ debian/source/format
 sql/swh-scheduler-schema.sql
 sql/swh-scheduler-testdata.sql
 sql/updates/02.sql
+sql/updates/03.sql
 swh.scheduler.egg-info/PKG-INFO
 swh.scheduler.egg-info/SOURCES.txt
 swh.scheduler.egg-info/dependency_links.txt
@@ -25,6 +27,7 @@ swh.scheduler.egg-info/top_level.txt
 swh/scheduler/backend.py
 swh/scheduler/cli.py
 swh/scheduler/task.py
+swh/scheduler/utils.py
 swh/scheduler/celery_backend/__init__.py
 swh/scheduler/celery_backend/config.py
 swh/scheduler/celery_backend/listener.py

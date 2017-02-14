@@ -49,6 +49,7 @@ def run_ready_tasks(backend, app):
 
         backend.commit()
 
+
 if __name__ == '__main__':
     for module in main_app.conf.CELERY_IMPORTS:
         __import__(module)
