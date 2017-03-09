@@ -1,6 +1,6 @@
 Click
 arrow
-celery
+celery<4
 psycopg2
 swh.core
 vcversioner
