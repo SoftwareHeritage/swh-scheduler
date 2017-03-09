@@ -1,3 +1,10 @@
+swh-scheduler (0.0.12-1~swh1) unstable-swh; urgency=medium
+
+  * Release swh.scheduler v0.0.12
+  * Only log to database if the configuration is present
+
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Thu, 09 Mar 2017 11:12:45 +0100
+
 swh-scheduler (0.0.11-1~swh1) unstable-swh; urgency=medium
 
   * Release swh.scheduler v0.0.11
