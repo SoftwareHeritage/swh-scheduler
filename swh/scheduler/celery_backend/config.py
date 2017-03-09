@@ -50,14 +50,14 @@ def setup_log_handler(loglevel=None, logfile=None, format=None,
     console = logging.StreamHandler()
     console.setLevel(logging.DEBUG)
     console.setFormatter(color_formatter)
-
-    pg = PostgresHandler(CONFIG['log_db'])
-    pg.setFormatter(logging.Formatter(format))
-    pg.setLevel(logging.DEBUG)
-    pg.setFormatter(formatter)
-
     root_logger.addHandler(console)
-    root_logger.addHandler(pg)
+
+    if 'log_db' in CONFIG and CONFIG['log_db']:
+        pg = PostgresHandler(CONFIG['log_db'])
+        pg.setFormatter(logging.Formatter(format))
+        pg.setLevel(logging.DEBUG)
+        pg.setFormatter(formatter)
+        root_logger.addHandler(pg)
 
     celery_logger = logging.getLogger('celery')
     celery_logger.setLevel(logging.INFO)
