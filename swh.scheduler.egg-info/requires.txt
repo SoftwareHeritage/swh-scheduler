@@ -2,5 +2,5 @@ Click
 arrow
 celery<4
 psycopg2
-swh.core
+swh.core>=0.0.30
 vcversioner
