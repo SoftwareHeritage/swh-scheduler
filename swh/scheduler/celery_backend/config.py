@@ -8,11 +8,10 @@ import os
 
 from celery import Celery
 from celery.signals import setup_logging
-from celery.utils.log import ColorFormatter
 from kombu import Exchange, Queue
 
 from swh.core.config import load_named_config
-from swh.core.logger import PostgresHandler
+from swh.core.logger import JournalHandler
 
 DEFAULT_CONFIG_NAME = 'worker'
 CONFIG_NAME_ENVVAR = 'SWH_WORKER_INSTANCE'
@@ -39,25 +38,14 @@ def setup_log_handler(loglevel=None, logfile=None, format=None,
         loglevel = logging.DEBUG
 
     formatter = logging.Formatter(format)
-    if colorize:
-        color_formatter = ColorFormatter(format)
-    else:
-        color_formatter = formatter
 
     root_logger = logging.getLogger('')
     root_logger.setLevel(logging.INFO)
 
-    console = logging.StreamHandler()
-    console.setLevel(logging.DEBUG)
-    console.setFormatter(color_formatter)
-    root_logger.addHandler(console)
-
-    if 'log_db' in CONFIG and CONFIG['log_db']:
-        pg = PostgresHandler(CONFIG['log_db'])
-        pg.setFormatter(logging.Formatter(format))
-        pg.setLevel(logging.DEBUG)
-        pg.setFormatter(formatter)
-        root_logger.addHandler(pg)
+    systemd_journal = JournalHandler()
+    systemd_journal.setLevel(logging.DEBUG)
+    systemd_journal.setFormatter(formatter)
+    root_logger.addHandler(systemd_journal)
 
     celery_logger = logging.getLogger('celery')
     celery_logger.setLevel(logging.INFO)
