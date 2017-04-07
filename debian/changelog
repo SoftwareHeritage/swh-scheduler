@@ -1,3 +1,10 @@
+swh-scheduler (0.0.13-1~swh1) unstable-swh; urgency=medium
+
+  * Release swh.scheduler v0.0.13
+  * Use systemd for logging rather than PostgreSQL
+
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Fri, 07 Apr 2017 11:57:50 +0200
+
 swh-scheduler (0.0.12-1~swh1) unstable-swh; urgency=medium
 
   * Release swh.scheduler v0.0.12
