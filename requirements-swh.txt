@@ -1,1 +1,1 @@
-swh.core
+swh.core (>= 0.0.30)
