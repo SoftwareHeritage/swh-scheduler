@@ -5,6 +5,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import datetime
 from fnmatch import fnmatch
 from operator import itemgetter
 import os
@@ -71,6 +72,26 @@ def filter_workers(workers, filters):
             if all(check(worker) for check in filters)}
 
 
+def get_clock_offsets(workers, inspect):
+    """Add a clock_offset entry for each worker"""
+    err_msg = 'Could not get monotonic clock for {worker}'
+
+    t = datetime.datetime.now(tz=datetime.timezone.utc)
+    for worker, clock in inspect._request('monotonic').items():
+        monotonic = clock.get('monotonic')
+        if monotonic is None:
+            monotonic = 0
+            click.echo(err_msg.format(worker=worker), err=True)
+        dt = datetime.timedelta(seconds=monotonic)
+        workers[worker]['clock_offset'] = t - dt
+
+
+def worker_to_wallclock(worker, monotonic):
+    """Convert a monotonic timestamp from a worker to a wall clock time"""
+    dt = datetime.timedelta(seconds=monotonic)
+    return worker['clock_offset'] + dt
+
+
 @click.group()
 @click.option('--instance-config', metavar='CONFIG', default=None,
               help='Use this worker instance configuration')
@@ -101,10 +122,13 @@ def cli(ctx, debug, timeout, instance_config, host, type):
     )
     ctx.obj['workers'] = workers
 
-    destination = [worker['name'] for worker in workers.values()]
+    destination = list(workers)
+    inspect = app.control.inspect(destination=destination,
+                                  timeout=timeout)
+    ctx.obj['inspect'] = inspect
 
-    ctx.obj['inspect'] = app.control.inspect(destination=destination,
-                                             timeout=timeout)
+    get_clock_offsets(workers, inspect)
+
     ctx.obj['control'] = app.control
     ctx.obj['destination'] = destination
     ctx.obj['timeout'] = timeout
@@ -128,7 +152,10 @@ def list_workers(ctx):
 @click.pass_context
 def list_tasks(ctx):
     """List the tasks currently running on workers"""
-    task_template = '{worker} {name}[{id}, pid={worker_pid}] {args} {kwargs}'
+    task_template = ('{worker} {name}'
+                     '[{id} '
+                     'started={started:%Y-%m-%mT%H:%M:%S} '
+                     'pid={worker_pid}] {args} {kwargs}')
     inspect = ctx.obj['inspect']
     workers = ctx.obj['workers']
     active = inspect.active()
@@ -142,7 +169,9 @@ def list_tasks(ctx):
         worker = workers[worker_name]
         if not tasks:
             click.echo("No active tasks on {name}".format(**worker), err=True)
-        for task in sorted(tasks, key=itemgetter('worker_pid')):
+        print(tasks)
+        for task in sorted(tasks, key=itemgetter('time_start')):
+            task['started'] = worker_to_wallclock(worker, task['time_start'])
             click.echo(task_template.format(worker=worker_name, **task))
             has_tasks = True
 
