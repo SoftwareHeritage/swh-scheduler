@@ -8,7 +8,10 @@ import os
 
 from celery import Celery
 from celery.signals import setup_logging
+from celery.worker.control import Panel
+
 from kombu import Exchange, Queue
+from kombu.five import monotonic as _monotonic
 
 from swh.core.config import load_named_config
 from swh.core.logger import JournalHandler
@@ -60,6 +63,12 @@ def setup_log_handler(loglevel=None, logfile=None, format=None,
     # get_task_logger makes the swh tasks loggers children of celery.task
     celery_task_logger = logging.getLogger('celery.task')
     celery_task_logger.setLevel(loglevel)
+
+
+@Panel.register
+def monotonic(state):
+    """Get the current value for the monotonic clock"""
+    return {'monotonic': _monotonic()}
 
 
 class TaskRouter:
