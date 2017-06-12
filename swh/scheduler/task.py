@@ -1,4 +1,4 @@
-# Copyright (C) 2015  The Software Heritage developers
+# Copyright (C) 2015-2017 The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -24,7 +24,26 @@ class Task(celery.Task):
     task_queue = 'celery'
 
     def run(self, *args, **kwargs):
-        raise NotImplementedError('tasks must implement the run() method')
+        """This method is called by the celery worker when a task is received.
+
+        Should not be overridden as we need our special events to be sent for
+        the reccurrent scheduler. Override run_task instead."""
+        try:
+            result = self.run_task(*args, **kwargs)
+        except Exception as e:
+            self.send_event('task-result-exception')
+            raise e from None
+        else:
+            self.send_event('task-result', result=result)
+            return result
+
+    def run_task(self, *args, **kwargs):
+        """Perform the task.
+
+        Must return a json-serializable value as it is passed back to the task
+        scheduler using a celery event.
+        """
+        raise NotImplementedError('tasks must implement the run_task() method')
 
     @property
     def log(self):
