@@ -1,3 +1,10 @@
+swh-scheduler (0.0.14-1~swh1) unstable-swh; urgency=medium
+
+  * Release swh.scheduler 0.0.14
+  * Make the return value of tasks available in the listener
+
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Mon, 12 Jun 2017 17:50:32 +0200
+
 swh-scheduler (0.0.13-1~swh1) unstable-swh; urgency=medium
 
   * Release swh.scheduler v0.0.13
