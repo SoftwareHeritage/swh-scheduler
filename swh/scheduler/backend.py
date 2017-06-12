@@ -358,7 +358,7 @@ class SchedulerBackend(SWHConfig):
 
     @autocommit
     def end_task_run(self, backend_id, status, metadata=None, timestamp=None,
-                     cursor=None):
+                     result=None, cursor=None):
         """Mark a given task as ended, updating the corresponding task_run
            entry in the database.
 

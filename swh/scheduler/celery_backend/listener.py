@@ -105,9 +105,14 @@ def event_monitor(app, backend):
         })
 
     def task_succeeded(event, message):
-        status = 'uneventful'
-        if 'True' in event['result']:
-            status = 'eventful'
+        result = event['result']
+
+        try:
+            status = result.get('status')
+            if status == 'success':
+                status = 'eventful' if result.get('eventful') else 'uneventful'
+        except Exception:
+            status = 'eventful' if result else 'uneventful'
 
         queue_action({
             'action': 'end_task_run',
@@ -115,6 +120,7 @@ def event_monitor(app, backend):
             'kwargs': {
                 'timestamp': utcnow(),
                 'status': status,
+                'result': result,
             },
             'message': message,
         })
@@ -135,7 +141,7 @@ def event_monitor(app, backend):
         app=main_app,
         handlers={
             'task-started': task_started,
-            'task-succeeded': task_succeeded,
+            'task-result': task_succeeded,
             'task-failed': task_failed,
             '*': catchall_event,
         },
