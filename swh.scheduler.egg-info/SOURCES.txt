@@ -8,6 +8,7 @@ requirements-swh.txt
 requirements.txt
 setup.py
 version.txt
+bin/swh-worker-control
 debian/changelog
 debian/compat
 debian/control

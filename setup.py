@@ -22,7 +22,7 @@ setup(
     packages=[
         'swh.scheduler', 'swh.scheduler.celery_backend', 'swh.scheduler.tests'
     ],
-    scripts=[],   # scripts to package
+    scripts=['bin/swh-worker-control'],   # scripts to package
     install_requires=parse_requirements(),
     entry_points='''
         [console_scripts]
