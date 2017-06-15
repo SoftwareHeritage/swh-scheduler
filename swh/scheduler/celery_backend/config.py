@@ -8,6 +8,7 @@ import os
 
 from celery import Celery
 from celery.signals import setup_logging
+from celery.utils.log import ColorFormatter
 from celery.worker.control import Panel
 
 from kombu import Exchange, Queue
@@ -44,6 +45,13 @@ def setup_log_handler(loglevel=None, logfile=None, format=None,
 
     root_logger = logging.getLogger('')
     root_logger.setLevel(logging.INFO)
+
+    if loglevel == logging.DEBUG:
+        color_formatter = ColorFormatter(format) if colorize else formatter
+        console = logging.StreamHandler()
+        console.setLevel(logging.DEBUG)
+        console.setFormatter(color_formatter)
+        root_logger.addHandler(console)
 
     systemd_journal = JournalHandler()
     systemd_journal.setLevel(logging.DEBUG)
