@@ -123,6 +123,10 @@ class CustomCelery(Celery):
                 r.status_code, r.json()))
         return r.json()
 
+    def get_queue_length(self, queue_name):
+        """Shortcut to get a queue's length"""
+        return self.get_queue_stats(queue_name)['messages']
+
 
 INSTANCE_NAME = os.environ.get(CONFIG_NAME_ENVVAR)
 if INSTANCE_NAME:
