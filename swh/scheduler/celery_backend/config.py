@@ -5,13 +5,17 @@
 
 import logging
 import os
+import urllib.parse
 
 from celery import Celery
 from celery.signals import setup_logging
+from celery.utils.log import ColorFormatter
 from celery.worker.control import Panel
 
 from kombu import Exchange, Queue
 from kombu.five import monotonic as _monotonic
+
+import requests
 
 from swh.core.config import load_named_config
 from swh.core.logger import JournalHandler
@@ -44,6 +48,13 @@ def setup_log_handler(loglevel=None, logfile=None, format=None,
 
     root_logger = logging.getLogger('')
     root_logger.setLevel(logging.INFO)
+
+    if loglevel == logging.DEBUG:
+        color_formatter = ColorFormatter(format) if colorize else formatter
+        console = logging.StreamHandler()
+        console.setLevel(logging.DEBUG)
+        console.setFormatter(color_formatter)
+        root_logger.addHandler(console)
 
     systemd_journal = JournalHandler()
     systemd_journal.setLevel(logging.DEBUG)
@@ -80,6 +91,43 @@ class TaskRouter:
         return None
 
 
+class CustomCelery(Celery):
+    def get_queue_stats(self, queue_name):
+        """Get the statistics regarding a queue on the broker.
+
+        Arguments:
+          queue_name: name of the queue to check
+
+        Returns a dictionary raw from the RabbitMQ management API.
+
+        Interesting keys:
+         - consumers (number of consumers for the queue)
+         - messages (number of messages in queue)
+         - messages_unacknowledged (number of messages currently being
+           processed)
+
+        Documentation: https://www.rabbitmq.com/management.html#http-api
+        """
+
+        conn_info = self.connection().info()
+        url = 'http://{hostname}:{port}/api/queues/{vhost}/{queue}'.format(
+            hostname=conn_info['hostname'],
+            port=conn_info['port'] + 10000,
+            vhost=urllib.parse.quote(conn_info['virtual_host'], safe=''),
+            queue=urllib.parse.quote(queue_name, safe=''),
+        )
+        credentials = (conn_info['userid'], conn_info['password'])
+        r = requests.get(url, auth=credentials)
+        if r.status_code != 200:
+            raise ValueError('Got error %s when reading queue stats: %s' % (
+                r.status_code, r.json()))
+        return r.json()
+
+    def get_queue_length(self, queue_name):
+        """Shortcut to get a queue's length"""
+        return self.get_queue_stats(queue_name)['messages']
+
+
 INSTANCE_NAME = os.environ.get(CONFIG_NAME_ENVVAR)
 if INSTANCE_NAME:
     CONFIG_NAME = CONFIG_NAME_TEMPLATE % INSTANCE_NAME
@@ -96,7 +144,7 @@ for queue in CONFIG['task_queues']:
     CELERY_QUEUES.append(Queue(queue, Exchange(queue), routing_key=queue))
 
 # Instantiate the Celery app
-app = Celery()
+app = CustomCelery()
 app.conf.update(
     # The broker
     BROKER_URL=CONFIG['task_broker'],
