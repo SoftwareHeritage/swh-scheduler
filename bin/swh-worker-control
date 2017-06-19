@@ -169,7 +169,6 @@ def list_tasks(ctx):
         worker = workers[worker_name]
         if not tasks:
             click.echo("No active tasks on {name}".format(**worker), err=True)
-        print(tasks)
         for task in sorted(tasks, key=itemgetter('time_start')):
             task['started'] = worker_to_wallclock(worker, task['time_start'])
             click.echo(task_template.format(worker=worker_name, **task))

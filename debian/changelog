@@ -1,8 +1,10 @@
-swh-scheduler (0.0.14-1~swh1~bpo9+1) stretch-swh; urgency=medium
+swh-scheduler (0.0.15-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for stretch-backports.
+  * Release swh-scheduler v0.0.15
+  * Add some methods to get the length of task queues
+  * worker: Show logs on stdout if loglevel = debug
 
- -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Mon, 12 Jun 2017 17:50:31 +0200
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Mon, 19 Jun 2017 19:44:56 +0200
 
 swh-scheduler (0.0.14-1~swh1) unstable-swh; urgency=medium
 
