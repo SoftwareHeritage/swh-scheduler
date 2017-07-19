@@ -68,3 +68,11 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
         self.backend.create_task_type(tt2)
         self.assertEqual(tt, self.backend.get_task_type(tt['type']))
         self.assertEqual(tt2, self.backend.get_task_type(tt2['type']))
+
+    @istest
+    def get_task_types(self):
+        tt = self.task_type
+        tt2 = self.task_type2
+        self.backend.create_task_type(tt)
+        self.backend.create_task_type(tt2)
+        self.assertCountEqual([tt2, tt], self.backend.get_task_types())

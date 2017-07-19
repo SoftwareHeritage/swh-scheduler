@@ -208,6 +208,16 @@ class SchedulerBackend(SWHConfig):
 
         return ret
 
+    @autocommit
+    def get_task_types(self, cursor=None):
+        query = self._format_query(
+            "select {keys} from task_type",
+            self.task_type_keys,
+        )
+        cursor.execute(query)
+        ret = cursor.fetchall()
+        return ret
+
     task_keys = ['id', 'type', 'arguments', 'next_run', 'current_interval',
                  'status']
     task_create_keys = ['type', 'arguments', 'next_run']
