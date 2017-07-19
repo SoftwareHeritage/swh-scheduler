@@ -6,6 +6,7 @@
 import copy
 import datetime
 import os
+import random
 import unittest
 
 from arrow import utcnow
@@ -100,6 +101,17 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
             ret['arguments']['kwargs'] = kwargs
         return ret
 
+    def _tasks_from_template(self, template, max_timestamp, num):
+        return [
+            self._task_from_template(
+                template,
+                max_timestamp - datetime.timedelta(microseconds=i),
+                'argument-%03d' % i,
+                **{'kwarg%03d' % i: 'bogus-kwarg'}
+            )
+            for i in range(num)
+        ]
+
     def _create_task_types(self):
         self.backend.create_task_type(self.task_type)
         self.backend.create_task_type(self.task_type2)
@@ -107,13 +119,7 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
     @istest
     def create_tasks(self):
         self._create_task_types()
-        next_run = utcnow()
-        tasks = [
-            self._task_from_template(self.task1_template, next_run,
-                                     'argument-%03d' % i)
-            for i in range(100)
-        ]
-
+        tasks = self._tasks_from_template(self.task1_template, utcnow(), 100)
         ret = self.backend.create_tasks(tasks)
         ids = set()
         for task, orig_task in zip(ret, tasks):
@@ -127,3 +133,45 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
             del task['status']
             del task['current_interval']
             self.assertEqual(task, orig_task)
+
+    @istest
+    def peek_ready_tasks(self):
+        self._create_task_types()
+        t = utcnow()
+        tasks = self._tasks_from_template(self.task1_template, t, 100)
+        random.shuffle(tasks)
+        self.backend.create_tasks(tasks)
+
+        ready_tasks = self.backend.peek_ready_tasks()
+        self.assertEqual(len(ready_tasks), len(tasks))
+        for i in range(len(ready_tasks) - 1):
+            self.assertLessEqual(ready_tasks[i]['next_run'],
+                                 ready_tasks[i+1]['next_run'])
+
+        # Only get the first few ready tasks
+        limit = random.randrange(5, 5 + len(tasks)//2)
+        ready_tasks_limited = self.backend.peek_ready_tasks(num_tasks=limit)
+        self.assertEqual(len(ready_tasks_limited), limit)
+        self.assertCountEqual(ready_tasks_limited, ready_tasks[:limit])
+
+        # Limit by timestamp
+        max_ts = tasks[limit-1]['next_run']
+        ready_tasks_timestamped = self.backend.peek_ready_tasks(
+            timestamp=max_ts)
+
+        for ready_task in ready_tasks_timestamped:
+            self.assertLessEqual(ready_task['next_run'], max_ts)
+
+        # Make sure we get proper behavior for the first ready tasks
+        self.assertCountEqual(
+            ready_tasks[:len(ready_tasks_timestamped)],
+            ready_tasks_timestamped,
+        )
+
+        # Limit by both
+        ready_tasks_both = self.backend.peek_ready_tasks(
+            timestamp=max_ts, num_tasks=limit//3)
+        self.assertLessEqual(len(ready_tasks_both), limit//3)
+        for ready_task in ready_tasks_both:
+            self.assertLessEqual(ready_task['next_run'], max_ts)
+            self.assertIn(ready_task, ready_tasks[:limit//3])
