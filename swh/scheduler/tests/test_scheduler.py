@@ -175,3 +175,21 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
         for ready_task in ready_tasks_both:
             self.assertLessEqual(ready_task['next_run'], max_ts)
             self.assertIn(ready_task, ready_tasks[:limit//3])
+
+    @istest
+    def grab_ready_tasks(self):
+        self._create_task_types()
+        t = utcnow()
+        tasks = self._tasks_from_template(self.task1_template, t, 100)
+        random.shuffle(tasks)
+        self.backend.create_tasks(tasks)
+
+        first_ready_tasks = self.backend.peek_ready_tasks(num_tasks=10)
+        grabbed_tasks = self.backend.grab_ready_tasks(num_tasks=10)
+
+        for peeked, grabbed in zip(first_ready_tasks, grabbed_tasks):
+            self.assertEqual(peeked['status'], 'next_run_not_scheduled')
+            del peeked['status']
+            self.assertEqual(grabbed['status'], 'next_run_scheduled')
+            del grabbed['status']
+            self.assertEqual(peeked, grabbed)
