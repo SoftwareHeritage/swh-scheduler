@@ -251,6 +251,14 @@ class SchedulerBackend(SWHConfig):
         return None
 
     @autocommit
+    def get_tasks(self, task_ids, cursor=None):
+        """Retrieve the info of tasks whose ids are listed."""
+        query = self._format_query('select {keys} from task where id in %s',
+                                   self.task_keys)
+        cursor.execute(query, (tuple(task_ids),))
+        return cursor.fetchall()
+
+    @autocommit
     def peek_ready_tasks(self, task_type, timestamp=None, num_tasks=None,
                          cursor=None):
         """Fetch the list of ready tasks

@@ -198,3 +198,18 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
             self.assertEqual(grabbed['status'], 'next_run_scheduled')
             del grabbed['status']
             self.assertEqual(peeked, grabbed)
+
+    @istest
+    def get_tasks(self):
+        self._create_task_types()
+        t = utcnow()
+        tasks = self._tasks_from_template(self.task1_template, t, 100)
+        tasks = self.backend.create_tasks(tasks)
+        random.shuffle(tasks)
+        while len(tasks) > 1:
+            length = random.randrange(1, len(tasks))
+            cur_tasks = tasks[:length]
+            tasks[:length] = []
+
+            ret = self.backend.get_tasks(task['id'] for task in cur_tasks)
+            self.assertCountEqual(ret, cur_tasks)
