@@ -8,7 +8,7 @@ create table dbversion
 comment on table dbversion is 'Schema update tracking';
 
 insert into dbversion (version, release, description)
-       values (3, now(), 'Work In Progress');
+       values (4, now(), 'Work In Progress');
 
 create table task_type (
   type text primary key,
@@ -106,7 +106,7 @@ $$;
 
 comment on function swh_scheduler_create_tasks_from_temp () is 'Create tasks in bulk from the temporary table';
 
-create or replace function swh_scheduler_peek_ready_tasks (ts timestamptz default now(),
+create or replace function swh_scheduler_peek_ready_tasks (task_type text, ts timestamptz default now(),
                                                            num_tasks bigint default NULL)
   returns setof task
   language sql
@@ -114,12 +114,13 @@ create or replace function swh_scheduler_peek_ready_tasks (ts timestamptz defaul
 as $$
 select * from task
   where next_run <= ts
-  and status = 'next_run_not_scheduled'
+        and type = task_type
+        and status = 'next_run_not_scheduled'
   order by next_run
   limit num_tasks;
 $$;
 
-create or replace function swh_scheduler_grab_ready_tasks (ts timestamptz default now(),
+create or replace function swh_scheduler_grab_ready_tasks (task_type text, ts timestamptz default now(),
                                                            num_tasks bigint default NULL)
   returns setof task
   language sql
@@ -129,6 +130,7 @@ as $$
     from (
       select id from task
         where next_run <= ts
+              and type = task_type
               and status='next_run_not_scheduled'
         order by next_run
         limit num_tasks

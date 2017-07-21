@@ -138,11 +138,12 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
     def peek_ready_tasks(self):
         self._create_task_types()
         t = utcnow()
+        task_type = self.task1_template['type']
         tasks = self._tasks_from_template(self.task1_template, t, 100)
         random.shuffle(tasks)
         self.backend.create_tasks(tasks)
 
-        ready_tasks = self.backend.peek_ready_tasks()
+        ready_tasks = self.backend.peek_ready_tasks(task_type)
         self.assertEqual(len(ready_tasks), len(tasks))
         for i in range(len(ready_tasks) - 1):
             self.assertLessEqual(ready_tasks[i]['next_run'],
@@ -150,14 +151,16 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
 
         # Only get the first few ready tasks
         limit = random.randrange(5, 5 + len(tasks)//2)
-        ready_tasks_limited = self.backend.peek_ready_tasks(num_tasks=limit)
+        ready_tasks_limited = self.backend.peek_ready_tasks(
+            task_type, num_tasks=limit)
+
         self.assertEqual(len(ready_tasks_limited), limit)
         self.assertCountEqual(ready_tasks_limited, ready_tasks[:limit])
 
         # Limit by timestamp
         max_ts = tasks[limit-1]['next_run']
         ready_tasks_timestamped = self.backend.peek_ready_tasks(
-            timestamp=max_ts)
+            task_type, timestamp=max_ts)
 
         for ready_task in ready_tasks_timestamped:
             self.assertLessEqual(ready_task['next_run'], max_ts)
@@ -170,7 +173,7 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
 
         # Limit by both
         ready_tasks_both = self.backend.peek_ready_tasks(
-            timestamp=max_ts, num_tasks=limit//3)
+            task_type, timestamp=max_ts, num_tasks=limit//3)
         self.assertLessEqual(len(ready_tasks_both), limit//3)
         for ready_task in ready_tasks_both:
             self.assertLessEqual(ready_task['next_run'], max_ts)
@@ -180,12 +183,14 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
     def grab_ready_tasks(self):
         self._create_task_types()
         t = utcnow()
+        task_type = self.task1_template['type']
         tasks = self._tasks_from_template(self.task1_template, t, 100)
         random.shuffle(tasks)
         self.backend.create_tasks(tasks)
 
-        first_ready_tasks = self.backend.peek_ready_tasks(num_tasks=10)
-        grabbed_tasks = self.backend.grab_ready_tasks(num_tasks=10)
+        first_ready_tasks = self.backend.peek_ready_tasks(
+            task_type, num_tasks=10)
+        grabbed_tasks = self.backend.grab_ready_tasks(task_type, num_tasks=10)
 
         for peeked, grabbed in zip(first_ready_tasks, grabbed_tasks):
             self.assertEqual(peeked['status'], 'next_run_not_scheduled')

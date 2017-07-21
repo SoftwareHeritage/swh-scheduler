@@ -251,7 +251,8 @@ class SchedulerBackend(SWHConfig):
         return None
 
     @autocommit
-    def peek_ready_tasks(self, timestamp=None, num_tasks=None, cursor=None):
+    def peek_ready_tasks(self, task_type, timestamp=None, num_tasks=None,
+                         cursor=None):
         """Fetch the list of ready tasks
 
         Args:
@@ -266,13 +267,16 @@ class SchedulerBackend(SWHConfig):
         if timestamp is None:
             timestamp = utcnow()
 
-        cursor.execute('select * from swh_scheduler_peek_ready_tasks(%s, %s)',
-                       (timestamp, num_tasks))
+        cursor.execute(
+            'select * from swh_scheduler_peek_ready_tasks(%s, %s, %s)',
+            (task_type, timestamp, num_tasks)
+        )
 
         return cursor.fetchall()
 
     @autocommit
-    def grab_ready_tasks(self, timestamp=None, num_tasks=None, cursor=None):
+    def grab_ready_tasks(self, task_type, timestamp=None, num_tasks=None,
+                         cursor=None):
         """Fetch the list of ready tasks, and mark them as scheduled
 
         Args:
@@ -287,8 +291,10 @@ class SchedulerBackend(SWHConfig):
         if timestamp is None:
             timestamp = utcnow()
 
-        cursor.execute('select * from swh_scheduler_grab_ready_tasks(%s, %s)',
-                       (timestamp, num_tasks))
+        cursor.execute(
+            'select * from swh_scheduler_grab_ready_tasks(%s, %s, %s)',
+            (task_type, timestamp, num_tasks)
+        )
 
         return cursor.fetchall()
 
