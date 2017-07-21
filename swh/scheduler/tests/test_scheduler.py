@@ -38,11 +38,13 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
             'min_interval': datetime.timedelta(hours=12),
             'max_interval': datetime.timedelta(days=64),
             'backoff_factor': 2,
+            'max_queue_length': None,
         }
         self.task_type2 = tt2 = tt.copy()
         tt2['type'] = 'update-hg'
         tt2['description'] = 'Update a mercurial repository'
         tt2['backend_name'] = 'swh.loader.mercurial.tasks.UpdateHgRepository'
+        tt2['max_queue_length'] = 42
 
         self.task1_template = t1_template = {
             'type': tt['type'],

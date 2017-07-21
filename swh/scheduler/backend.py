@@ -145,7 +145,7 @@ class SchedulerBackend(SWHConfig):
 
     task_type_keys = [
         'type', 'description', 'backend_name', 'default_interval',
-        'min_interval', 'max_interval', 'backoff_factor',
+        'min_interval', 'max_interval', 'backoff_factor', 'max_queue_length',
     ]
 
     def _format_query(self, query, keys):
@@ -188,6 +188,8 @@ class SchedulerBackend(SWHConfig):
                 two task runs
             backoff_factor (float): the factor by which the interval changes
                 at each run
+            max_queue_length (int): the maximum length of the task queue for
+                this task type
         """
         query = self._format_query(
             """insert into task_type ({keys}) values ({placeholders})""",

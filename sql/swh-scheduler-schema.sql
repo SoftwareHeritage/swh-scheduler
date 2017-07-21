@@ -17,7 +17,8 @@ create table task_type (
   default_interval interval not null,
   min_interval interval not null,
   max_interval interval not null,
-  backoff_factor float not null
+  backoff_factor float not null,
+  max_queue_length bigint
 );
 
 comment on table task_type is 'Types of schedulable tasks';
@@ -28,6 +29,7 @@ comment on column task_type.default_interval is 'Default interval for newly sche
 comment on column task_type.min_interval is 'Minimum interval between two runs of a task';
 comment on column task_type.max_interval is 'Maximum interval between two runs of a task';
 comment on column task_type.backoff_factor is 'Adjustment factor for the backoff between two task runs';
+comment on column task_type.max_queue_length is 'Maximum length of the queue for this type of tasks';
 
 create type task_status as enum ('next_run_not_scheduled', 'next_run_scheduled', 'disabled');
 comment on type task_status is 'Status of a given task';

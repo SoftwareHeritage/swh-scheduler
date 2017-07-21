@@ -8,6 +8,10 @@ begin;
 insert into dbversion (version, release, description)
 values (4, now(), 'Work In Progress');
 
+alter table task_type add column max_queue_length bigint;
+comment on column task_type.max_queue_length is 'Maximum length of the queue for this type of tasks';
+
+
 drop function swh_scheduler_peek_ready_tasks (timestamptz, bigint);
 drop function swh_scheduler_grab_ready_tasks (timestamptz, bigint);
 
