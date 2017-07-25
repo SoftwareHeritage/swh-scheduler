@@ -8,7 +8,7 @@ create table dbversion
 comment on table dbversion is 'Schema update tracking';
 
 insert into dbversion (version, release, description)
-       values (4, now(), 'Work In Progress');
+       values (5, now(), 'Work In Progress');
 
 create table task_type (
   type text primary key,
@@ -18,7 +18,9 @@ create table task_type (
   min_interval interval not null,
   max_interval interval not null,
   backoff_factor float not null,
-  max_queue_length bigint
+  max_queue_length bigint,
+  num_retries bigint,
+  retry_delay interval
 );
 
 comment on table task_type is 'Types of schedulable tasks';
@@ -30,9 +32,14 @@ comment on column task_type.min_interval is 'Minimum interval between two runs o
 comment on column task_type.max_interval is 'Maximum interval between two runs of a task';
 comment on column task_type.backoff_factor is 'Adjustment factor for the backoff between two task runs';
 comment on column task_type.max_queue_length is 'Maximum length of the queue for this type of tasks';
+comment on column task_type.num_retries is 'Default number of retries on transient failures';
+comment on column task_type.retry_delay is 'Retry delay for the task';
 
 create type task_status as enum ('next_run_not_scheduled', 'next_run_scheduled', 'disabled');
 comment on type task_status is 'Status of a given task';
+
+create type task_policy as enum ('recurring', 'oneshot');
+comment on type task_policy is 'Recurrence policy of the given task';
 
 create table task (
   id bigserial primary key,
@@ -40,7 +47,9 @@ create table task (
   arguments jsonb not null,
   next_run timestamptz not null,
   current_interval interval not null,
-  status task_status not null
+  status task_status not null,
+  policy task_policy not null default 'recurring',
+  retries_left bigint not null default 0
 );
 comment on table task is 'Schedule of recurring tasks';
 comment on column task.arguments is 'Arguments passed to the underlying job scheduler. '
@@ -48,6 +57,8 @@ comment on column task.arguments is 'Arguments passed to the underlying job sche
 comment on column task.next_run is 'The next run of this task should be run on or after that time';
 comment on column task.current_interval is 'The interval between two runs of this task, '
                                            'taking into account the backoff factor';
+comment on column task.retries_left is 'The number of "short delay" retries of the task in case of '
+                                       'transient failure';
 
 create index on task(type);
 create index on task(next_run);
@@ -86,7 +97,9 @@ as $$
   alter table tmp_task
     drop column id,
     drop column current_interval,
-    drop column status;
+    drop column status,
+    alter column policy drop not null,
+    alter column retries_left drop not null;
 $$;
 
 comment on function swh_scheduler_mktemp_task () is 'Create a temporary table for bulk task creation';
@@ -98,9 +111,11 @@ create or replace function swh_scheduler_create_tasks_from_temp ()
 as $$
 begin
   return query
-  insert into task (type, arguments, next_run, status, current_interval)
+  insert into task (type, arguments, next_run, status, current_interval, policy, retries_left)
     select type, arguments, next_run, 'next_run_not_scheduled',
-           (select default_interval from task_type tt where tt.type = tmp_task.type)
+           (select default_interval from task_type tt where tt.type = tmp_task.type),
+           coalesce(policy, 'recurring'),
+           coalesce(retries_left, (select num_retries from task_type tt where tt.type = tmp_task.type), 0)
       from tmp_task
   returning task.*;
 end;

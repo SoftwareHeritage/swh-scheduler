@@ -146,6 +146,7 @@ class SchedulerBackend(SWHConfig):
     task_type_keys = [
         'type', 'description', 'backend_name', 'default_interval',
         'min_interval', 'max_interval', 'backoff_factor', 'max_queue_length',
+        'num_retries', 'retry_delay',
     ]
 
     def _format_query(self, query, keys):
@@ -220,9 +221,10 @@ class SchedulerBackend(SWHConfig):
         ret = cursor.fetchall()
         return ret
 
-    task_keys = ['id', 'type', 'arguments', 'next_run', 'current_interval',
-                 'status']
-    task_create_keys = ['type', 'arguments', 'next_run']
+    task_create_keys = [
+        'type', 'arguments', 'next_run', 'policy', 'retries_left',
+    ]
+    task_keys = task_create_keys + ['id', 'current_interval', 'status']
 
     @autocommit
     def create_tasks(self, tasks, cursor=None):

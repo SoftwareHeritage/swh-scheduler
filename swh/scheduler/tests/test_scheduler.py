@@ -39,12 +39,16 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
             'max_interval': datetime.timedelta(days=64),
             'backoff_factor': 2,
             'max_queue_length': None,
+            'num_retries': 7,
+            'retry_delay': datetime.timedelta(hours=2),
         }
         tt2 = tt.copy()
         tt2['type'] = 'update-hg'
         tt2['description'] = 'Update a mercurial repository'
         tt2['backend_name'] = 'swh.loader.mercurial.tasks.UpdateHgRepository'
         tt2['max_queue_length'] = 42
+        tt2['num_retries'] = None
+        tt2['retry_delay'] = None
 
         self.task_types = {
             tt['type']: tt,
@@ -61,6 +65,7 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
         }
         self.task2_template = t2_template = copy.deepcopy(t1_template)
         t2_template['type'] = tt2['type']
+        t2_template['policy'] = 'oneshot'
 
     def tearDown(self):
         self.backend.db.close()
@@ -137,10 +142,17 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
             self.assertEqual(task['status'], 'next_run_not_scheduled')
             self.assertEqual(task['current_interval'],
                              task_type['default_interval'])
+            self.assertEqual(task['policy'], orig_task.get('policy',
+                                                           'recurring'))
+            self.assertEqual(task['retries_left'],
+                             task_type['num_retries'] or 0)
             ids.add(task['id'])
             del task['id']
             del task['status']
             del task['current_interval']
+            del task['retries_left']
+            if 'policy' not in orig_task:
+                del task['policy']
             self.assertEqual(task, orig_task)
 
     @istest
