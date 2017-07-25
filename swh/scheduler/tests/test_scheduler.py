@@ -30,7 +30,7 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
         self.config = {'scheduling_db': 'dbname=' + self.TEST_DB_NAME}
         self.backend = SchedulerBackend(**self.config)
 
-        self.task_type = tt = {
+        tt = {
             'type': 'update-git',
             'description': 'Update a git repository',
             'backend_name': 'swh.loader.git.tasks.UpdateGitRepository',
@@ -40,11 +40,16 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
             'backoff_factor': 2,
             'max_queue_length': None,
         }
-        self.task_type2 = tt2 = tt.copy()
+        tt2 = tt.copy()
         tt2['type'] = 'update-hg'
         tt2['description'] = 'Update a mercurial repository'
         tt2['backend_name'] = 'swh.loader.mercurial.tasks.UpdateHgRepository'
         tt2['max_queue_length'] = 42
+
+        self.task_types = {
+            tt['type']: tt,
+            tt2['type']: tt2,
+        }
 
         self.task1_template = t1_template = {
             'type': tt['type'],
@@ -74,8 +79,7 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
 
     @istest
     def add_task_type(self):
-        tt = self.task_type
-        tt2 = self.task_type2
+        tt, tt2 = self.task_types.values()
         self.backend.create_task_type(tt)
         self.assertEqual(tt, self.backend.get_task_type(tt['type']))
         with self.assertRaisesRegex(psycopg2.IntegrityError,
@@ -87,8 +91,7 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
 
     @istest
     def get_task_types(self):
-        tt = self.task_type
-        tt2 = self.task_type2
+        tt, tt2 = self.task_types.values()
         self.backend.create_task_type(tt)
         self.backend.create_task_type(tt2)
         self.assertCountEqual([tt2, tt], self.backend.get_task_types())
@@ -115,21 +118,25 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
         ]
 
     def _create_task_types(self):
-        self.backend.create_task_type(self.task_type)
-        self.backend.create_task_type(self.task_type2)
+        for tt in self.task_types.values():
+            self.backend.create_task_type(tt)
 
     @istest
     def create_tasks(self):
         self._create_task_types()
-        tasks = self._tasks_from_template(self.task1_template, utcnow(), 100)
+        tasks = (
+            self._tasks_from_template(self.task1_template, utcnow(), 100)
+            + self._tasks_from_template(self.task2_template, utcnow(), 100)
+        )
         ret = self.backend.create_tasks(tasks)
         ids = set()
         for task, orig_task in zip(ret, tasks):
             task = copy.deepcopy(task)
+            task_type = self.task_types[orig_task['type']]
             self.assertNotIn(task['id'], ids)
             self.assertEqual(task['status'], 'next_run_not_scheduled')
             self.assertEqual(task['current_interval'],
-                             self.task_type['default_interval'])
+                             task_type['default_interval'])
             ids.add(task['id'])
             del task['id']
             del task['status']
