@@ -35,7 +35,7 @@ comment on column task_type.max_queue_length is 'Maximum length of the queue for
 comment on column task_type.num_retries is 'Default number of retries on transient failures';
 comment on column task_type.retry_delay is 'Retry delay for the task';
 
-create type task_status as enum ('next_run_not_scheduled', 'next_run_scheduled', 'disabled', 'completed');
+create type task_status as enum ('next_run_not_scheduled', 'next_run_scheduled', 'completed', 'disabled');
 comment on type task_status is 'Status of a given task';
 
 create type task_policy as enum ('recurring', 'oneshot');
@@ -57,6 +57,7 @@ comment on column task.arguments is 'Arguments passed to the underlying job sche
 comment on column task.next_run is 'The next run of this task should be run on or after that time';
 comment on column task.current_interval is 'The interval between two runs of this task, '
                                            'taking into account the backoff factor';
+comment on column task.policy is 'Whether the task is one-shot or recurring';
 comment on column task.retries_left is 'The number of "short delay" retries of the task in case of '
                                        'transient failure';
 
