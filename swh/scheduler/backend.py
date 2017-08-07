@@ -145,7 +145,8 @@ class SchedulerBackend(SWHConfig):
 
     task_type_keys = [
         'type', 'description', 'backend_name', 'default_interval',
-        'min_interval', 'max_interval', 'backoff_factor',
+        'min_interval', 'max_interval', 'backoff_factor', 'max_queue_length',
+        'num_retries', 'retry_delay',
     ]
 
     def _format_query(self, query, keys):
@@ -188,6 +189,8 @@ class SchedulerBackend(SWHConfig):
                 two task runs
             backoff_factor (float): the factor by which the interval changes
                 at each run
+            max_queue_length (int): the maximum length of the task queue for
+                this task type
         """
         query = self._format_query(
             """insert into task_type ({keys}) values ({placeholders})""",
@@ -208,9 +211,20 @@ class SchedulerBackend(SWHConfig):
 
         return ret
 
-    task_keys = ['id', 'type', 'arguments', 'next_run', 'current_interval',
-                 'status']
-    task_create_keys = ['type', 'arguments', 'next_run']
+    @autocommit
+    def get_task_types(self, cursor=None):
+        query = self._format_query(
+            "select {keys} from task_type",
+            self.task_type_keys,
+        )
+        cursor.execute(query)
+        ret = cursor.fetchall()
+        return ret
+
+    task_create_keys = [
+        'type', 'arguments', 'next_run', 'policy', 'retries_left',
+    ]
+    task_keys = task_create_keys + ['id', 'current_interval', 'status']
 
     @autocommit
     def create_tasks(self, tasks, cursor=None):
@@ -241,7 +255,16 @@ class SchedulerBackend(SWHConfig):
         return None
 
     @autocommit
-    def peek_ready_tasks(self, timestamp=None, num_tasks=None, cursor=None):
+    def get_tasks(self, task_ids, cursor=None):
+        """Retrieve the info of tasks whose ids are listed."""
+        query = self._format_query('select {keys} from task where id in %s',
+                                   self.task_keys)
+        cursor.execute(query, (tuple(task_ids),))
+        return cursor.fetchall()
+
+    @autocommit
+    def peek_ready_tasks(self, task_type, timestamp=None, num_tasks=None,
+                         cursor=None):
         """Fetch the list of ready tasks
 
         Args:
@@ -256,13 +279,16 @@ class SchedulerBackend(SWHConfig):
         if timestamp is None:
             timestamp = utcnow()
 
-        cursor.execute('select * from swh_scheduler_peek_ready_tasks(%s, %s)',
-                       (timestamp, num_tasks))
+        cursor.execute(
+            'select * from swh_scheduler_peek_ready_tasks(%s, %s, %s)',
+            (task_type, timestamp, num_tasks)
+        )
 
         return cursor.fetchall()
 
     @autocommit
-    def grab_ready_tasks(self, timestamp=None, num_tasks=None, cursor=None):
+    def grab_ready_tasks(self, task_type, timestamp=None, num_tasks=None,
+                         cursor=None):
         """Fetch the list of ready tasks, and mark them as scheduled
 
         Args:
@@ -277,8 +303,10 @@ class SchedulerBackend(SWHConfig):
         if timestamp is None:
             timestamp = utcnow()
 
-        cursor.execute('select * from swh_scheduler_grab_ready_tasks(%s, %s)',
-                       (timestamp, num_tasks))
+        cursor.execute(
+            'select * from swh_scheduler_grab_ready_tasks(%s, %s, %s)',
+            (task_type, timestamp, num_tasks)
+        )
 
         return cursor.fetchall()
 
