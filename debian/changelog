@@ -1,3 +1,12 @@
+swh-scheduler (0.0.16-1~swh1) unstable-swh; urgency=medium
+
+  * Release swh-scheduler v0.0.16
+  * add some tests
+  * implement one-shot tasks
+  * implement retry on temporary failure
+
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Mon, 07 Aug 2017 18:44:03 +0200
+
 swh-scheduler (0.0.15-1~swh1) unstable-swh; urgency=medium
 
   * Release swh-scheduler v0.0.15
