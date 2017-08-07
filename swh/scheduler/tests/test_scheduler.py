@@ -10,6 +10,7 @@ import random
 import unittest
 
 from arrow import utcnow
+from nose.plugins.attrib import attr
 from nose.tools import istest
 import psycopg2
 
@@ -21,6 +22,7 @@ TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 TEST_DATA_DIR = os.path.join(TEST_DIR, '../../../../swh-storage-testdata')
 
 
+@attr('db')
 class Scheduler(SingleDbTestFixture, unittest.TestCase):
     TEST_DB_NAME = 'softwareheritage-scheduler-test'
     TEST_DB_DUMP = os.path.join(TEST_DATA_DIR, 'dumps/swh-scheduler.dump')
