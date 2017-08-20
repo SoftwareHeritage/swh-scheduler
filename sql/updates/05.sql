@@ -3,6 +3,8 @@
 -- to_version: 05
 -- description: Add reccurrence logic for temporary failures and one-shot tasks
 
+alter type task_status add value if not exists 'completed' before 'disabled';
+
 begin;
 
 insert into dbversion (version, release, description)
@@ -13,8 +15,6 @@ alter table task_type add column retry_delay interval;
 
 comment on column task_type.num_retries is 'Default number of retries on transient failures';
 comment on column task_type.retry_delay is 'Retry delay for the task';
-
-alter type task_status add value if not exists 'completed' before 'disabled';
 
 create type task_policy as enum ('recurring', 'oneshot');
 comment on type task_policy is 'Recurrence policy of the given task';
@@ -62,8 +62,8 @@ $$;
 
 comment on function swh_scheduler_create_tasks_from_temp () is 'Create tasks in bulk from the temporary table';
 
-drop trigger update_interval_on_task_end;
-drop function swh_scheduler_compute_new_task_interval (task_type, current_interval, end_status) cascade;
+drop trigger update_interval_on_task_end on task_run;
+drop function swh_scheduler_compute_new_task_interval (text, interval, task_run_status) cascade;
 drop function swh_scheduler_update_task_interval () cascade;
 
 create or replace function swh_scheduler_update_task_on_task_end ()
