@@ -4,6 +4,7 @@
 -- description: Add reccurrence logic for temporary failures and one-shot tasks
 
 alter type task_status add value if not exists 'completed' before 'disabled';
+alter type task_run_status add value if not exists 'permfailed' after 'failed';
 
 begin;
 
@@ -104,12 +105,12 @@ begin
           update task
             set status = 'next_run_not_scheduled',
                 next_run = now() + new_interval,
-                interval = new_interval,
-                retries_left = cur_task_type.max_retries
+                current_interval = new_interval,
+                retries_left = coalesce(cur_task_type.num_retries, 0)
             where id = cur_task.id;
       end case;
     else -- new.status in 'failed', 'lost'
-      if coalesce(cur_task.retries_left, 0) > 0 then
+      if cur_task.retries_left > 0 then
         update task
           set status = 'next_run_not_scheduled',
               next_run = now() + cur_task_type.retry_delay,
@@ -125,7 +126,7 @@ begin
             update task
               set status = 'next_run_not_scheduled',
                   next_run = now() + cur_task.current_interval,
-                  retries_left = cur_task_type.max_retries
+                  retries_left = coalesce(cur_task_type.num_retries, 0)
               where id = cur_task.id;
         end case;
       end if; -- retries
