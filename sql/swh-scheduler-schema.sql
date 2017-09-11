@@ -8,16 +8,16 @@ create table dbversion
 comment on table dbversion is 'Schema update tracking';
 
 insert into dbversion (version, release, description)
-       values (5, now(), 'Work In Progress');
+       values (6, now(), 'Work In Progress');
 
 create table task_type (
   type text primary key,
   description text not null,
   backend_name text not null,
-  default_interval interval not null,
-  min_interval interval not null,
-  max_interval interval not null,
-  backoff_factor float not null,
+  default_interval interval,
+  min_interval interval,
+  max_interval interval,
+  backoff_factor float,
   max_queue_length bigint,
   num_retries bigint,
   retry_delay interval
@@ -46,10 +46,11 @@ create table task (
   type text not null references task_type(type),
   arguments jsonb not null,
   next_run timestamptz not null,
-  current_interval interval not null,
+  current_interval interval,
   status task_status not null,
   policy task_policy not null default 'recurring',
-  retries_left bigint not null default 0
+  retries_left bigint not null default 0,
+  check (policy <> 'recurring' or current_interval is not null)
 );
 comment on table task is 'Schedule of recurring tasks';
 comment on column task.arguments is 'Arguments passed to the underlying job scheduler. '
