@@ -17,7 +17,7 @@ alter table task_type
 
 alter table task
     alter column current_interval drop not null,
-    add constraint check (policy <> 'recurring' or current_interval is not null);
+    add constraint task_check check (policy <> 'recurring' or current_interval is not null);
 
 commit;
 
