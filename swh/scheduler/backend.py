@@ -279,6 +279,7 @@ class SchedulerBackend(SWHConfig):
         """Fetch the list of ready tasks
 
         Args:
+            task_type (str): filtering task per their type
             timestamp (datetime.datetime): peek tasks that need to be executed
                 before that timestamp
             num_tasks (int): only peek at num_tasks tasks
@@ -303,6 +304,7 @@ class SchedulerBackend(SWHConfig):
         """Fetch the list of ready tasks, and mark them as scheduled
 
         Args:
+            task_type (str): filtering task per their type
             timestamp (datetime.datetime): grab tasks that need to be executed
                 before that timestamp
             num_tasks (int): only grab num_tasks tasks
