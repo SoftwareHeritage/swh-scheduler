@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 def parse_requirements():
@@ -19,10 +19,8 @@ setup(
     author='Software Heritage developers',
     author_email='swh-devel@inria.fr',
     url='https://forge.softwareheritage.org/diffusion/DSCH/',
-    packages=[
-        'swh.scheduler', 'swh.scheduler.celery_backend', 'swh.scheduler.tests'
-    ],
-    scripts=['bin/swh-worker-control'],   # scripts to package
+    packages=find_packages(),
+    scripts=['bin/swh-worker-control'],
     install_requires=parse_requirements(),
     entry_points='''
         [console_scripts]
