@@ -142,17 +142,20 @@ def schedule_tasks(ctx, columns, file):
 
 
 @task.command('list-pending')
+@click.option('--task-type', '-t', required=True,
+              help='The tasks\' type concerned by the listing')
 @click.option('--limit', '-l', required=False, type=click.INT,
               help='The maximum number of tasks to fetch')
 @click.option('--before', '-b', required=False, type=DATETIME,
               help='List all jobs supposed to run before the given date')
 @click.pass_context
-def list_pending_tasks(ctx, limit, before):
+def list_pending_tasks(ctx, task_type, limit, before):
     """List the tasks that are going to be run.
 
     You can override the number of tasks to fetch
     """
-    pending = ctx.obj.peek_ready_tasks(timestamp=before, num_tasks=limit)
+    pending = ctx.obj.peek_ready_tasks(task_type,
+                                       timestamp=before, num_tasks=limit)
     output = [
         'Found %d tasks\n' % len(pending)
     ]

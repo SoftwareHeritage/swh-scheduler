@@ -8,16 +8,16 @@ create table dbversion
 comment on table dbversion is 'Schema update tracking';
 
 insert into dbversion (version, release, description)
-       values (5, now(), 'Work In Progress');
+       values (6, now(), 'Work In Progress');
 
 create table task_type (
   type text primary key,
   description text not null,
   backend_name text not null,
-  default_interval interval not null,
-  min_interval interval not null,
-  max_interval interval not null,
-  backoff_factor float not null,
+  default_interval interval,
+  min_interval interval,
+  max_interval interval,
+  backoff_factor float,
   max_queue_length bigint,
   num_retries bigint,
   retry_delay interval
@@ -46,10 +46,11 @@ create table task (
   type text not null references task_type(type),
   arguments jsonb not null,
   next_run timestamptz not null,
-  current_interval interval not null,
+  current_interval interval,
   status task_status not null,
   policy task_policy not null default 'recurring',
-  retries_left bigint not null default 0
+  retries_left bigint not null default 0,
+  check (policy <> 'recurring' or current_interval is not null)
 );
 comment on table task is 'Schedule of recurring tasks';
 comment on column task.arguments is 'Arguments passed to the underlying job scheduler. '
@@ -66,7 +67,7 @@ create index on task(next_run);
 create index task_args on task using btree ((arguments -> 'args'));
 create index task_kwargs on task using gin ((arguments -> 'kwargs'));
 
-create type task_run_status as enum ('scheduled', 'started', 'eventful', 'uneventful', 'failed', 'lost');
+create type task_run_status as enum ('scheduled', 'started', 'eventful', 'uneventful', 'failed', 'permfailed', 'lost');
 comment on type task_run_status is 'Status of a given task run';
 
 create table task_run (
@@ -263,12 +264,12 @@ begin
           update task
             set status = 'next_run_not_scheduled',
                 next_run = now() + new_interval,
-                interval = new_interval,
-                retries_left = cur_task_type.max_retries
+                current_interval = new_interval,
+                retries_left = coalesce(cur_task_type.num_retries, 0)
             where id = cur_task.id;
       end case;
     else -- new.status in 'failed', 'lost'
-      if coalesce(cur_task.retries_left, 0) > 0 then
+      if cur_task.retries_left > 0 then
         update task
           set status = 'next_run_not_scheduled',
               next_run = now() + cur_task_type.retry_delay,
@@ -284,7 +285,7 @@ begin
             update task
               set status = 'next_run_not_scheduled',
                   next_run = now() + cur_task.current_interval,
-                  retries_left = cur_task_type.max_retries
+                  retries_left = coalesce(cur_task_type.num_retries, 0)
               where id = cur_task.id;
         end case;
       end if; -- retries

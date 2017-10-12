@@ -175,22 +175,25 @@ class SchedulerBackend(SWHConfig):
     def create_task_type(self, task_type, cursor=None):
         """Create a new task type ready for scheduling.
 
-        A task type is a dictionary with the following keys:
-            type (str): an identifier for the task type
-            description (str): a human-readable description of what the task
-                does
-            backend_name (str): the name of the task in the job-scheduling
-                backend
-            default_interval (datetime.timedelta): the default interval
-                between two task runs
-            min_interval (datetime.timedelta): the minimum interval between
-                two task runs
-            max_interval (datetime.timedelta): the maximum interval between
-                two task runs
-            backoff_factor (float): the factor by which the interval changes
-                at each run
-            max_queue_length (int): the maximum length of the task queue for
-                this task type
+        Args:
+            task_type (dict): a dictionary with the following keys:
+
+                - type (str): an identifier for the task type
+                - description (str): a human-readable description of what the
+                  task does
+                - backend_name (str): the name of the task in the
+                  job-scheduling backend
+                - default_interval (datetime.timedelta): the default interval
+                  between two task runs
+                - min_interval (datetime.timedelta): the minimum interval
+                  between two task runs
+                - max_interval (datetime.timedelta): the maximum interval
+                  between two task runs
+                - backoff_factor (float): the factor by which the interval
+                  changes at each run
+                - max_queue_length (int): the maximum length of the task queue
+                  for this task type
+
         """
         query = self._format_query(
             """insert into task_type ({keys}) values ({placeholders})""",
@@ -230,13 +233,21 @@ class SchedulerBackend(SWHConfig):
     def create_tasks(self, tasks, cursor=None):
         """Create new tasks.
 
-        A task is a dictionary with the following keys:
-            type (str): the task type
-            arguments (dict): the arguments for the task runner
-                args (list of str): arguments
-                kwargs (dict str -> str): keyword arguments
-            next_run (datetime.datetime): the next scheduled run for the task
-        This returns a list of created task ids.
+        Args:
+            tasks (list): each task is a dictionary with the following keys:
+
+                - type (str): the task type
+                - arguments (dict): the arguments for the task runner, keys:
+
+                      - args (list of str): arguments
+                      - kwargs (dict str -> str): keyword arguments
+
+                - next_run (datetime.datetime): the next scheduled run for the
+                  task
+
+        Returns:
+            a list of created task ids.
+
         """
         cursor.execute('select swh_scheduler_mktemp_task()')
         self.copy_to(tasks, 'tmp_task', self.task_create_keys, cursor)
@@ -268,6 +279,7 @@ class SchedulerBackend(SWHConfig):
         """Fetch the list of ready tasks
 
         Args:
+            task_type (str): filtering task per their type
             timestamp (datetime.datetime): peek tasks that need to be executed
                 before that timestamp
             num_tasks (int): only peek at num_tasks tasks
@@ -292,6 +304,7 @@ class SchedulerBackend(SWHConfig):
         """Fetch the list of ready tasks, and mark them as scheduled
 
         Args:
+            task_type (str): filtering task per their type
             timestamp (datetime.datetime): grab tasks that need to be executed
                 before that timestamp
             num_tasks (int): only grab num_tasks tasks
@@ -322,8 +335,10 @@ class SchedulerBackend(SWHConfig):
             backend_id (str): the identifier of the job in the backend
             metadata (dict): metadata to add to the task_run entry
             timestamp (datetime.datetime): the instant the event occurred
+
         Returns:
             a fresh task_run entry
+
         """
 
         if metadata is None:
@@ -344,11 +359,13 @@ class SchedulerBackend(SWHConfig):
         """Schedule a bunch of task runs.
 
         Args:
-            task_runs: a list of dicts with keys:
-                task (int): the identifier for the task being scheduled
-                backend_id (str): the identifier of the job in the backend
-                metadata (dict): metadata to add to the task_run entry
-                scheduled (datetime.datetime): the instant the event occurred
+            task_runs (list): a list of dicts with keys:
+
+                - task (int): the identifier for the task being scheduled
+                - backend_id (str): the identifier of the job in the backend
+                - metadata (dict): metadata to add to the task_run entry
+                - scheduled (datetime.datetime): the instant the event occurred
+
         Returns:
             None
         """
@@ -367,8 +384,10 @@ class SchedulerBackend(SWHConfig):
             backend_id (str): the identifier of the job in the backend
             metadata (dict): metadata to add to the task_run entry
             timestamp (datetime.datetime): the instant the event occurred
+
         Returns:
             the updated task_run entry
+
         """
 
         if metadata is None:
@@ -387,16 +406,19 @@ class SchedulerBackend(SWHConfig):
     @autocommit
     def end_task_run(self, backend_id, status, metadata=None, timestamp=None,
                      result=None, cursor=None):
-        """Mark a given task as ended, updating the corresponding task_run
-           entry in the database.
+        """Mark a given task as ended, updating the corresponding task_run entry in the
+        database.
 
         Args:
             backend_id (str): the identifier of the job in the backend
-            status ('eventful', 'uneventful', 'failed'): how the task ended
+            status (str): how the task ended; one of: 'eventful', 'uneventful',
+                'failed'
             metadata (dict): metadata to add to the task_run entry
             timestamp (datetime.datetime): the instant the event occurred
+
         Returns:
             the updated task_run entry
+
         """
 
         if metadata is None:
