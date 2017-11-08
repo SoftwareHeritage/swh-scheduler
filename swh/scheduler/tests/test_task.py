@@ -23,7 +23,7 @@ class Task(unittest.TestCase):
     @istest
     def add_task(self):
         class AddTask(task.Task):
-            def run(self, x, y):
+            def run_task(self, x, y):
                 return x + y
 
         r = AddTask().apply([2, 3])
