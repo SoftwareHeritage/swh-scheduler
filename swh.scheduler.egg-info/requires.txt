@@ -1,6 +1,6 @@
 Click
 arrow
-celery<4
+celery
 psycopg2
 swh.core>=0.0.34
 vcversioner
