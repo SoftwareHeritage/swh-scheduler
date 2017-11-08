@@ -1,3 +1,10 @@
+swh-scheduler (0.0.18-1~swh1) unstable-swh; urgency=medium
+
+  * Release swh.scheduler v0.0.18
+  * Celery 4 compatibility
+
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Wed, 08 Nov 2017 17:06:22 +0100
+
 swh-scheduler (0.0.17-1~swh1) unstable-swh; urgency=medium
 
   * Release swh.scheduler version 0.0.17
