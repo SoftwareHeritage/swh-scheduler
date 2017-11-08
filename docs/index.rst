@@ -1,3 +1,5 @@
+.. _swh-scheduler:
+
 Software Heritage - Development Documentation
 =============================================
 
