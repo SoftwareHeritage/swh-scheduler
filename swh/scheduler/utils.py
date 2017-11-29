@@ -4,6 +4,9 @@
 # See top-level LICENSE file for more information
 
 
+import datetime
+
+
 def get_task(task_name):
     """Retrieve task object in our application instance by its fully
     qualified python name.
@@ -20,3 +23,27 @@ def get_task(task_name):
     for module in app.conf.CELERY_IMPORTS:
         __import__(module)
     return app.tasks[task_name]
+
+
+def create_oneshot_task_dict(type, *args, **kwargs):
+    """Create a oneshot task scheduled for as soon as possible.
+
+    Args:
+        type (str): Type of oneshot task as per swh-scheduler's db
+                    table task_type's column (Ex: origin-update-git,
+                    swh-deposit-archive-checks)
+
+    Returns:
+        Expected dictionary for the one-shot task scheduling api
+        (swh.scheduler.backend.create_tasks)
+
+    """
+    return {
+        'policy': 'oneshot',
+        'type': type,
+        'next_run': datetime.datetime.now(tz=datetime.timezone.utc),
+        'arguments': {
+            'args': args if args else [],
+            'kwargs': kwargs if kwargs else {},
+        }
+    }
