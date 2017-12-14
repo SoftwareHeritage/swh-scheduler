@@ -55,7 +55,7 @@ class SchedulerBackend(SWHConfig):
 
     CONFIG_BASE_FILENAME = 'scheduler.ini'
     DEFAULT_CONFIG = {
-        'scheduling_db': ('str', 'dbname=swh-scheduler'),
+        'scheduling_db': ('str', 'dbname=softwareheritage-scheduler-dev'),
     }
 
     def __init__(self, **override_config):
