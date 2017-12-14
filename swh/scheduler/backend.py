@@ -246,7 +246,7 @@ class SchedulerBackend(SWHConfig):
                   task
 
         Returns:
-            a list of created task ids.
+            a list of created tasks.
 
         """
         cursor.execute('select swh_scheduler_mktemp_task()')
