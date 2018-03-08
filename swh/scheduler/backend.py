@@ -35,7 +35,7 @@ def autocommit(fn):
 
         try:
             ret = fn(self, *args, **kwargs)
-        except:
+        except Exception:
             if autocommit:
                 self.rollback()
             raise
