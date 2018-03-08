@@ -272,7 +272,7 @@ begin
       if cur_task.retries_left > 0 then
         update task
           set status = 'next_run_not_scheduled',
-              next_run = now() + cur_task_type.retry_delay,
+              next_run = now() + coalesce(cur_task_type.retry_delay, interval '1 hour'),
               retries_left = cur_task.retries_left - 1
           where id = cur_task.id;
       else -- no retries left
