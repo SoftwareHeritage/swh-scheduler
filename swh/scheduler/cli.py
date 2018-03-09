@@ -114,6 +114,15 @@ def schedule_tasks(ctx, columns, delimiter, file):
     The CSV can be read either from a named file, or from stdin (use - as
     filename).
 
+    Use sample:
+
+    cat scheduling-task.txt | \
+        python3 -m swh.scheduler.cli \
+            --database 'service=swh-scheduler-dev' \
+            task schedule \
+                --columns type --columns kwargs --columns policy \
+                --delimiter ';' -
+
     """
     tasks = []
     now = arrow.utcnow()
