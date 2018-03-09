@@ -38,7 +38,7 @@ def pretty_print_list(list, indent):
 
 def pretty_print_dict(dict, indent):
     """Pretty-print a list"""
-    return ''.join('%s%s:%s\n' %
+    return ''.join('%s%s: %s\n' %
                    (' ' * indent, click.style(key, bold=True), value)
                    for key, value in dict.items())
 
