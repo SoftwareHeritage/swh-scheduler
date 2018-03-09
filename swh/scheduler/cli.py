@@ -91,9 +91,10 @@ def task(ctx):
               default=['type', 'args', 'kwargs', 'next_run'],
               type=click.Choice(['type', 'args', 'kwargs', 'next_run']),
               help='columns present in the CSV file')
+@click.option('--delimiter', '-d', default=',')
 @click.argument('file', type=click.File(encoding='utf-8'))
 @click.pass_context
-def schedule_tasks(ctx, columns, file):
+def schedule_tasks(ctx, columns, delimiter, file):
     """Schedule tasks from a CSV input file.
 
     The following columns are expected, and can be set through the -c option:
@@ -116,8 +117,7 @@ def schedule_tasks(ctx, columns, file):
     tasks = []
     now = arrow.utcnow()
 
-    reader = csv.reader(file)
-
+    reader = csv.reader(file, delimiter=delimiter)
     for line in reader:
         task = dict(zip(columns, line))
         args = json.loads(task.pop('args', '[]'))
