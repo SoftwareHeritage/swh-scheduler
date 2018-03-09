@@ -89,7 +89,8 @@ def task(ctx):
 @task.command('schedule')
 @click.option('--columns', '-c', multiple=True,
               default=['type', 'args', 'kwargs', 'next_run'],
-              type=click.Choice(['type', 'args', 'kwargs', 'next_run']),
+              type=click.Choice([
+                  'type', 'args', 'kwargs', 'policy', 'next_run']),
               help='columns present in the CSV file')
 @click.option('--delimiter', '-d', default=',')
 @click.argument('file', type=click.File(encoding='utf-8'))
