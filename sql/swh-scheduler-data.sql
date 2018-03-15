@@ -16,13 +16,13 @@ insert into task_type(
        description,
        backend_name,
        default_interval, min_interval, max_interval, backoff_factor,
+       num_retries,
        max_queue_length)
 values (
        'swh-deposit-archive-loading',
        'Loading deposit archive into swh through swh-loader-tar',
        'swh.deposit.loader.tasks.LoadDepositArchiveTsk',
-       '1 day', '1 day', '1 day', 1,
- 1000);
+       '1 day', '1 day', '1 day', 1, 3, 1000);
 
 
 insert into task_type(
@@ -30,13 +30,12 @@ insert into task_type(
        description,
        backend_name,
        default_interval, min_interval, max_interval, backoff_factor,
-       max_queue_length)
+       num_retries, max_queue_length)
 values (
        'swh-deposit-archive-checks',
-       'Loading deposit archive into swh through swh-loader-tar',
+       'Pre-checking deposit step before loading into swh archive',
        'swh.deposit.loader.tasks.ChecksDepositTsk',
-       '1 day', '1 day', '1 day', 1,
- 1000);
+       '1 day', '1 day', '1 day', 1, 3, 1000);
 
 insert into task_type(
        type,
