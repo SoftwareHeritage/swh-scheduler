@@ -226,6 +226,39 @@ as $$
   returning *;
 $$;
 
+create type task_record as (
+    task_id bigint,
+    task_policy task_policy,
+    task_status task_status,
+    task_run_id bigint,
+    arguments jsonb,
+    type text,
+    backend_id text,
+    metadata jsonb,
+    scheduled timestamptz,
+    started timestamptz,
+    ended timestamptz
+);
+
+create or replace function swh_scheduler_task_to_archive(
+  ts timestamptz, last_id bigint default -1, lim bigint default 10)
+  returns setof task_record
+  language sql
+as $$
+   select t.id as task_id, t.policy as task_policy,
+          t.status as task_status, tr.id as task_run_id,
+          t.arguments, t.type, tr.backend_id, tr.metadata,
+          tr.scheduled, tr.started, tr.ended
+          from task t inner join task_run tr on t.id=tr.task
+   where ((t.policy = 'oneshot' and t.status ='completed') or
+          (t.policy = 'recurring' and t.status ='disabled')) and
+          tr.ended < ts and
+          t.id > last_id
+   order by t.id
+   limit lim;
+$$;
+
+
 create or replace function swh_scheduler_update_task_on_task_end ()
   returns trigger
   language plpgsql
