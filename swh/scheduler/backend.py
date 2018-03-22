@@ -440,7 +440,9 @@ class SchedulerBackend(SWHConfig):
         """Returns the list of task/task_run prior to a given date to archive.
 
         """
+        last_task_run_id = None
         while True:
+            row = None
             cursor.execute(
                 "select * from swh_scheduler_task_to_archive(%s, %s, %s)",
                 (timestamp, last_id, limit)
@@ -452,12 +454,15 @@ class SchedulerBackend(SWHConfig):
                     i: v for i, v in enumerate(row['arguments']['args'])
                 }
                 yield row
+
             if not row:
                 break
             _id = row.get('task_id')
-            if last_id == _id:
+            _task_run_id = row.get('task_run_id')
+            if last_id == _id and last_task_run_id == _task_run_id:
                 break
             last_id = _id
+            last_task_run_id = _task_run_id
 
     @autocommit
     def delete_archive_tasks(self, tasks, cursor=None):

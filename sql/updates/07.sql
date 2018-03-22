@@ -34,7 +34,7 @@ as $$
           (t.policy = 'recurring' and t.status ='disabled')) and
           tr.ended < ts and
           t.id > last_id
-   order by t.id
+   order by task_id, task_run_id
    limit lim;
 $$;
 
