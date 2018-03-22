@@ -1,16 +1,17 @@
-# Copyright (C) 2016  The Software Heritage developers
+# Copyright (C) 2016-2018  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import arrow
+import click
 import csv
 import json
 import locale
-
-import arrow
-import click
+import logging
 
 from .backend import SchedulerBackend
+from .backend_es import SWHElasticSearchClient
 
 
 locale.setlocale(locale.LC_ALL, '')
@@ -173,6 +174,50 @@ def list_pending_tasks(ctx, task_type, limit, before):
         output.append(pretty_print_task(task))
 
     click.echo_via_pager('\n'.join(output))
+
+
+@task.command('archive')
+@click.option('--before', '-b', default='2016-02-22',
+              help='Task whose ended date is anterior will be archived.')
+@click.option('--dry-run/--no-dry-run', is_flag=True, default=True,
+              help='Default to list only what would be archived.')
+@click.option('--verbose', is_flag=True, default=False,
+              help='Default to list only what would be archived.')
+@click.option('--delete/--no-delete', is_flag=True, default=False,
+              help='Delete archived tasks (default)')
+@click.option('--start-from', type=click.INT, default=-1,
+              help='(Optional) default task id to start from. Default is -1.')
+@click.pass_context
+def archive_tasks(ctx, before, dry_run, verbose, delete, start_from):
+    """Archive task/task_run whose (task_type is 'oneshot' and task_status
+       is 'completed') or (task_type is 'recurring' and task_status is
+       'disabled').
+
+       With --dry-run flag set (default), only list those.
+
+    """
+    es = SWHElasticSearchClient()
+    # es.create_index()  # idempotent on existence
+    logging.basicConfig(
+        level=logging.DEBUG if verbose else logging.INFO,
+        format='%(asctime)s %(process)d %(message)s'
+    )
+    log = logging.getLogger('swh.scheduler.cli.archive')
+    log.setLevel(logging.INFO)
+
+    tasks_to_clean = []
+    count = 0
+    for entry in ctx.obj.filter_task_to_archive(before, last_id=start_from):
+        # first, index the data
+        count += 1
+        log.debug('entry: %s' % entry)
+        result = es.index(entry)
+        if result:
+            log.debug('result: %s' % result)
+            tasks_to_clean.append(entry['task_id'])
+
+    if delete:
+        ctx.obj.delete_archive_tasks(tasks_to_clean)
 
 
 @cli.group('task-run')

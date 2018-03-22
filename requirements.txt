@@ -7,5 +7,4 @@ celery
 Click
 psycopg2
 vcversioner
-
-
+elasticsearch

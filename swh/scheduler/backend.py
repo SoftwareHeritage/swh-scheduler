@@ -433,3 +433,33 @@ class SchedulerBackend(SWHConfig):
         )
 
         return cursor.fetchone()
+
+    @autocommit
+    def filter_task_to_archive(self, timestamp, limit=10, last_id=-1,
+                               cursor=None):
+        """Returns the list of task/task_run prior to a given date to archive.
+
+        """
+        while True:
+            cursor.execute(
+                "select * from swh_scheduler_task_to_archive(%s, %s, %s)",
+                (timestamp, last_id, limit)
+            )
+            for row in cursor:
+                # nested type index does not accept bare values
+                # transform it as a dict to comply with this
+                row['arguments']['args'] = {
+                    i: v for i, v in enumerate(row['arguments']['args'])
+                }
+                yield row
+            if not row:
+                break
+            _id = row.get('task_id')
+            if last_id == _id:
+                break
+            last_id = _id
+
+    @autocommit
+    def delete_archive_tasks(self, tasks, cursor=None):
+        cursor.execute("select * from swh_scheduler_delete_archive_tasks(%s)",
+                       tasks)
