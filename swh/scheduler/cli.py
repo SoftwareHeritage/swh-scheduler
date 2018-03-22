@@ -10,6 +10,7 @@ import json
 import locale
 import logging
 
+from swh.core import utils
 from .backend import SchedulerBackend
 from .backend_es import SWHElasticSearchClient
 
@@ -183,12 +184,12 @@ def list_pending_tasks(ctx, task_type, limit, before):
               help='Default to list only what would be archived.')
 @click.option('--verbose', is_flag=True, default=False,
               help='Default to list only what would be archived.')
-@click.option('--delete/--no-delete', is_flag=True, default=False,
-              help='Delete archived tasks (default)')
+@click.option('--cleanup/--no-cleanup', is_flag=True, default=False,
+              help='Clean up archived tasks (default)')
 @click.option('--start-from', type=click.INT, default=-1,
               help='(Optional) default task id to start from. Default is -1.')
 @click.pass_context
-def archive_tasks(ctx, before, dry_run, verbose, delete, start_from):
+def archive_tasks(ctx, before, dry_run, verbose, cleanup, start_from):
     """Archive task/task_run whose (task_type is 'oneshot' and task_status
        is 'completed') or (task_type is 'recurring' and task_status is
        'disabled').
@@ -198,26 +199,29 @@ def archive_tasks(ctx, before, dry_run, verbose, delete, start_from):
     """
     es = SWHElasticSearchClient()
     # es.create_index()  # idempotent on existence
-    logging.basicConfig(
-        level=logging.DEBUG if verbose else logging.INFO,
-        format='%(asctime)s %(process)d %(message)s'
-    )
+    logging.basicConfig(level=logging.DEBUG if verbose else logging.INFO)
     log = logging.getLogger('swh.scheduler.cli.archive')
-    log.setLevel(logging.INFO)
+    logging.getLogger('urllib3').setLevel(logging.WARN)
+    logging.getLogger('elasticsearch').setLevel(logging.WARN)
 
-    tasks_to_clean = []
-    count = 0
-    for entry in ctx.obj.filter_task_to_archive(before, last_id=start_from):
-        # first, index the data
-        count += 1
-        log.debug('entry: %s' % entry)
-        result = es.index(entry)
-        if result:
+    def index_data(before, last_id, backend=ctx.obj):
+        for entry in backend.filter_task_to_archive(
+                before, last_id=last_id):
+            log.debug('entry: %s' % entry)
+            result = es.index(entry)
+            if not result:
+                log.error('Error during indexation: %s, skipping', result)
+                continue
             log.debug('result: %s' % result)
-            tasks_to_clean.append(entry['task_id'])
+            yield entry
 
-    if delete:
-        ctx.obj.delete_archive_tasks(tasks_to_clean)
+    gen = index_data(before, last_id=start_from)
+    if cleanup:
+        for task_ids in utils.grouper(gen, 1000):
+            ctx.obj.delete_archive_tasks([t['task_id'] for t in task_ids])
+    else:
+        for task_id in gen:
+            log.info('Indexing: %s' % task_id)
 
 
 @cli.group('task-run')
