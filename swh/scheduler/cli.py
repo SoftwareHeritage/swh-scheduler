@@ -180,6 +180,10 @@ def list_pending_tasks(ctx, task_type, limit, before):
 @task.command('archive')
 @click.option('--before', '-b', default='2016-02-22',
               help='Task whose ended date is anterior will be archived.')
+@click.option('--batch-index', default=1000, type=click.INT,
+              help='Batch size of tasks to archive')
+@click.option('--batch-clean', default=1000, type=click.INT,
+              help='Batch size of task to clean after archival')
 @click.option('--dry-run/--no-dry-run', is_flag=True, default=True,
               help='Default to list only what would be archived.')
 @click.option('--verbose', is_flag=True, default=False,
@@ -189,7 +193,8 @@ def list_pending_tasks(ctx, task_type, limit, before):
 @click.option('--start-from', type=click.INT, default=-1,
               help='(Optional) default task id to start from. Default is -1.')
 @click.pass_context
-def archive_tasks(ctx, before, dry_run, verbose, cleanup, start_from):
+def archive_tasks(ctx, before, batch_index, batch_clean,
+                  dry_run, verbose, cleanup, start_from):
     """Archive task/task_run whose (task_type is 'oneshot' and task_status
        is 'completed') or (task_type is 'recurring' and task_status is
        'disabled').
@@ -204,9 +209,9 @@ def archive_tasks(ctx, before, dry_run, verbose, cleanup, start_from):
     logging.getLogger('urllib3').setLevel(logging.WARN)
     logging.getLogger('elasticsearch').setLevel(logging.WARN)
 
-    def index_data(before, last_id, backend=ctx.obj):
+    def index_data(before, last_id, batch_index, backend=ctx.obj):
         for entry in backend.filter_task_to_archive(
-                before, last_id=last_id):
+                before, last_id=last_id, limit=batch_index):
             log.debug('entry: %s' % entry)
             result = es.index(entry)
             if not result:
@@ -215,9 +220,9 @@ def archive_tasks(ctx, before, dry_run, verbose, cleanup, start_from):
             log.debug('result: %s' % result)
             yield entry
 
-    gen = index_data(before, last_id=start_from)
+    gen = index_data(before, last_id=start_from, batch_index=batch_index)
     if cleanup:
-        for task_ids in utils.grouper(gen, 1000):
+        for task_ids in utils.grouper(gen, n=batch_clean):
             ctx.obj.delete_archive_tasks([t['task_id'] for t in task_ids])
     else:
         for task_id in gen:
