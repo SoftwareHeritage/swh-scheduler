@@ -184,11 +184,11 @@ def list_pending_tasks(ctx, task_type, limit, before):
               help='Batch size of tasks to archive')
 @click.option('--batch-clean', default=1000, type=click.INT,
               help='Batch size of task to clean after archival')
-@click.option('--dry-run/--no-dry-run', is_flag=True, default=True,
+@click.option('--dry-run/--no-dry-run', is_flag=True, default=False,
               help='Default to list only what would be archived.')
 @click.option('--verbose', is_flag=True, default=False,
               help='Default to list only what would be archived.')
-@click.option('--cleanup/--no-cleanup', is_flag=True, default=False,
+@click.option('--cleanup/--no-cleanup', is_flag=True, default=True,
               help='Clean up archived tasks (default)')
 @click.option('--start-from', type=click.INT, default=-1,
               help='(Optional) default task id to start from. Default is -1.')
@@ -203,27 +203,33 @@ def archive_tasks(ctx, before, batch_index, batch_clean,
 
     """
     es = SWHElasticSearchClient()
-    # es.create_index()  # idempotent on existence
     logging.basicConfig(level=logging.DEBUG if verbose else logging.INFO)
     log = logging.getLogger('swh.scheduler.cli.archive')
     logging.getLogger('urllib3').setLevel(logging.WARN)
     logging.getLogger('elasticsearch').setLevel(logging.WARN)
 
     def index_data(before, last_id, batch_index, backend=ctx.obj):
-        for entry in backend.filter_task_to_archive(
+        for task in backend.filter_task_to_archive(
                 before, last_id=last_id, limit=batch_index):
-            log.debug('entry: %s' % entry)
-            result = es.index(entry)
+            log.debug('task: %s' % task)
+            if dry_run:
+                yield task
+                continue
+            result = es.index(task)
             if not result:
                 log.error('Error during indexation: %s, skipping', result)
                 continue
             log.debug('result: %s' % result)
-            yield entry
+            yield task
 
     gen = index_data(before, last_id=start_from, batch_index=batch_index)
     if cleanup:
         for task_ids in utils.grouper(gen, n=batch_clean):
-            ctx.obj.delete_archive_tasks([t['task_id'] for t in task_ids])
+            _task_ids = [t['task_id'] for t in task_ids]
+            log.debug('Cleanup %s tasks' % (len(_task_ids, )))
+            if dry_run:
+                continue
+            ctx.obj.delete_archive_tasks(_task_ids)
     else:
         for task_id in gen:
             log.info('Indexing: %s' % task_id)
