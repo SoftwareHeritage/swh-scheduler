@@ -20,6 +20,8 @@ create type task_record as (
     ended timestamptz
 );
 
+create index task_run_id_asc_idx on task_run(task asc, ended asc);
+
 create or replace function swh_scheduler_task_to_archive(
   ts timestamptz, last_id bigint default -1, lim bigint default 10)
   returns setof task_record
@@ -29,12 +31,12 @@ as $$
           t.status as task_status, tr.id as task_run_id,
           t.arguments, t.type, tr.backend_id, tr.metadata,
           tr.scheduled, tr.started, tr.ended
-   from task t inner join task_run tr on t.id=tr.task
+   from task_run tr inner join task t on tr.task=t.id
    where ((t.policy = 'oneshot' and t.status ='completed') or
           (t.policy = 'recurring' and t.status ='disabled')) and
           tr.ended < ts and
           t.id > last_id
-   order by task_id
+   order by tr.task, tr.ended
    limit lim;
 $$;
 
