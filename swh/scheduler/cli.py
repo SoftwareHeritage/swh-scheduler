@@ -179,7 +179,7 @@ def list_pending_tasks(ctx, task_type, limit, before):
 
 
 @task.command('archive')
-@click.option('--before', '-b', default='2016-02-22',
+@click.option('--before', '-b', default=None,
               help='Task whose ended date is anterior will be archived.')
 @click.option('--batch-index', default=1000, type=click.INT,
               help='Batch size of tasks to archive')
@@ -211,7 +211,11 @@ def archive_tasks(ctx, before, batch_index, batch_clean,
     if dry_run:
         log.info('**DRY-RUN**, only reading the db')
 
-    log.info('index: %s; cleanup: %s' % (not dry_run, not dry_run and cleanup))
+    if not before:  # Default to archive all tasks prior to now's last month
+        before = arrow.utcnow().format('YYYY-MM-01')
+
+    log.debug('index: %s; cleanup: %s' % (
+        not dry_run, not dry_run and cleanup))
 
     def group_by_index_name(data, es_client=es_client):
         ended = data['ended']
