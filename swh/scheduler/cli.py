@@ -6,6 +6,7 @@
 import arrow
 import click
 import csv
+import itertools
 import json
 import locale
 import logging
@@ -202,37 +203,46 @@ def archive_tasks(ctx, before, batch_index, batch_clean,
        With --dry-run flag set (default), only list those.
 
     """
-    es = SWHElasticSearchClient()
+    es_client = SWHElasticSearchClient()
     logging.basicConfig(level=logging.DEBUG if verbose else logging.INFO)
     log = logging.getLogger('swh.scheduler.cli.archive')
     logging.getLogger('urllib3').setLevel(logging.WARN)
     logging.getLogger('elasticsearch').setLevel(logging.WARN)
+    if dry_run:
+        log.info('**DRY-RUN**, only reading the db')
+
+    log.info('index: %s; cleanup: %s' % (not dry_run, not dry_run and cleanup))
+
+    def group_by_index_name(data, es_client=es_client):
+        ended = data['ended']
+        return es_client.compute_index_name(ended.year, ended.month)
 
     def index_data(before, last_id, batch_index, backend=ctx.obj):
-        for task in backend.filter_task_to_archive(
-                before, last_id=last_id, limit=batch_index):
-            log.debug('task: %s' % task)
+        tasks_in = backend.filter_task_to_archive(
+            before, last_id=last_id, limit=batch_index)
+        for index_name, tasks_group in itertools.groupby(
+                tasks_in, key=group_by_index_name):
+            log.debug('Send for indexation to index %s' % index_name)
             if dry_run:
-                yield task
+                for task in tasks_group:
+                    yield task
                 continue
-            result = es.index(task)
-            if not result:
-                log.error('Error during indexation: %s, skipping', result)
-                continue
-            log.debug('result: %s' % result)
-            yield task
+
+            yield from es_client.streaming_bulk(
+                index_name, tasks_group, source=['task_id'],
+                chunk_size=batch_index, log=log)
 
     gen = index_data(before, last_id=start_from, batch_index=batch_index)
     if cleanup:
         for task_ids in utils.grouper(gen, n=batch_clean):
             _task_ids = [t['task_id'] for t in task_ids]
             log.debug('Cleanup %s tasks' % (len(_task_ids, )))
-            if dry_run:
+            if dry_run:  # no clean up
                 continue
             ctx.obj.delete_archive_tasks(_task_ids)
     else:
         for task_id in gen:
-            log.info('Indexing: %s' % task_id)
+            log.info('Indexed: %s' % task_id)
 
 
 @cli.group('task-run')
