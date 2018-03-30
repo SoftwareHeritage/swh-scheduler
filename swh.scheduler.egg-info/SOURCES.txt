@@ -9,6 +9,7 @@ requirements.txt
 setup.py
 version.txt
 bin/swh-worker-control
+data/elastic-template.json
 debian/changelog
 debian/compat
 debian/control
@@ -23,6 +24,7 @@ docs/_static/.placeholder
 docs/_templates/.placeholder
 sql/.gitignore
 sql/Makefile
+sql/swh-scheduler-data.sql
 sql/swh-scheduler-schema.sql
 sql/swh-scheduler-testdata.sql
 sql/updates/02.sql
@@ -30,6 +32,7 @@ sql/updates/03.sql
 sql/updates/04.sql
 sql/updates/05.sql
 sql/updates/06.sql
+sql/updates/07.sql
 swh/__init__.py
 swh.scheduler.egg-info/PKG-INFO
 swh.scheduler.egg-info/SOURCES.txt
@@ -39,6 +42,7 @@ swh.scheduler.egg-info/requires.txt
 swh.scheduler.egg-info/top_level.txt
 swh/scheduler/__init__.py
 swh/scheduler/backend.py
+swh/scheduler/backend_es.py
 swh/scheduler/cli.py
 swh/scheduler/task.py
 swh/scheduler/utils.py
