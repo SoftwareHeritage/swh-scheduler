@@ -156,6 +156,10 @@ app.conf.update(
     # Time (in seconds, or a timedelta object) for when after stored task
     # tombstones will be deleted. None means to never expire results.
     CELERY_TASK_RESULT_EXPIRES=None,
+    # A string identifying the default serialization method to use. Can
+    # be json (default), pickle, yaml, msgpack, or any custom
+    # serialization methods that have been registered with
+    CELERY_TASK_SERIALIZER='msgpack',
     # Late ack means the task messages will be acknowledged after the task has
     # been executed, not just before, which is the default behavior.
     CELERY_ACKS_LATE=True,

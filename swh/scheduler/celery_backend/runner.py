@@ -79,6 +79,6 @@ if __name__ == '__main__':
     main_backend = SchedulerBackend()
     try:
         run_ready_tasks(main_backend, main_app)
-    except:
+    except Exception:
         main_backend.rollback()
         raise

@@ -4,7 +4,8 @@ DBNAME = softwareheritage-scheduler-dev
 DOCDIR = autodoc
 
 SQL_SCHEMA  = swh-scheduler-schema.sql
-SQLS = $(SQL_SCHEMA)
+SQL_DATA    = swh-scheduler-data.sql
+SQLS = $(SQL_SCHEMA) $(SQL_DATA)
 
 PSQL_BIN = psql
 PSQL_FLAGS = --echo-all -X -v ON_ERROR_STOP=1
