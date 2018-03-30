@@ -3,7 +3,6 @@
     "index_patterns": ["swh-tasks-*"],
     "settings": {
         "index": {
-            "number_of_shards": "1",
             "codec": "best_compression",
             "refresh_interval": "30s"
         }

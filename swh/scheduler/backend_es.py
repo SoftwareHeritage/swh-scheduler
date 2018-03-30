@@ -16,7 +16,7 @@ from elasticsearch.helpers import streaming_bulk
 
 
 class SWHElasticSearchClient(SWHConfig):
-    DEFAULT_BASE_FILENAME = 'backend/elastic'
+    CONFIG_BASE_FILENAME = 'backend/elastic'
 
     DEFAULT_CONFIG = {
         'storage_nodes': ('[dict]', [{'host': 'localhost', 'port': 9200}]),
