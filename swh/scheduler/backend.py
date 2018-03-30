@@ -35,7 +35,7 @@ def autocommit(fn):
 
         try:
             ret = fn(self, *args, **kwargs)
-        except:
+        except Exception:
             if autocommit:
                 self.rollback()
             raise
@@ -55,7 +55,7 @@ class SchedulerBackend(SWHConfig):
 
     CONFIG_BASE_FILENAME = 'scheduler.ini'
     DEFAULT_CONFIG = {
-        'scheduling_db': ('str', 'dbname=swh-scheduler'),
+        'scheduling_db': ('str', 'dbname=softwareheritage-scheduler-dev'),
     }
 
     def __init__(self, **override_config):
@@ -246,7 +246,7 @@ class SchedulerBackend(SWHConfig):
                   task
 
         Returns:
-            a list of created task ids.
+            a list of created tasks.
 
         """
         cursor.execute('select swh_scheduler_mktemp_task()')
@@ -433,3 +433,38 @@ class SchedulerBackend(SWHConfig):
         )
 
         return cursor.fetchone()
+
+    @autocommit
+    def filter_task_to_archive(self, timestamp, limit=10, last_id=-1,
+                               cursor=None):
+        """Returns the list of task/task_run prior to a given date to archive.
+
+        """
+        last_task_run_id = None
+        while True:
+            row = None
+            cursor.execute(
+                "select * from swh_scheduler_task_to_archive(%s, %s, %s)",
+                (timestamp, last_id, limit)
+            )
+            for row in cursor:
+                # nested type index does not accept bare values
+                # transform it as a dict to comply with this
+                row['arguments']['args'] = {
+                    i: v for i, v in enumerate(row['arguments']['args'])
+                }
+                yield row
+
+            if not row:
+                break
+            _id = row.get('task_id')
+            _task_run_id = row.get('task_run_id')
+            if last_id == _id and last_task_run_id == _task_run_id:
+                break
+            last_id = _id
+            last_task_run_id = _task_run_id
+
+    @autocommit
+    def delete_archive_tasks(self, task_ids, cursor=None):
+        cursor.execute("select * from swh_scheduler_delete_archive_tasks(%s)",
+                       (task_ids, ))

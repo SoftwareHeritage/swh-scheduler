@@ -1,8 +1,20 @@
-swh-scheduler (0.0.19-1~swh1~bpo9+1) stretch-swh; urgency=medium
+swh-scheduler (0.0.20-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for stretch-backports.
+  * v0.0.20
+  * swh.scheduler.cli.archive: Open completed oneshot or disabled
+  * recurring tasks archival endpoint
+  * swh.core.serializer: Move to msgpack serialization format
+  * swh.scheduler.cli: Unify pretty print output
+  * sql/data: Add new task type for loading mercurial dump
+  * swh.scheduler.cli: Add sample use case for the scheduling cli
+  * swh.scheduler.cli: Open policy column to the scheduling cli
+  * swh.scheduler.cli: Open the delimiter option as cli argument
+  * Fix issue when updating task-type without any retry delay defined
+  * swh-scheduler/data: Add new oneshot scheduling load-mercurial task
+  * backend: fix default scheduling_db value for consistency
+  * backend: doc: fix return value of create_tasks
 
- -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Wed, 29 Nov 2017 12:51:15 +0100
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Fri, 30 Mar 2018 11:44:18 +0200
 
 swh-scheduler (0.0.19-1~swh1) unstable-swh; urgency=medium
 

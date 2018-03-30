@@ -1,16 +1,19 @@
-# Copyright (C) 2016  The Software Heritage developers
+# Copyright (C) 2016-2018  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import csv
-import json
-import locale
-
 import arrow
 import click
+import csv
+import itertools
+import json
+import locale
+import logging
 
+from swh.core import utils
 from .backend import SchedulerBackend
+from .backend_es import SWHElasticSearchClient
 
 
 locale.setlocale(locale.LC_ALL, '')
@@ -38,7 +41,7 @@ def pretty_print_list(list, indent):
 
 def pretty_print_dict(dict, indent):
     """Pretty-print a list"""
-    return ''.join('%s%s:%s\n' %
+    return ''.join('%s%s: %s\n' %
                    (' ' * indent, click.style(key, bold=True), value)
                    for key, value in dict.items())
 
@@ -89,11 +92,13 @@ def task(ctx):
 @task.command('schedule')
 @click.option('--columns', '-c', multiple=True,
               default=['type', 'args', 'kwargs', 'next_run'],
-              type=click.Choice(['type', 'args', 'kwargs', 'next_run']),
+              type=click.Choice([
+                  'type', 'args', 'kwargs', 'policy', 'next_run']),
               help='columns present in the CSV file')
+@click.option('--delimiter', '-d', default=',')
 @click.argument('file', type=click.File(encoding='utf-8'))
 @click.pass_context
-def schedule_tasks(ctx, columns, file):
+def schedule_tasks(ctx, columns, delimiter, file):
     """Schedule tasks from a CSV input file.
 
     The following columns are expected, and can be set through the -c option:
@@ -112,12 +117,20 @@ def schedule_tasks(ctx, columns, file):
     The CSV can be read either from a named file, or from stdin (use - as
     filename).
 
+    Use sample:
+
+    cat scheduling-task.txt | \
+        python3 -m swh.scheduler.cli \
+            --database 'service=swh-scheduler-dev' \
+            task schedule \
+                --columns type --columns kwargs --columns policy \
+                --delimiter ';' -
+
     """
     tasks = []
     now = arrow.utcnow()
 
-    reader = csv.reader(file)
-
+    reader = csv.reader(file, delimiter=delimiter)
     for line in reader:
         task = dict(zip(columns, line))
         args = json.loads(task.pop('args', '[]'))
@@ -163,6 +176,77 @@ def list_pending_tasks(ctx, task_type, limit, before):
         output.append(pretty_print_task(task))
 
     click.echo_via_pager('\n'.join(output))
+
+
+@task.command('archive')
+@click.option('--before', '-b', default=None,
+              help='Task whose ended date is anterior will be archived.')
+@click.option('--batch-index', default=1000, type=click.INT,
+              help='Batch size of tasks to archive')
+@click.option('--batch-clean', default=1000, type=click.INT,
+              help='Batch size of task to clean after archival')
+@click.option('--dry-run/--no-dry-run', is_flag=True, default=False,
+              help='Default to list only what would be archived.')
+@click.option('--verbose', is_flag=True, default=False,
+              help='Default to list only what would be archived.')
+@click.option('--cleanup/--no-cleanup', is_flag=True, default=True,
+              help='Clean up archived tasks (default)')
+@click.option('--start-from', type=click.INT, default=-1,
+              help='(Optional) default task id to start from. Default is -1.')
+@click.pass_context
+def archive_tasks(ctx, before, batch_index, batch_clean,
+                  dry_run, verbose, cleanup, start_from):
+    """Archive task/task_run whose (task_type is 'oneshot' and task_status
+       is 'completed') or (task_type is 'recurring' and task_status is
+       'disabled').
+
+       With --dry-run flag set (default), only list those.
+
+    """
+    es_client = SWHElasticSearchClient()
+    logging.basicConfig(level=logging.DEBUG if verbose else logging.INFO)
+    log = logging.getLogger('swh.scheduler.cli.archive')
+    logging.getLogger('urllib3').setLevel(logging.WARN)
+    logging.getLogger('elasticsearch').setLevel(logging.WARN)
+    if dry_run:
+        log.info('**DRY-RUN**, only reading the db')
+
+    if not before:  # Default to archive all tasks prior to now's last month
+        before = arrow.utcnow().format('YYYY-MM-01')
+
+    log.debug('index: %s; cleanup: %s' % (
+        not dry_run, not dry_run and cleanup))
+
+    def group_by_index_name(data, es_client=es_client):
+        ended = data['ended']
+        return es_client.compute_index_name(ended.year, ended.month)
+
+    def index_data(before, last_id, batch_index, backend=ctx.obj):
+        tasks_in = backend.filter_task_to_archive(
+            before, last_id=last_id, limit=batch_index)
+        for index_name, tasks_group in itertools.groupby(
+                tasks_in, key=group_by_index_name):
+            log.debug('Send for indexation to index %s' % index_name)
+            if dry_run:
+                for task in tasks_group:
+                    yield task
+                continue
+
+            yield from es_client.streaming_bulk(
+                index_name, tasks_group, source=['task_id'],
+                chunk_size=batch_index, log=log)
+
+    gen = index_data(before, last_id=start_from, batch_index=batch_index)
+    if cleanup:
+        for task_ids in utils.grouper(gen, n=batch_clean):
+            _task_ids = [t['task_id'] for t in task_ids]
+            log.debug('Cleanup %s tasks' % (len(_task_ids, )))
+            if dry_run:  # no clean up
+                continue
+            ctx.obj.delete_archive_tasks(_task_ids)
+    else:
+        for task_id in gen:
+            log.info('Indexed: %s' % task_id)
 
 
 @cli.group('task-run')
