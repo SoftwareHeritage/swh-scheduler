@@ -1,8 +1,10 @@
-swh-scheduler (0.0.20-1~swh1~bpo9+1) stretch-swh; urgency=medium
+swh-scheduler (0.0.21-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for stretch-backports.
+  * v0.0.21
+  * Adapt default configuration
+  * Fix typo in configuration variable name
 
- -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Fri, 30 Mar 2018 11:44:18 +0200
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Fri, 30 Mar 2018 15:02:55 +0200
 
 swh-scheduler (0.0.20-1~swh1) unstable-swh; urgency=medium
 
