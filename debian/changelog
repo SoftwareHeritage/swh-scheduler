@@ -1,3 +1,10 @@
+swh-scheduler (0.0.22-1~swh1) unstable-swh; urgency=medium
+
+  * v0.0.22
+  * Update to a more recent python3-elasticsearch client
+
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Mon, 09 Apr 2018 16:09:16 +0200
+
 swh-scheduler (0.0.21-1~swh1) unstable-swh; urgency=medium
 
   * v0.0.21
