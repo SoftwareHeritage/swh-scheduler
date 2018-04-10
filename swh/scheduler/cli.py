@@ -244,17 +244,15 @@ def archive_tasks(ctx, before, after, batch_index, batch_clean,
                 continue
 
             yield from es_client.streaming_bulk(
-                index_name, tasks_group, source=['task_id'],
+                index_name, tasks_group, source=['task_id', 'task_run_id'],
                 chunk_size=batch_index, log=log)
 
     gen = index_data(before, last_id=start_from, batch_index=batch_index)
     if cleanup:
         for task_ids in utils.grouper(gen, n=batch_clean):
-            _task_ids = {t['task_id'] for t in task_ids}
-            log.debug('Cleanup %s tasks' % (len(_task_ids, )))
             if dry_run:  # no clean up
                 continue
-            ctx.obj.delete_archive_tasks(_task_ids)
+            ctx.obj.delete_archived_tasks(task_ids)
     else:
         for task_id in gen:
             log.info('Indexed: %s' % task_id)

@@ -465,6 +465,13 @@ class SchedulerBackend(SWHConfig):
             last_task_run_id = _task_run_id
 
     @autocommit
-    def delete_archive_tasks(self, task_ids, cursor=None):
-        cursor.execute("select * from swh_scheduler_delete_archive_tasks(%s)",
-                       (task_ids, ))
+    def delete_archived_tasks(self, task_ids, cursor=None):
+        """Delete archived tasks as much as possible. Only the task_ids whose
+           complete associated task_run have been cleaned up will be.
+
+        """
+        _task_ids = {t['task_id'] for t in task_ids}
+        _task_run_ids = {t['task_run_id'] for t in task_ids}
+        cursor.execute(
+            "select * from swh_scheduler_delete_archived_tasks(%s, %s)",
+            (_task_ids, _task_run_ids))
