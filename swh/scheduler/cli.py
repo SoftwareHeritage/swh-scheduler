@@ -180,7 +180,11 @@ def list_pending_tasks(ctx, task_type, limit, before):
 
 @task.command('archive')
 @click.option('--before', '-b', default=None,
-              help='Task whose ended date is anterior will be archived.')
+              help='''Task whose ended date is anterior will be archived.
+                      Default to current month's first day.''')
+@click.option('--after', '-a', default=None,
+              help='''Task whose ended date is after the specified date will
+                      be archived. Default to prior month's first day.''')
 @click.option('--batch-index', default=1000, type=click.INT,
               help='Batch size of tasks to archive')
 @click.option('--batch-clean', default=1000, type=click.INT,
@@ -194,7 +198,7 @@ def list_pending_tasks(ctx, task_type, limit, before):
 @click.option('--start-from', type=click.INT, default=-1,
               help='(Optional) default task id to start from. Default is -1.')
 @click.pass_context
-def archive_tasks(ctx, before, batch_index, batch_clean,
+def archive_tasks(ctx, before, after, batch_index, batch_clean,
                   dry_run, verbose, cleanup, start_from):
     """Archive task/task_run whose (task_type is 'oneshot' and task_status
        is 'completed') or (task_type is 'recurring' and task_status is
@@ -209,13 +213,20 @@ def archive_tasks(ctx, before, batch_index, batch_clean,
     logging.getLogger('urllib3').setLevel(logging.WARN)
     logging.getLogger('elasticsearch').setLevel(logging.WARN)
     if dry_run:
-        log.info('**DRY-RUN**, only reading the db')
+        log.info('**DRY-RUN** (only reading db)')
+    if not cleanup:
+        log.info('**NO CLEANUP**')
 
-    if not before:  # Default to archive all tasks prior to now's last month
-        before = arrow.utcnow().format('YYYY-MM-01')
+    now = arrow.utcnow()
+    # Default to archive all tasks prior to now's last month
+    if not before:
+        before = now.format('YYYY-MM-01')
 
-    log.debug('index: %s; cleanup: %s' % (
-        not dry_run, not dry_run and cleanup))
+    if not after:
+        after = now.shift(months=-1).format('YYYY-MM-01')
+
+    log.debug('index: %s; cleanup: %s; period: [%s ; %s]' % (
+        not dry_run, not dry_run and cleanup, after, before))
 
     def group_by_index_name(data, es_client=es_client):
         ended = data['ended']
@@ -223,7 +234,7 @@ def archive_tasks(ctx, before, batch_index, batch_clean,
 
     def index_data(before, last_id, batch_index, backend=ctx.obj):
         tasks_in = backend.filter_task_to_archive(
-            before, last_id=last_id, limit=batch_index)
+            after, before, last_id=last_id, limit=batch_index)
         for index_name, tasks_group in itertools.groupby(
                 tasks_in, key=group_by_index_name):
             log.debug('Send for indexation to index %s' % index_name)
@@ -233,20 +244,23 @@ def archive_tasks(ctx, before, batch_index, batch_clean,
                 continue
 
             yield from es_client.streaming_bulk(
-                index_name, tasks_group, source=['task_id'],
+                index_name, tasks_group, source=['task_id', 'task_run_id'],
                 chunk_size=batch_index, log=log)
 
     gen = index_data(before, last_id=start_from, batch_index=batch_index)
     if cleanup:
         for task_ids in utils.grouper(gen, n=batch_clean):
-            _task_ids = [t['task_id'] for t in task_ids]
-            log.debug('Cleanup %s tasks' % (len(_task_ids, )))
+            task_ids = list(task_ids)
+            log.info('Clean up %s tasks: [%s, ...]' % (
+                len(task_ids), task_ids[0]))
             if dry_run:  # no clean up
                 continue
-            ctx.obj.delete_archive_tasks(_task_ids)
+            ctx.obj.delete_archived_tasks(task_ids)
     else:
-        for task_id in gen:
-            log.info('Indexed: %s' % task_id)
+        for task_ids in utils.grouper(gen, n=batch_index):
+            task_ids = list(task_ids)
+            log.info('Indexed %s tasks: [%s, ...]' % (
+                len(task_ids), task_ids[0]))
 
 
 @cli.group('task-run')

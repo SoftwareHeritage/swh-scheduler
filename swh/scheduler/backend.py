@@ -435,7 +435,7 @@ class SchedulerBackend(SWHConfig):
         return cursor.fetchone()
 
     @autocommit
-    def filter_task_to_archive(self, timestamp, limit=10, last_id=-1,
+    def filter_task_to_archive(self, after_ts, before_ts, limit=10, last_id=-1,
                                cursor=None):
         """Returns the list of task/task_run prior to a given date to archive.
 
@@ -444,8 +444,8 @@ class SchedulerBackend(SWHConfig):
         while True:
             row = None
             cursor.execute(
-                "select * from swh_scheduler_task_to_archive(%s, %s, %s)",
-                (timestamp, last_id, limit)
+                "select * from swh_scheduler_task_to_archive(%s, %s, %s, %s)",
+                (after_ts, before_ts, last_id, limit)
             )
             for row in cursor:
                 # nested type index does not accept bare values
@@ -465,6 +465,16 @@ class SchedulerBackend(SWHConfig):
             last_task_run_id = _task_run_id
 
     @autocommit
-    def delete_archive_tasks(self, task_ids, cursor=None):
-        cursor.execute("select * from swh_scheduler_delete_archive_tasks(%s)",
-                       (task_ids, ))
+    def delete_archived_tasks(self, task_ids, cursor=None):
+        """Delete archived tasks as much as possible. Only the task_ids whose
+           complete associated task_run have been cleaned up will be.
+
+        """
+        _task_ids = _task_run_ids = []
+        for task_id in task_ids:
+            _task_ids.append(task_id['task_id'])
+            _task_run_ids.add(task_id['task_run_id'])
+
+        cursor.execute(
+            "select * from swh_scheduler_delete_archived_tasks(%s, %s)",
+            (_task_ids, _task_run_ids))
