@@ -250,12 +250,17 @@ def archive_tasks(ctx, before, after, batch_index, batch_clean,
     gen = index_data(before, last_id=start_from, batch_index=batch_index)
     if cleanup:
         for task_ids in utils.grouper(gen, n=batch_clean):
+            task_ids = list(task_ids)
+            log.info('Clean up %s tasks: [%s, ...]' % (
+                len(task_ids), task_ids[0]))
             if dry_run:  # no clean up
                 continue
             ctx.obj.delete_archived_tasks(task_ids)
     else:
-        for task_id in gen:
-            log.info('Indexed: %s' % task_id)
+        for task_ids in utils.grouper(gen, n=batch_index):
+            task_ids = list(task_ids)
+            log.info('Indexed %s tasks: [%s, ...]' % (
+                len(task_ids), task_ids[0]))
 
 
 @cli.group('task-run')
