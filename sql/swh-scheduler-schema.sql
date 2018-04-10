@@ -8,7 +8,7 @@ create table dbversion
 comment on table dbversion is 'Schema update tracking';
 
 insert into dbversion (version, release, description)
-       values (7, now(), 'Work In Progress');
+       values (8, now(), 'Work In Progress');
 
 create table task_type (
   type text primary key,
@@ -242,8 +242,11 @@ create type task_record as (
 
 create index task_run_id_asc_idx on task_run(task asc, ended asc);
 
+drop function swh_scheduler_task_to_archive(timestamptz, bigint, bigint);
+
 create or replace function swh_scheduler_task_to_archive(
-  ts timestamptz, last_id bigint default -1, lim bigint default 10)
+  ts_after timestamptz, ts_before timestamptz, last_id bigint default -1,
+  lim bigint default 10)
   returns setof task_record
   language sql stable
 as $$
@@ -254,7 +257,7 @@ as $$
    from task_run tr inner join task t on tr.task=t.id
    where ((t.policy = 'oneshot' and t.status ='completed') or
           (t.policy = 'recurring' and t.status ='disabled')) and
-          tr.ended < ts and
+          ts_after <= tr.ended  and tr.ended < ts_before and
           t.id > last_id
    order by tr.task, tr.ended
    limit lim;
