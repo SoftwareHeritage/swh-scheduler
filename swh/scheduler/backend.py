@@ -470,8 +470,11 @@ class SchedulerBackend(SWHConfig):
            complete associated task_run have been cleaned up will be.
 
         """
-        _task_ids = {t['task_id'] for t in task_ids}
-        _task_run_ids = {t['task_run_id'] for t in task_ids}
+        _task_ids = _task_run_ids = []
+        for task_id in task_ids:
+            _task_ids.append(task_id['task_id'])
+            _task_run_ids.add(task_id['task_run_id'])
+
         cursor.execute(
             "select * from swh_scheduler_delete_archived_tasks(%s, %s)",
             (_task_ids, _task_run_ids))
