@@ -8,7 +8,7 @@ create table dbversion
 comment on table dbversion is 'Schema update tracking';
 
 insert into dbversion (version, release, description)
-       values (7, now(), 'Work In Progress');
+       values (8, now(), 'Work In Progress');
 
 create table task_type (
   type text primary key,
@@ -242,8 +242,11 @@ create type task_record as (
 
 create index task_run_id_asc_idx on task_run(task asc, ended asc);
 
+drop function swh_scheduler_task_to_archive(timestamptz, bigint, bigint);
+
 create or replace function swh_scheduler_task_to_archive(
-  ts timestamptz, last_id bigint default -1, lim bigint default 10)
+  ts_after timestamptz, ts_before timestamptz, last_id bigint default -1,
+  lim bigint default 10)
   returns setof task_record
   language sql stable
 as $$
@@ -254,7 +257,7 @@ as $$
    from task_run tr inner join task t on tr.task=t.id
    where ((t.policy = 'oneshot' and t.status ='completed') or
           (t.policy = 'recurring' and t.status ='disabled')) and
-          tr.ended < ts and
+          ts_after <= tr.ended  and tr.ended < ts_before and
           t.id > last_id
    order by tr.task, tr.ended
    limit lim;
@@ -262,16 +265,26 @@ $$;
 
 comment on function swh_scheduler_task_to_archive is 'Read archivable tasks function';
 
-create or replace function swh_scheduler_delete_archive_tasks(
-  task_ids bigint[])
+drop function swh_scheduler_delete_archive_tasks(bigint[]);
+
+create or replace function swh_scheduler_delete_archived_tasks(
+  task_ids bigint[], task_run_ids bigint[])
   returns void
   language sql
 as $$
-  delete from task_run where task in (select * from unnest(task_ids));
-  delete from task where id in (select * from unnest(task_ids));
+  -- clean up task_run_ids
+  delete from task_run where id in (select * from unnest(task_run_ids));
+  -- clean up only tasks whose associated task_run are all cleaned up.
+  -- Remaining tasks will stay there and will be cleaned up when
+  -- remaining data have been indexed
+  delete from task
+  where id in (select t.id
+               from task t left outer join task_run tr on t.id=tr.task
+               where t.id in (select * from unnest(task_ids))
+               and tr.task is null);
 $$;
 
-comment on function swh_scheduler_delete_archive_tasks is 'Clean up archived tasks function';
+comment on function swh_scheduler_delete_archived_tasks is 'Clean up archived tasks function';
 
 create or replace function swh_scheduler_update_task_on_task_end ()
   returns trigger

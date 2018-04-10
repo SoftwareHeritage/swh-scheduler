@@ -12,7 +12,7 @@
 from swh.core import utils
 from swh.core.config import SWHConfig
 from elasticsearch import Elasticsearch
-from elasticsearch.helpers import streaming_bulk
+from elasticsearch import helpers
 
 
 class SWHElasticSearchClient(SWHConfig):
@@ -130,10 +130,11 @@ class SWHElasticSearchClient(SWHConfig):
                     '_op_type': 'index',
                     '_type': self.doc_type,
                     '_source': data} for data in doc_stream)
-        for ok, result in streaming_bulk(client=self.storage,
-                                         actions=actions,
-                                         chunk_size=chunk_size,
-                                         raise_on_exception=False):
+        for ok, result in helpers.streaming_bulk(client=self.storage,
+                                                 actions=actions,
+                                                 chunk_size=chunk_size,
+                                                 raise_on_error=False,
+                                                 raise_on_exception=False):
             if not ok:
                 if log:
                     log.error('Error during %s indexation. Skipping.' % result)
