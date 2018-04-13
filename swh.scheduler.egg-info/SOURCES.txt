@@ -9,7 +9,9 @@ requirements.txt
 setup.py
 version.txt
 bin/swh-worker-control
+data/README.md
 data/elastic-template.json
+data/update-index-settings.json
 debian/changelog
 debian/compat
 debian/control
