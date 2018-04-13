@@ -19,10 +19,12 @@
                     "type": "object",
                     "properties" : {
                         "args": {
-                            "type": "nested"
+                            "type": "nested",
+                            "dynamic": false
                         },
                         "kwargs": {
-                            "type": "object"
+                            "type": "object",
+                            "dynamic": false
                         }
                     }
                 },
