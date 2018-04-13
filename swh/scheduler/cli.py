@@ -186,7 +186,9 @@ def list_pending_tasks(ctx, task_type, limit, before):
               help='''Task whose ended date is after the specified date will
                       be archived. Default to prior month's first day.''')
 @click.option('--batch-index', default=1000, type=click.INT,
-              help='Batch size of tasks to archive')
+              help='Batch size of tasks to read from db to archive')
+@click.option('--bulk-index', default=200, type=click.INT,
+              help='Batch size of tasks to bulk index')
 @click.option('--batch-clean', default=1000, type=click.INT,
               help='Batch size of task to clean after archival')
 @click.option('--dry-run/--no-dry-run', is_flag=True, default=False,
@@ -198,7 +200,7 @@ def list_pending_tasks(ctx, task_type, limit, before):
 @click.option('--start-from', type=click.INT, default=-1,
               help='(Optional) default task id to start from. Default is -1.')
 @click.pass_context
-def archive_tasks(ctx, before, after, batch_index, batch_clean,
+def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
                   dry_run, verbose, cleanup, start_from):
     """Archive task/task_run whose (task_type is 'oneshot' and task_status
        is 'completed') or (task_type is 'recurring' and task_status is
@@ -245,7 +247,7 @@ def archive_tasks(ctx, before, after, batch_index, batch_clean,
 
             yield from es_client.streaming_bulk(
                 index_name, tasks_group, source=['task_id', 'task_run_id'],
-                chunk_size=batch_index, log=log)
+                chunk_size=bulk_index, log=log)
 
     gen = index_data(before, last_id=start_from, batch_index=batch_index)
     if cleanup:

@@ -1,8 +1,11 @@
-swh-scheduler (0.0.23-1~swh1~bpo9+1) stretch-swh; urgency=medium
+swh-scheduler (0.0.24-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for stretch-backports.
+  * v0.0.24
+  * data/template: Do not index the arguments field (it's in _source)
+  * data/README: Add a small readme to explain es install step
+  * swh.scheduler.cli: Add a bulk index flag to separate read from index
 
- -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Tue, 10 Apr 2018 17:43:07 +0200
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Fri, 13 Apr 2018 14:55:32 +0200
 
 swh-scheduler (0.0.23-1~swh1) unstable-swh; urgency=medium
 
