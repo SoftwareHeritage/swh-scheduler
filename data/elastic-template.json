@@ -23,8 +23,7 @@
                             "dynamic": false
                         },
                         "kwargs": {
-                            "type": "object",
-                            "dynamic": false
+                            "type": "text"
                         }
                     }
                 },
