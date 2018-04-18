@@ -1,3 +1,10 @@
+swh-scheduler (0.0.25-1~swh1) unstable-swh; urgency=medium
+
+  * v0.0.25
+  * swh.scheduler.cli.archive: Index arguments.kwargs as text
+
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Wed, 18 Apr 2018 12:34:43 +0200
+
 swh-scheduler (0.0.24-1~swh1) unstable-swh; urgency=medium
 
   * v0.0.24
