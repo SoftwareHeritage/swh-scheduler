@@ -3,6 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import click
 import datetime
 import socket
 
@@ -151,6 +152,27 @@ def event_monitor(app, backend):
     recv.capture(limit=None, timeout=None, wakeup=True)
 
 
+@click.command()
+@click.option('--cls', '-c', default='local',
+              help="Scheduler's class, default to 'local'")
+@click.option(
+    '--database', '-d', help='Scheduling database DSN',
+    default='host=db.internal.softwareheritage.org '
+            'dbname=softwareheritage-scheduler user=guest')
+@click.option('--url', '-u', default='http://localhost:5008',
+              help="(Optional) Scheduler's url access")
+def main(cls, database, url):
+    scheduler = None
+    if cls == 'local':
+        scheduler = get_scheduler(cls, args={'scheduling_db': database})
+    elif cls == 'remote':
+        scheduler = get_scheduler(cls, args={'url': url})
+
+    if not scheduler:
+        raise ValueError('Scheduler class (local/remote) must be instantiated')
+
+    event_monitor(main_app, backend=scheduler)
+
+
 if __name__ == '__main__':
-    main_backend = get_scheduler('local')
-    event_monitor(main_app, main_backend)
+    main()
