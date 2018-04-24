@@ -12,7 +12,6 @@ import locale
 import logging
 
 from swh.core import utils
-from .backend import SchedulerBackend
 from .backend_es import SWHElasticSearchClient
 
 
@@ -72,14 +71,17 @@ def pretty_print_task(task):
     '--database', '-d', help='Scheduling database DSN',
     default='host=db.internal.softwareheritage.org '
             'dbname=softwareheritage-scheduler user=guest')
+@click.option('--scheduler-class', '-c', default='local',
+              help="Scheduler's class, default to 'local'")
 @click.pass_context
-def cli(ctx, database):
+def cli(ctx, database, scheduler_class):
     """Software Heritage Scheduler CLI interface"""
     override_config = {}
     if database:
         override_config['scheduling_db'] = database
 
-    ctx.obj = SchedulerBackend(**override_config)
+    from . import get_scheduler
+    ctx.obj = get_scheduler(scheduler_class, override_config)
 
 
 @cli.group('task')

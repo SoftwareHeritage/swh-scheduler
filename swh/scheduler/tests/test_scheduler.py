@@ -1,4 +1,4 @@
-# Copyright (C) 2017  The Software Heritage developers
+# Copyright (C) 2017-2018  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -15,7 +15,7 @@ from nose.tools import istest
 import psycopg2
 
 from swh.core.tests.db_testing import SingleDbTestFixture
-from swh.scheduler.backend import SchedulerBackend
+from swh.scheduler import get_scheduler
 
 
 TEST_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -30,7 +30,7 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
     def setUp(self):
         super().setUp()
         self.config = {'scheduling_db': 'dbname=' + self.TEST_DB_NAME}
-        self.backend = SchedulerBackend(**self.config)
+        self.backend = get_scheduler('local', self.config)
 
         tt = {
             'type': 'update-git',

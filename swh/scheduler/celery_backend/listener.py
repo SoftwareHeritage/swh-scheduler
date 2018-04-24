@@ -1,4 +1,4 @@
-# Copyright (C) 2015  The Software Heritage developers
+# Copyright (C) 2015-2018  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -10,8 +10,8 @@ from arrow import utcnow
 from kombu import Queue
 from celery.events import EventReceiver
 
+from swh.scheduler import get_scheduler
 from .config import app as main_app
-from ..backend import SchedulerBackend
 
 
 class ReliableEventReceiver(EventReceiver):
@@ -152,5 +152,5 @@ def event_monitor(app, backend):
 
 
 if __name__ == '__main__':
-    main_backend = SchedulerBackend()
+    main_backend = get_scheduler('local')
     event_monitor(main_app, main_backend)
