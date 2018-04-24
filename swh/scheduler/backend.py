@@ -49,11 +49,10 @@ def autocommit(fn):
 
 
 class SchedulerBackend(SWHConfig):
-    """
-    Backend for the Software Heritage scheduling database.
-    """
+    """Backend for the Software Heritage scheduling database.
 
-    CONFIG_BASE_FILENAME = 'scheduler.ini'
+    """
+    CONFIG_BASE_FILENAME = 'scheduler'
     DEFAULT_CONFIG = {
         'scheduling_db': ('str', 'dbname=softwareheritage-scheduler-dev'),
     }
@@ -74,8 +73,10 @@ class SchedulerBackend(SWHConfig):
             )
 
     def cursor(self):
-        """Return a fresh cursor on the database, with auto-reconnection in case of
-        failure"""
+        """Return a fresh cursor on the database, with auto-reconnection in
+        case of failure
+
+        """
         cur = None
 
         # Get a fresh cursor and reconnect at most three times
