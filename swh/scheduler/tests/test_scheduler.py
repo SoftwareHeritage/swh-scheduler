@@ -318,4 +318,36 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
     @istest
     def delete_archived_tasks(self):
         self._create_task_types()
-        pass
+        _time = utcnow()
+        recurring = self._tasks_from_template(
+            self.task1_template, _time, 100)
+        oneshots = self._tasks_from_template(
+            self.task2_template, _time, 100)
+        total_tasks = len(recurring) + len(oneshots)
+        pending_tasks = self.backend.create_tasks(recurring + oneshots)
+        backend_tasks = [{
+            'task': task['id'],
+            'backend_id': str(uuid.uuid4()),
+            'scheduled': utcnow(),
+        } for task in pending_tasks]
+        self.backend.mass_schedule_task_runs(backend_tasks)
+
+        _tasks = []
+        percent = random.randint(0, 100)  # random election removal boundary
+        for task in backend_tasks:
+            t = self.backend.end_task_run(
+                task['backend_id'], status='eventful')
+            c = random.randint(0, 100)
+            if c <= percent:
+                _tasks.append({'task_id': t['task'], 'task_run_id': t['id']})
+
+        self.backend.delete_archived_tasks(_tasks)
+
+        self.cursor.execute('select count(*) from task')
+        tasks_count = self.cursor.fetchone()
+
+        self.cursor.execute('select count(*) from task_run')
+        tasks_run_count = self.cursor.fetchone()
+
+        self.assertEqual(tasks_count[0], total_tasks - len(_tasks))
+        self.assertEqual(tasks_run_count[0], total_tasks - len(_tasks))
