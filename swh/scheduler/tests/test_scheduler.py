@@ -8,8 +8,10 @@ import datetime
 import os
 import random
 import unittest
+import uuid
 
 from arrow import utcnow
+from collections import defaultdict
 from nose.plugins.attrib import attr
 from nose.tools import istest
 import psycopg2
@@ -236,3 +238,84 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
 
             ret = self.backend.get_tasks(task['id'] for task in cur_tasks)
             self.assertCountEqual(ret, cur_tasks)
+
+    @istest
+    def filter_task_to_archive(self):
+        """Filtering only list disabled recurring or completed oneshot tasks
+
+        """
+        self._create_task_types()
+        _time = utcnow()
+        recurring = self._tasks_from_template(self.task1_template, _time, 100)
+        oneshots = self._tasks_from_template(self.task2_template, _time, 100)
+        total_tasks = len(recurring) + len(oneshots)
+
+        # simulate scheduling tasks
+        pending_tasks = self.backend.create_tasks(recurring + oneshots)
+        backend_tasks = [{
+            'task': task['id'],
+            'backend_id': str(uuid.uuid4()),
+            'scheduled': utcnow(),
+        } for task in pending_tasks]
+        self.backend.mass_schedule_task_runs(backend_tasks)
+
+        # we simulate the task are being done
+        _tasks = []
+        for task in backend_tasks:
+            t = self.backend.end_task_run(
+                task['backend_id'], status='eventful')
+            _tasks.append(t)
+
+        # Randomly update task's status per policy
+        status_per_policy = {'recurring': 0, 'oneshot': 0}
+        status_choice = {
+            # policy: [tuple (1-for-filtering, 'associated-status')]
+            'recurring': [(1, 'disabled'),
+                          (0, 'completed'),
+                          (0, 'next_run_not_scheduled')],
+            'oneshot': [(0, 'next_run_not_scheduled'),
+                        (0, 'disabled'),
+                        (1, 'completed')]
+        }
+
+        tasks_to_update = defaultdict(list)
+        _task_ids = defaultdict(list)
+        # randomize 'disabling' recurring task or 'complete' oneshot task
+        for task in pending_tasks:
+            policy = task['policy']
+            _task_ids[policy].append(task['id'])
+            status = random.choice(status_choice[policy])
+            if status[0] != 1:
+                continue
+            # elected for filtering
+            status_per_policy[policy] += status[0]
+            tasks_to_update[policy].append(task['id'])
+
+        self.backend.disable_tasks(tasks_to_update['recurring'])
+        # hack: change the status to something else than completed
+        self.backend.set_status_tasks(
+            _task_ids['oneshot'], status='disabled')
+        self.backend.set_status_tasks(
+            tasks_to_update['oneshot'], status='completed')
+
+        total_tasks_filtered = (status_per_policy['recurring'] +
+                                status_per_policy['oneshot'])
+
+        # retrieve tasks to archive
+        after = _time.shift(days=-1).format('YYYY-MM-DD')
+        before = utcnow().shift(days=1).format('YYYY-MM-DD')
+        tasks_to_archive = list(self.backend.filter_task_to_archive(
+            after_ts=after, before_ts=before, limit=total_tasks))
+
+        self.assertEqual(len(tasks_to_archive), total_tasks_filtered)
+
+        actual_filtered_per_status = {'recurring': 0, 'oneshot': 0}
+        for task in tasks_to_archive:
+            actual_filtered_per_status[task['task_policy']] += 1
+
+        self.assertEqual(actual_filtered_per_status, status_per_policy)
+
+    @istest
+    def delete_archived_tasks(self):
+        self._create_task_types()
+        pass
