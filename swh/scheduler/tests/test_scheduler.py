@@ -25,14 +25,12 @@ TEST_DATA_DIR = os.path.join(TEST_DIR, '../../../../swh-storage-testdata')
 
 
 @attr('db')
-class Scheduler(SingleDbTestFixture, unittest.TestCase):
+class CommonSchedulerTest(SingleDbTestFixture):
     TEST_DB_NAME = 'softwareheritage-scheduler-test'
     TEST_DB_DUMP = os.path.join(TEST_DATA_DIR, 'dumps/swh-scheduler.dump')
 
     def setUp(self):
         super().setUp()
-        self.config = {'scheduling_db': 'dbname=' + self.TEST_DB_NAME}
-        self.backend = get_scheduler('local', self.config)
 
         tt = {
             'type': 'update-git',
@@ -72,7 +70,7 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
         t2_template['policy'] = 'oneshot'
 
     def tearDown(self):
-        self.backend.db.close()
+        self.backend.close_connection()
         self.empty_tables()
         super().tearDown()
 
@@ -246,8 +244,8 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
         """
         self._create_task_types()
         _time = utcnow()
-        recurring = self._tasks_from_template(self.task1_template, _time, 100)
-        oneshots = self._tasks_from_template(self.task2_template, _time, 100)
+        recurring = self._tasks_from_template(self.task1_template, _time, 12)
+        oneshots = self._tasks_from_template(self.task2_template, _time, 12)
         total_tasks = len(recurring) + len(oneshots)
 
         # simulate scheduling tasks
@@ -320,9 +318,9 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
         self._create_task_types()
         _time = utcnow()
         recurring = self._tasks_from_template(
-            self.task1_template, _time, 100)
+            self.task1_template, _time, 12)
         oneshots = self._tasks_from_template(
-            self.task2_template, _time, 100)
+            self.task2_template, _time, 12)
         total_tasks = len(recurring) + len(oneshots)
         pending_tasks = self.backend.create_tasks(recurring + oneshots)
         backend_tasks = [{
@@ -351,3 +349,10 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
 
         self.assertEqual(tasks_count[0], total_tasks - len(_tasks))
         self.assertEqual(tasks_run_count[0], total_tasks - len(_tasks))
+
+
+class LocalSchedulerTest(CommonSchedulerTest, unittest.TestCase):
+    def setUp(self):
+        super().setUp()
+        self.config = {'scheduling_db': 'dbname=' + self.TEST_DB_NAME}
+        self.backend = get_scheduler('local', self.config)

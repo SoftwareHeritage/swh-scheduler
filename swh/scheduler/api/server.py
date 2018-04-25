@@ -43,6 +43,16 @@ def index():
     return 'SWH Scheduler API server'
 
 
+@app.route('/close_connection', methods=['POST'])
+def close_connection():
+    return encode_data(g.scheduler.close_connection())
+
+
+@app.route('/set_status_tasks', methods=['POST'])
+def set_status_tasks():
+    return encode_data(g.scheduler.set_status_tasks(**decode_request(request)))
+
+
 @app.route('/create_task_type', methods=['POST'])
 def create_task_type():
     return encode_data(g.scheduler.create_task_type(**decode_request(request)))

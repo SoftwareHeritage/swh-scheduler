@@ -103,6 +103,11 @@ class SchedulerBackend(SWHConfig):
         """Rollback a transaction"""
         self.db.rollback()
 
+    def close_connection(self):
+        """Close db connection"""
+        if self.db and not self.db.closed:
+            self.db.close()
+
     def copy_to(self, items, tblname, columns, cursor=None, item_cb=None):
         def escape(data):
             if data is None:

@@ -24,6 +24,13 @@ class RemoteScheduler(SWHRemoteAPI):
     def __init__(self, url):
         super().__init__(api_exception=SchedulerAPIError, url=url)
 
+    def close_connection(self):
+        return self.post('close_connection', {})
+
+    def set_status_tasks(self, task_ids, status='disabled'):
+        return self.post('set_status_tasks', {'task_ids': task_ids,
+                                              'status': status})
+
     def create_task_type(self, task_type):
         return self.post('create_task_type', {'task_type': task_type})
 
