@@ -242,8 +242,6 @@ create type task_record as (
 
 create index task_run_id_asc_idx on task_run(task asc, ended asc);
 
-drop function swh_scheduler_task_to_archive(timestamptz, bigint, bigint);
-
 create or replace function swh_scheduler_task_to_archive(
   ts_after timestamptz, ts_before timestamptz, last_id bigint default -1,
   lim bigint default 10)
@@ -264,8 +262,6 @@ as $$
 $$;
 
 comment on function swh_scheduler_task_to_archive is 'Read archivable tasks function';
-
-drop function swh_scheduler_delete_archive_tasks(bigint[]);
 
 create or replace function swh_scheduler_delete_archived_tasks(
   task_ids bigint[], task_run_ids bigint[])
