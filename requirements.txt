@@ -5,6 +5,7 @@
 arrow
 celery
 Click
+elasticsearch>5.4
+flask
 psycopg2
 vcversioner
-elasticsearch>5.4

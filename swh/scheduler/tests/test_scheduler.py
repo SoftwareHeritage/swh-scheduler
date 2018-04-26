@@ -1,4 +1,4 @@
-# Copyright (C) 2017  The Software Heritage developers
+# Copyright (C) 2017-2018  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -8,14 +8,16 @@ import datetime
 import os
 import random
 import unittest
+import uuid
 
 from arrow import utcnow
+from collections import defaultdict
 from nose.plugins.attrib import attr
 from nose.tools import istest
 import psycopg2
 
 from swh.core.tests.db_testing import SingleDbTestFixture
-from swh.scheduler.backend import SchedulerBackend
+from swh.scheduler import get_scheduler
 
 
 TEST_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -23,14 +25,12 @@ TEST_DATA_DIR = os.path.join(TEST_DIR, '../../../../swh-storage-testdata')
 
 
 @attr('db')
-class Scheduler(SingleDbTestFixture, unittest.TestCase):
+class CommonSchedulerTest(SingleDbTestFixture):
     TEST_DB_NAME = 'softwareheritage-scheduler-test'
     TEST_DB_DUMP = os.path.join(TEST_DATA_DIR, 'dumps/swh-scheduler.dump')
 
     def setUp(self):
         super().setUp()
-        self.config = {'scheduling_db': 'dbname=' + self.TEST_DB_NAME}
-        self.backend = SchedulerBackend(**self.config)
 
         tt = {
             'type': 'update-git',
@@ -70,7 +70,7 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
         t2_template['policy'] = 'oneshot'
 
     def tearDown(self):
-        self.backend.db.close()
+        self.backend.close_connection()
         self.empty_tables()
         super().tearDown()
 
@@ -236,3 +236,123 @@ class Scheduler(SingleDbTestFixture, unittest.TestCase):
 
             ret = self.backend.get_tasks(task['id'] for task in cur_tasks)
             self.assertCountEqual(ret, cur_tasks)
+
+    @istest
+    def filter_task_to_archive(self):
+        """Filtering only list disabled recurring or completed oneshot tasks
+
+        """
+        self._create_task_types()
+        _time = utcnow()
+        recurring = self._tasks_from_template(self.task1_template, _time, 12)
+        oneshots = self._tasks_from_template(self.task2_template, _time, 12)
+        total_tasks = len(recurring) + len(oneshots)
+
+        # simulate scheduling tasks
+        pending_tasks = self.backend.create_tasks(recurring + oneshots)
+        backend_tasks = [{
+            'task': task['id'],
+            'backend_id': str(uuid.uuid4()),
+            'scheduled': utcnow(),
+        } for task in pending_tasks]
+        self.backend.mass_schedule_task_runs(backend_tasks)
+
+        # we simulate the task are being done
+        _tasks = []
+        for task in backend_tasks:
+            t = self.backend.end_task_run(
+                task['backend_id'], status='eventful')
+            _tasks.append(t)
+
+        # Randomly update task's status per policy
+        status_per_policy = {'recurring': 0, 'oneshot': 0}
+        status_choice = {
+            # policy: [tuple (1-for-filtering, 'associated-status')]
+            'recurring': [(1, 'disabled'),
+                          (0, 'completed'),
+                          (0, 'next_run_not_scheduled')],
+            'oneshot': [(0, 'next_run_not_scheduled'),
+                        (0, 'disabled'),
+                        (1, 'completed')]
+        }
+
+        tasks_to_update = defaultdict(list)
+        _task_ids = defaultdict(list)
+        # randomize 'disabling' recurring task or 'complete' oneshot task
+        for task in pending_tasks:
+            policy = task['policy']
+            _task_ids[policy].append(task['id'])
+            status = random.choice(status_choice[policy])
+            if status[0] != 1:
+                continue
+            # elected for filtering
+            status_per_policy[policy] += status[0]
+            tasks_to_update[policy].append(task['id'])
+
+        self.backend.disable_tasks(tasks_to_update['recurring'])
+        # hack: change the status to something else than completed
+        self.backend.set_status_tasks(
+            _task_ids['oneshot'], status='disabled')
+        self.backend.set_status_tasks(
+            tasks_to_update['oneshot'], status='completed')
+
+        total_tasks_filtered = (status_per_policy['recurring'] +
+                                status_per_policy['oneshot'])
+
+        # retrieve tasks to archive
+        after = _time.shift(days=-1).format('YYYY-MM-DD')
+        before = utcnow().shift(days=1).format('YYYY-MM-DD')
+        tasks_to_archive = list(self.backend.filter_task_to_archive(
+            after_ts=after, before_ts=before, limit=total_tasks))
+
+        self.assertEqual(len(tasks_to_archive), total_tasks_filtered)
+
+        actual_filtered_per_status = {'recurring': 0, 'oneshot': 0}
+        for task in tasks_to_archive:
+            actual_filtered_per_status[task['task_policy']] += 1
+
+        self.assertEqual(actual_filtered_per_status, status_per_policy)
+
+    @istest
+    def delete_archived_tasks(self):
+        self._create_task_types()
+        _time = utcnow()
+        recurring = self._tasks_from_template(
+            self.task1_template, _time, 12)
+        oneshots = self._tasks_from_template(
+            self.task2_template, _time, 12)
+        total_tasks = len(recurring) + len(oneshots)
+        pending_tasks = self.backend.create_tasks(recurring + oneshots)
+        backend_tasks = [{
+            'task': task['id'],
+            'backend_id': str(uuid.uuid4()),
+            'scheduled': utcnow(),
+        } for task in pending_tasks]
+        self.backend.mass_schedule_task_runs(backend_tasks)
+
+        _tasks = []
+        percent = random.randint(0, 100)  # random election removal boundary
+        for task in backend_tasks:
+            t = self.backend.end_task_run(
+                task['backend_id'], status='eventful')
+            c = random.randint(0, 100)
+            if c <= percent:
+                _tasks.append({'task_id': t['task'], 'task_run_id': t['id']})
+
+        self.backend.delete_archived_tasks(_tasks)
+
+        self.cursor.execute('select count(*) from task')
+        tasks_count = self.cursor.fetchone()
+
+        self.cursor.execute('select count(*) from task_run')
+        tasks_run_count = self.cursor.fetchone()
+
+        self.assertEqual(tasks_count[0], total_tasks - len(_tasks))
+        self.assertEqual(tasks_run_count[0], total_tasks - len(_tasks))
+
+
+class LocalSchedulerTest(CommonSchedulerTest, unittest.TestCase):
+    def setUp(self):
+        super().setUp()
+        self.config = {'scheduling_db': 'dbname=' + self.TEST_DB_NAME}
+        self.backend = get_scheduler('local', self.config)

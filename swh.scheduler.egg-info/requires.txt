@@ -2,6 +2,7 @@ Click
 arrow
 celery
 elasticsearch>5.4
+flask
 psycopg2
-swh.core>=0.0.34
+swh.core>=0.0.38
 vcversioner
