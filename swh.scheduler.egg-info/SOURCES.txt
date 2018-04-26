@@ -49,10 +49,14 @@ swh/scheduler/backend_es.py
 swh/scheduler/cli.py
 swh/scheduler/task.py
 swh/scheduler/utils.py
+swh/scheduler/api/__init__.py
+swh/scheduler/api/client.py
+swh/scheduler/api/server.py
 swh/scheduler/celery_backend/__init__.py
 swh/scheduler/celery_backend/config.py
 swh/scheduler/celery_backend/listener.py
 swh/scheduler/celery_backend/runner.py
 swh/scheduler/tests/__init__.py
+swh/scheduler/tests/test_api_client.py
 swh/scheduler/tests/test_scheduler.py
 swh/scheduler/tests/test_task.py
