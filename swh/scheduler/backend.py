@@ -49,11 +49,10 @@ def autocommit(fn):
 
 
 class SchedulerBackend(SWHConfig):
-    """
-    Backend for the Software Heritage scheduling database.
-    """
+    """Backend for the Software Heritage scheduling database.
 
-    CONFIG_BASE_FILENAME = 'scheduler.ini'
+    """
+    CONFIG_BASE_FILENAME = 'scheduler'
     DEFAULT_CONFIG = {
         'scheduling_db': ('str', 'dbname=softwareheritage-scheduler-dev'),
     }
@@ -74,8 +73,10 @@ class SchedulerBackend(SWHConfig):
             )
 
     def cursor(self):
-        """Return a fresh cursor on the database, with auto-reconnection in case of
-        failure"""
+        """Return a fresh cursor on the database, with auto-reconnection in
+        case of failure
+
+        """
         cur = None
 
         # Get a fresh cursor and reconnect at most three times
@@ -101,6 +102,11 @@ class SchedulerBackend(SWHConfig):
     def rollback(self):
         """Rollback a transaction"""
         self.db.rollback()
+
+    def close_connection(self):
+        """Close db connection"""
+        if self.db and not self.db.closed:
+            self.db.close()
 
     def copy_to(self, items, tblname, columns, cursor=None, item_cb=None):
         def escape(data):
@@ -259,11 +265,16 @@ class SchedulerBackend(SWHConfig):
         return cursor.fetchall()
 
     @autocommit
+    def set_status_tasks(self, task_ids, status='disabled', cursor=None):
+        """Set the tasks' status whose ids are listed."""
+        query = "UPDATE task SET status = %s WHERE id IN %s"
+        cursor.execute(query, (status, tuple(task_ids),))
+        return None
+
+    @autocommit
     def disable_tasks(self, task_ids, cursor=None):
         """Disable the tasks whose ids are listed."""
-        query = "UPDATE task SET status = 'disabled' WHERE id IN %s"
-        cursor.execute(query, (tuple(task_ids),))
-        return None
+        return self.set_status_tasks(task_ids)
 
     @autocommit
     def get_tasks(self, task_ids, cursor=None):
@@ -475,7 +486,7 @@ class SchedulerBackend(SWHConfig):
         _task_ids = _task_run_ids = []
         for task_id in task_ids:
             _task_ids.append(task_id['task_id'])
-            _task_run_ids.add(task_id['task_run_id'])
+            _task_run_ids.append(task_id['task_run_id'])
 
         cursor.execute(
             "select * from swh_scheduler_delete_archived_tasks(%s, %s)",

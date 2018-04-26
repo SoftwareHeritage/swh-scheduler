@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2017 The Software Heritage developers
+# Copyright (C) 2015-2018 The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -8,7 +8,7 @@ import time
 import arrow
 from celery import group
 
-from ..backend import SchedulerBackend
+from swh.scheduler import get_scheduler
 from .config import app as main_app
 
 
@@ -76,7 +76,7 @@ if __name__ == '__main__':
     for module in main_app.conf.CELERY_IMPORTS:
         __import__(module)
 
-    main_backend = SchedulerBackend()
+    main_backend = get_scheduler('local')
     try:
         run_ready_tasks(main_backend, main_app)
     except Exception:
