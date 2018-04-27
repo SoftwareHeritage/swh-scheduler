@@ -8,7 +8,7 @@ create table dbversion
 comment on table dbversion is 'Schema update tracking';
 
 insert into dbversion (version, release, description)
-       values (8, now(), 'Work In Progress');
+       values (9, now(), 'Work In Progress');
 
 create table task_type (
   type text primary key,
@@ -41,6 +41,22 @@ comment on type task_status is 'Status of a given task';
 create type task_policy as enum ('recurring', 'oneshot');
 comment on type task_policy is 'Recurrence policy of the given task';
 
+create type task_priority as enum('high', 'normal', 'low');
+comment on type task_priority is 'Priority of the given task';
+
+create table priority_ratio(
+  id task_priority primary key,
+  ratio float not null
+);
+
+comment on table priority_ratio is 'Oneshot task''s reading ratio per priority';
+comment on column priority_ratio.id is 'Task priority id';
+comment on column priority_ratio.ratio is 'Percentage of tasks to read per priority';
+
+insert into priority_ratio (id, ratio) values ('high', 0.5);
+insert into priority_ratio (id, ratio) values ('normal', 0.3);
+insert into priority_ratio (id, ratio) values ('low', 0.2);
+
 create table task (
   id bigserial primary key,
   type text not null references task_type(type),
@@ -50,8 +66,10 @@ create table task (
   status task_status not null,
   policy task_policy not null default 'recurring',
   retries_left bigint not null default 0,
+  priority task_priority references priority_ratio(id),
   check (policy <> 'recurring' or current_interval is not null)
 );
+
 comment on table task is 'Schedule of recurring tasks';
 comment on column task.arguments is 'Arguments passed to the underlying job scheduler. '
                                     'Contains two keys, ''args'' (list) and ''kwargs'' (object).';
@@ -61,11 +79,13 @@ comment on column task.current_interval is 'The interval between two runs of thi
 comment on column task.policy is 'Whether the task is one-shot or recurring';
 comment on column task.retries_left is 'The number of "short delay" retries of the task in case of '
                                        'transient failure';
+comment on column task.priority is 'Policy of the given task';
 
 create index on task(type);
 create index on task(next_run);
 create index task_args on task using btree ((arguments -> 'args'));
 create index task_kwargs on task using gin ((arguments -> 'kwargs'));
+create index on task(priority);
 
 create type task_run_status as enum ('scheduled', 'started', 'eventful', 'uneventful', 'failed', 'permfailed', 'lost');
 comment on type task_run_status is 'Status of a given task run';
@@ -125,8 +145,8 @@ $$;
 
 comment on function swh_scheduler_create_tasks_from_temp () is 'Create tasks in bulk from the temporary table';
 
-create or replace function swh_scheduler_peek_ready_tasks (task_type text, ts timestamptz default now(),
-                                                           num_tasks bigint default NULL)
+create or replace function swh_scheduler_peek_no_priority_tasks (task_type text, ts timestamptz default now(),
+                                                                 num_tasks bigint default NULL)
   returns setof task
   language sql
   stable
@@ -135,25 +155,57 @@ select * from task
   where next_run <= ts
         and type = task_type
         and status = 'next_run_not_scheduled'
+        and priority is null
   order by next_run
-  limit num_tasks;
+  limit num_tasks
+  for update skip locked;
+$$;
+
+create or replace function swh_scheduler_peek_priority_tasks (task_type text, ts timestamptz default now(),
+                                                              num_tasks_priority bigint default NULL,
+                                                              task_priority task_priority default 'normal')
+  returns setof task
+  language sql
+  stable
+as $$
+  select *
+  from task t
+  where t.next_run <= ts
+        and t.type = task_type
+        and t.status = 'next_run_not_scheduled'
+        and t.priority = task_priority
+  order by t.next_run
+  limit ceil(num_tasks_priority * (select ratio from priority_ratio where id = task_priority))
+  for update skip locked;
+$$;
+
+
+create or replace function swh_scheduler_peek_ready_tasks (task_type text, ts timestamptz default now(),
+                                                           num_tasks bigint default NULL, num_tasks_priority bigint default NULL)
+  returns setof task
+  language sql
+  stable
+as $$
+    select * from swh_scheduler_peek_priority_tasks(task_type, ts, num_tasks_priority, 'high')
+    union
+    select * from swh_scheduler_peek_priority_tasks(task_type, ts, num_tasks_priority, 'normal')
+    union
+    select * from swh_scheduler_peek_priority_tasks(task_type, ts, num_tasks_priority, 'low')
+    union
+    select * from swh_scheduler_peek_no_priority_tasks(task_type, ts, num_tasks)
+    order by priority, next_run;
 $$;
 
 create or replace function swh_scheduler_grab_ready_tasks (task_type text, ts timestamptz default now(),
-                                                           num_tasks bigint default NULL)
+                                                           num_tasks bigint default NULL,
+                                                           num_tasks_priority bigint default NULL)
   returns setof task
   language sql
 as $$
   update task
     set status='next_run_scheduled'
     from (
-      select id from task
-        where next_run <= ts
-              and type = task_type
-              and status='next_run_not_scheduled'
-        order by next_run
-        limit num_tasks
-        for update skip locked
+        select id from swh_scheduler_peek_ready_tasks(task_type, ts, num_tasks, num_tasks_priority)
     ) next_tasks
     where task.id = next_tasks.id
   returning task.*;

@@ -158,7 +158,7 @@ class CommonSchedulerTest(SingleDbTestFixture):
             self.assertEqual(task, orig_task)
 
     @istest
-    def peek_ready_tasks(self):
+    def peek_ready_tasks_no_priority(self):
         self._create_task_types()
         t = utcnow()
         task_type = self.task1_template['type']
@@ -203,17 +203,85 @@ class CommonSchedulerTest(SingleDbTestFixture):
             self.assertIn(ready_task, ready_tasks[:limit//3])
 
     @istest
-    def grab_ready_tasks(self):
+    def peek_ready_tasks_mixed_priorities(self):
+        priority_ratio = self._priority_ratio()
         self._create_task_types()
         t = utcnow()
         task_type = self.task1_template['type']
-        tasks = self._tasks_from_template(self.task1_template, t, 100)
+        num_tasks_priority = 100
+        num_tasks_no_priority = 100
+        # Create tasks with and without priorities
+        tasks = self._tasks_from_template(
+            self.task1_template, t,
+            num=num_tasks_no_priority,
+            num_priority=num_tasks_priority,
+            priorities=priority_ratio)
+
+        random.shuffle(tasks)
+        self.backend.create_tasks(tasks)
+
+        # take all available tasks
+        ready_tasks = self.backend.peek_ready_tasks(
+            task_type)
+
+        self.assertEqual(len(ready_tasks), len(tasks))
+        self.assertEqual(num_tasks_priority + num_tasks_no_priority,
+                         len(ready_tasks))
+
+        count_tasks_per_priority = defaultdict(int)
+        for task in ready_tasks:
+            priority = task.get('priority')
+            if priority:
+                count_tasks_per_priority[priority] += 1
+
+        self.assertEqual(dict(count_tasks_per_priority), {
+            priority: int(ratio * num_tasks_priority)
+            for priority, ratio in priority_ratio.items()
+        })
+
+        # Only get some ready tasks
+        num_tasks = random.randrange(5, 5 + num_tasks_no_priority//2)
+        num_tasks_priority = random.randrange(5, num_tasks_priority//2)
+        ready_tasks_limited = self.backend.peek_ready_tasks(
+            task_type, num_tasks=num_tasks,
+            num_tasks_priority=num_tasks_priority)
+
+        count_tasks_per_priority = defaultdict(int)
+        for task in ready_tasks_limited:
+            priority = task.get('priority')
+            count_tasks_per_priority[priority] += 1
+
+        import math
+        for priority, ratio in priority_ratio.items():
+            expected_count = math.ceil(ratio * num_tasks_priority)
+            actual_prio = count_tasks_per_priority[priority]
+            self.assertTrue(
+                actual_prio == expected_count or
+                actual_prio == expected_count + 1)
+
+        self.assertEqual(count_tasks_per_priority[None], num_tasks)
+
+    @istest
+    def grab_ready_tasks(self):
+        priority_ratio = self._priority_ratio()
+        self._create_task_types()
+        t = utcnow()
+        task_type = self.task1_template['type']
+        num_tasks_priority = 100
+        num_tasks_no_priority = 100
+        # Create tasks with and without priorities
+        tasks = self._tasks_from_template(
+            self.task1_template, t,
+            num=num_tasks_no_priority,
+            num_priority=num_tasks_priority,
+            priorities=priority_ratio)
         random.shuffle(tasks)
         self.backend.create_tasks(tasks)
 
         first_ready_tasks = self.backend.peek_ready_tasks(
-            task_type, num_tasks=10)
-        grabbed_tasks = self.backend.grab_ready_tasks(task_type, num_tasks=10)
+            task_type, num_tasks=10, num_tasks_priority=10)
+        grabbed_tasks = self.backend.grab_ready_tasks(
+            task_type, num_tasks=10, num_tasks_priority=10)
 
         for peeked, grabbed in zip(first_ready_tasks, grabbed_tasks):
             self.assertEqual(peeked['status'], 'next_run_not_scheduled')
@@ -221,6 +289,7 @@ class CommonSchedulerTest(SingleDbTestFixture):
             self.assertEqual(grabbed['status'], 'next_run_scheduled')
             del grabbed['status']
             self.assertEqual(peeked, grabbed)
+            self.assertEqual(peeked['priority'], grabbed['priority'])
 
     @istest
     def get_tasks(self):

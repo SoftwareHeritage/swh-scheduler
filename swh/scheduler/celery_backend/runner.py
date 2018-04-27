@@ -14,11 +14,18 @@ from .config import app as main_app
 
 # Max batch size for tasks
 MAX_NUM_TASKS = 10000
+# Percentage of tasks with priority to schedule
+PRIORITY_SLOT = 0.4
 
 
 def run_ready_tasks(backend, app):
-    """Run all tasks that are ready"""
+    """Run tasks that are ready
 
+    Args
+        backend (Scheduler): backend to read tasks to schedule
+        app (App): Celery application to send tasks to
+
+    """
     while True:
         throttled = False
         cursor = backend.cursor()
@@ -37,10 +44,14 @@ def run_ready_tasks(backend, app):
             else:
                 num_tasks = MAX_NUM_TASKS
             if num_tasks > 0:
+                num_tasks_priority = PRIORITY_SLOT * num_tasks
+                num_tasks = (1 - PRIORITY_SLOT) * num_tasks
                 pending_tasks.extend(
-                    backend.grab_ready_tasks(task_type_name,
-                                             num_tasks=num_tasks,
-                                             cursor=cursor))
+                    backend.grab_ready_tasks(
+                        task_type_name,
+                        num_tasks=num_tasks,
+                        num_tasks_priority=num_tasks_priority,
+                        cursor=cursor))
 
         if not pending_tasks:
             break
