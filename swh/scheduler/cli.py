@@ -70,10 +70,8 @@ def pretty_print_task(task):
 @click.option('--cls', '-c', default='local',
               help="Scheduler's class, default to 'local'")
 @click.option('--database', '-d',
-              default='host=db.internal.softwareheritage.org '
-                      'dbname=softwareheritage-scheduler user=guest',
               help='Scheduling database DSN')
-@click.option('--url', '-u', default='http://localhost:5008',
+@click.option('--url', '-u',
               help="(Optional) Scheduler's url access")
 @click.pass_context
 def cli(ctx, cls, database, url):
@@ -84,11 +82,16 @@ def cli(ctx, cls, database, url):
 
     """
     scheduler = None
+    override_config = {}
     from . import get_scheduler
     if cls == 'local':
-        scheduler = get_scheduler(cls, args={'scheduling_db': database})
+        if database:
+            override_config = {'scheduling_db': database}
+        scheduler = get_scheduler(cls, args=override_config)
     elif cls == 'remote':
-        scheduler = get_scheduler(cls, args={'url': url})
+        if url:
+            override_config = {'url': url}
+        scheduler = get_scheduler(cls, args=override_config)
 
     if not scheduler:
         raise ValueError('Scheduler class (local/remote) must be instantiated')
