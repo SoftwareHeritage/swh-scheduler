@@ -231,7 +231,7 @@ class SchedulerBackend(SWHConfig):
         return ret
 
     task_create_keys = [
-        'type', 'arguments', 'next_run', 'policy', 'retries_left',
+        'type', 'arguments', 'next_run', 'policy', 'retries_left', 'priority',
     ]
     task_keys = task_create_keys + ['id', 'current_interval', 'status']
 
