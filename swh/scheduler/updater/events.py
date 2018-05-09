@@ -20,12 +20,20 @@ class SWHEvent:
         self.event = evt
 
     def check(self):
-        return 'evt' in self.event and self.event['evt'] in LISTENED_EVENTS
+        return 'event' in self.event and self.event['event'] in LISTENED_EVENTS
+
+    def get(self):
+        return {
+            'event': self.event['event'],
+            'url': self.event['url'],
+            'last_seen': self.event.get('last_seen')
+        }
 
     def __str__(self):
         return {
-            'evt': self.event['evt'],
-            'url': self.event['url']
+            'event': self.event['event'],
+            'url': self.event['url'],
+            'last_seen': self.event.get('last_seen')
         }
 
 

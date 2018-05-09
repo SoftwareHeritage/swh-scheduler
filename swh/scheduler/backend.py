@@ -48,27 +48,17 @@ def autocommit(fn):
     return wrapped
 
 
-class SchedulerBackend(SWHConfig):
-    """Backend for the Software Heritage scheduling database.
+class DbBackend:
+    """Mixin intended to be used within scheduling db backend classes
+
+    cf. swh.scheduler.backend.SchedulerBackend, and
+    swh.scheduler.updater.backend.SchedulerUpdaterBackend
 
     """
-    CONFIG_BASE_FILENAME = 'scheduler'
-    DEFAULT_CONFIG = {
-        'scheduling_db': ('str', 'dbname=softwareheritage-scheduler-dev'),
-    }
-
-    def __init__(self, **override_config):
-        self.config = self.parse_config_file(global_config=False)
-        self.config.update(override_config)
-
-        self.db = None
-
-        self.reconnect()
-
     def reconnect(self):
         if not self.db or self.db.closed:
             self.db = psycopg2.connect(
-                dsn=self.config['scheduling_db'],
+                dsn=self.db_conn_dsn,
                 cursor_factory=psycopg2.extras.RealDictCursor,
             )
 
@@ -107,6 +97,28 @@ class SchedulerBackend(SWHConfig):
         """Close db connection"""
         if self.db and not self.db.closed:
             self.db.close()
+
+    def _format_query(self, query, keys):
+        """Format a query with the given keys"""
+
+        query_keys = ', '.join(keys)
+        placeholders = ', '.join(['%s'] * len(keys))
+
+        return query.format(keys=query_keys, placeholders=placeholders)
+
+    def _format_multiquery(self, query, keys, values):
+        """Format a query with placeholders generated for multiple values"""
+        query_keys = ', '.join(keys)
+        placeholders = '), ('.join(
+            [', '.join(['%s'] * len(keys))] * len(values)
+        )
+        ret_values = sum([[value[key] for key in keys]
+                          for value in values], [])
+
+        return (
+            query.format(keys=query_keys, placeholders=placeholders),
+            ret_values,
+        )
 
     def copy_to(self, items, tblname, columns, cursor=None, item_cb=None):
         def escape(data):
@@ -149,33 +161,29 @@ class SchedulerBackend(SWHConfig):
             cursor.copy_expert('COPY %s (%s) FROM STDIN CSV' % (
                 tblname, ', '.join(columns)), f)
 
+
+class SchedulerBackend(SWHConfig, DbBackend):
+    """Backend for the Software Heritage scheduling database.
+
+    """
+    CONFIG_BASE_FILENAME = 'scheduler'
+    DEFAULT_CONFIG = {
+        'scheduling_db': ('str', 'dbname=softwareheritage-scheduler-dev'),
+    }
+
+    def __init__(self, **override_config):
+        super().__init__()
+        self.config = self.parse_config_file(global_config=False)
+        self.config.update(override_config)
+        self.db = None
+        self.db_conn_dsn = self.config['scheduling_db']
+        self.reconnect()
+
     task_type_keys = [
         'type', 'description', 'backend_name', 'default_interval',
         'min_interval', 'max_interval', 'backoff_factor', 'max_queue_length',
         'num_retries', 'retry_delay',
     ]
-
-    def _format_query(self, query, keys):
-        """Format a query with the given keys"""
-
-        query_keys = ', '.join(keys)
-        placeholders = ', '.join(['%s'] * len(keys))
-
-        return query.format(keys=query_keys, placeholders=placeholders)
-
-    def _format_multiquery(self, query, keys, values):
-        """Format a query with placeholders generated for multiple values"""
-        query_keys = ', '.join(keys)
-        placeholders = '), ('.join(
-            [', '.join(['%s'] * len(keys))] * len(values)
-        )
-        ret_values = sum([[value[key] for key in keys]
-                          for value in values], [])
-
-        return (
-            query.format(keys=query_keys, placeholders=placeholders),
-            ret_values,
-        )
 
     @autocommit
     def create_task_type(self, task_type, cursor=None):

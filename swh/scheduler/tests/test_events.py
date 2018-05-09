@@ -5,11 +5,12 @@
 
 import unittest
 
+from arrow import utcnow
+from hypothesis import given
+from hypothesis.strategies import one_of, text, just, sampled_from
 from nose.tools import istest
 
 from swh.scheduler.updater.events import SWHEvent, LISTENED_EVENTS
-from hypothesis import given
-from hypothesis.strategies import one_of, text, just, sampled_from
 
 
 def event_values_ko():
@@ -28,8 +29,9 @@ def event_values_ko():
 class EventTest(unittest.TestCase):
     def _make_event(self, event_name):
         return {
-            'evt': event_name,
-            'url': 'something'
+            'event': event_name,
+            'url': 'something',
+            'last_seen': utcnow(),
         }
 
     @istest
