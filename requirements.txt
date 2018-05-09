@@ -7,5 +7,6 @@ celery
 Click
 elasticsearch>5.4
 flask
+kombu
 psycopg2
 vcversioner
