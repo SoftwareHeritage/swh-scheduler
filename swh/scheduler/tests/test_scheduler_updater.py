@@ -11,7 +11,6 @@ from nose.plugins.attrib import attr
 from nose.tools import istest
 from hypothesis import given
 from hypothesis.strategies import sets, from_regex
-from urllib.parse import urlencode
 
 from swh.core.tests.db_testing import SingleDbTestFixture
 from swh.scheduler.updater.backend import SchedulerUpdaterBackend
@@ -52,7 +51,7 @@ class SchedulerUpdaterTest(SingleDbTestFixture, unittest.TestCase):
     @istest
     @given(sets(
         from_regex(
-            r'^https://somwhere[.]org/[a-z0-9]{5,7}/[a-z0-9]{3,10}$'),
+            r'^https://somewhere[.]org/[a-z0-9]{5,7}/[a-z0-9]{3,10}$'),
         min_size=10, max_size=15))
     def cache_read(self, urls):
         def gen_events(urls):
