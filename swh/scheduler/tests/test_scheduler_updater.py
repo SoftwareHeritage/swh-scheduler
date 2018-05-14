@@ -58,7 +58,7 @@ class SchedulerUpdaterTest(SingleDbTestFixture, unittest.TestCase):
             for url in urls:
                 yield SWHEvent({
                     'url': url,
-                    'event': 'create'
+                    'type': 'create'
                 })
 
         self.backend.cache_put(gen_events(urls))

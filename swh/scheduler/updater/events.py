@@ -20,28 +20,19 @@ class SWHEvent:
         self.event = evt
 
     def check(self):
-        return 'event' in self.event and self.event['event'] in LISTENED_EVENTS
+        return 'type' in self.event and \
+            self.event['type'].lower() in LISTENED_EVENTS
 
     def get(self):
         return {
-            'event': self.event['event'],
+            'type': self.event['type'],
             'url': self.event['url'],
             'last_seen': self.event.get('last_seen')
         }
 
     def __str__(self):
         return {
-            'event': self.event['event'],
+            'type': self.event['type'],
             'url': self.event['url'],
             'last_seen': self.event.get('last_seen')
         }
-
-
-class SWHPublisher:
-    def process(self):
-        pass
-
-
-class SWHSubscriber:
-    def process(self):
-        pass

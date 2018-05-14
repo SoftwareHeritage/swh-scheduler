@@ -29,7 +29,7 @@ def event_values_ko():
 class EventTest(unittest.TestCase):
     def _make_event(self, event_name):
         return {
-            'event': event_name,
+            'type': event_name,
             'url': 'something',
             'last_seen': utcnow(),
         }
