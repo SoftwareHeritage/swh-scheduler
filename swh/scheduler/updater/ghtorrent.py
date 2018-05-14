@@ -8,6 +8,9 @@ import string
 
 from kombu import Connection, Exchange, Queue
 
+from swh.scheduler.updater.events import SWHEvent
+from swh.scheduler.updater.backend import SchedulerUpdaterBackend
+
 
 events = {
     # ghtorrent events related to github events (that's the one we are
@@ -109,7 +112,7 @@ class FakeGHTorrentPublisher(RabbitMQConn):
         event_type = random.choice(['evt', 'ent'])
         sub_event = random.choice(events[event_type])
         return {
-            'event': sub_event,
+            'type': sub_event,
             'url': self.fake_origin_generator.generate(),
         }
 
@@ -124,8 +127,12 @@ class FakeGHTorrentPublisher(RabbitMQConn):
                                      declare=[self.queue])
 
 
-def process_message(body, message):
-    print('####', body, message)
+def process_message(body, message, backend):
+    print('#### body', body)
+    print('#### message', message)
+    e = SWHEvent(body)
+    if e.check():
+        backend.cache_put([e])
     message.ack()
 
 
@@ -133,8 +140,15 @@ class GHTorrentConsumer(RabbitMQConn):
     """GHTorrent consumer
 
     """
+    def __init__(self):
+        super().__init__()
+        self.backend = SchedulerUpdaterBackend()
+
     def consume(self):
+        def process_message_fn(b, m, backend=self.backend):
+            return process_message(b, m, backend)
+
         with Connection(self.conn_queue) as conn:
-            with conn.Consumer(self.queue, callbacks=[process_message],
+            with conn.Consumer(self.queue, callbacks=[process_message_fn],
                                auto_declare=True) as consumer:
                 consumer.consume()
