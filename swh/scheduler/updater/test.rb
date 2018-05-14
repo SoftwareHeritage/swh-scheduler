@@ -6,7 +6,7 @@ conn = Bunny.new(:host => '127.0.0.1', :port => 2765,
 conn.start
 ch  = conn.create_channel
 exchange = ch.topic('ght-streams', :durable => true)
-queue_name = 'swh_ghtorrent_queue'
+queue_name = 'swh_queue'
 q = ch.queue(queue_name, :auto_delete => true)
 # q.bind(exchange, :routing_key => 'evt.*.*')
 # q.bind(exchange, :routing_key => 'evt.push.insert')

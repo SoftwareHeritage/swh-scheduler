@@ -5,38 +5,29 @@
 
 
 from kombu import Connection, Exchange, Queue
+from pprint import pprint
 
 
-def process_message(body, message):
-    print('####', body, message)
-    message.ack()
-
-
-# does not work yet
-# connections setup
 conf = {
     'user': 'streamer',
     'pass': 'streamer',
     'port': 2765,
     'gh_torrent_exchange_name': 'ght-streams',
-    # 'queue_name': 'ardumont_swh_queue',
-    'queue_name': 'swh_ghtorrent_queue',
+    'queue_name': 'swh_queue',
     # http://ghtorrent.org/streaming.html  : {evt|ent}.{entity|event}.action
-    'routing_key': '*.*.*',
-    # 'routing_key': 'evt.*.*',
-    # 'routing_key': 'evt.create|delete|public|push.insert',
+    'routing_key': 'evt.*.insert',
 }
 
 # works with fake event generator
-conf = {
-    'user': 'guest',
-    'pass': 'guest',
-    'port': 5672,
-    'gh_torrent_exchange_name': 'ght-streams',
-    'queue_name': 'fake-events',
-    'routing_key': 'something',
+# conf = {
+#     'user': 'guest',
+#     'pass': 'guest',
+#     'port': 5672,
+#     'gh_torrent_exchange_name': 'ght-streams',
+#     'queue_name': 'fake-events',
+#     'routing_key': 'something',
 
-}
+# }
 
 server_url = 'amqp://%s:%s@localhost:%s//' % (
     conf['user'], conf['pass'], conf['port'])
@@ -47,6 +38,15 @@ test_queue = Queue(conf['queue_name'],
                    exchange=exchange,
                    routing_key=conf['routing_key'],
                    auto_delete=True)
+
+
+def process_message(body, message):
+    print('#### body')
+    pprint(body)
+    print('#### message')
+    pprint(message)
+    message.ack()
+
 
 with Connection(server_url) as conn:
     # produce
