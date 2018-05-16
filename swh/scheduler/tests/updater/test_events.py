@@ -7,7 +7,7 @@ import unittest
 
 from arrow import utcnow
 from hypothesis import given
-from hypothesis.strategies import one_of, text, just, sampled_from
+from hypothesis.strategies import text, sampled_from
 from nose.tools import istest
 
 from swh.scheduler.updater.events import SWHEvent, LISTENED_EVENTS
@@ -18,6 +18,9 @@ def event_values_ko():
     return set(events['evt']).union(
         set(events['ent'])).difference(
         set(LISTENED_EVENTS))
+
+
+WRONG_EVENTS = sorted(list(event_values_ko()))
 
 
 class EventTest(unittest.TestCase):
@@ -44,7 +47,7 @@ class EventTest(unittest.TestCase):
         self.assertFalse(SWHEvent(evt).check())
 
     @istest
-    @given(one_of(map(just, event_values_ko())))
+    @given(sampled_from(WRONG_EVENTS))
     def check_ko(self, event_name):
         evt = self._make_event(event_name)
         self.assertFalse(SWHEvent(evt).check())
