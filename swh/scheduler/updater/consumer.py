@@ -55,11 +55,12 @@ class UpdaterConsumer(metaclass=ABCMeta):
                     self.events.append(event)
                     self.seen_events.add(event.url)
                     self.count += 1
-            if self.count >= self.batch:
-                self.backend.cache_put(self.events)
-                self._reset_cache()
         finally:
             self.post_process_message(message)
+            if self.count >= self.batch:
+                if self.events:
+                    self.backend.cache_put(self.events)
+                self._reset_cache()
 
     def consume(self):
         """The main entry point to consume data.
