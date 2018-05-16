@@ -11,19 +11,13 @@ from hypothesis.strategies import one_of, text, just, sampled_from
 from nose.tools import istest
 
 from swh.scheduler.updater.events import SWHEvent, LISTENED_EVENTS
+from swh.scheduler.updater.ghtorrent import events
 
 
 def event_values_ko():
-    return {
-        'repos', 'org_members', 'teamadd', 'geo_cache',
-        'follow', 'issue_comments', 'followers', 'forks', 'pagebuild',
-        'pullrequest', 'pull_requests', 'commit_comments', 'watch', 'fork',
-        'forkapply', 'commits', 'release', 'gollum', 'membership', 'watchers',
-        'pullrequestreviewcomment', 'deployment', 'issuecomment', 'status',
-        'repo_labels', 'issue_events', 'commitcomment', 'issues', 'member',
-        'users', 'download', 'repo_collaborators', 'repository',
-        'deploymentstatus', 'pull_request_comments', 'gist'
-    }
+    return set(events['evt']).union(
+        set(events['ent'])).difference(
+        set(LISTENED_EVENTS))
 
 
 class EventTest(unittest.TestCase):

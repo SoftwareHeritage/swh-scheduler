@@ -17,11 +17,11 @@ from swh.scheduler.updater.backend import SchedulerUpdaterBackend
 from swh.scheduler.updater.events import SWHEvent
 
 TEST_DIR = os.path.dirname(os.path.abspath(__file__))
-TEST_DATA_DIR = os.path.join(TEST_DIR, '../../../../swh-storage-testdata')
+TEST_DATA_DIR = os.path.join(TEST_DIR, '../../../../../swh-storage-testdata')
 
 
 @attr('db')
-class SchedulerUpdaterTest(SingleDbTestFixture, unittest.TestCase):
+class SchedulerUpdaterBackendTest(SingleDbTestFixture, unittest.TestCase):
     TEST_DB_NAME = 'softwareheritage-scheduler-updater-test'
     TEST_DB_DUMP = os.path.join(TEST_DATA_DIR,
                                 'dumps/swh-scheduler-updater.dump')
