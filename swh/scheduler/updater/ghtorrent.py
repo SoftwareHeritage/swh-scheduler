@@ -3,6 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import click
 import json
 import random
 import string
@@ -209,3 +210,15 @@ class GHTorrentConsumer(RabbitMQConn):
                                auto_declare=True):
                 while True:
                     conn.drain_events()
+
+
+@click.command()
+def main():
+    """Consume events from ghtorrent
+
+    """
+    GHTorrentConsumer().consume()
+
+
+if __name__ == '__main__':
+    main()
