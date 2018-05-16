@@ -219,7 +219,7 @@ def main():
     """Consume events from ghtorrent
 
     """
-    GHTorrentConsumer().consume()
+    GHTorrentConsumer().run()
 
 
 if __name__ == '__main__':

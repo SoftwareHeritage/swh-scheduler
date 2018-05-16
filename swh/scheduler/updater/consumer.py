@@ -62,6 +62,12 @@ class UpdaterConsumer(metaclass=ABCMeta):
                     self.backend.cache_put(self.events)
                 self._reset_cache()
 
+    def flush(self):
+        if self.events:
+            self.backend.cache_put(self.events)
+            self._reset_cache()
+
+    @abstractmethod
     def consume(self):
         """The main entry point to consume data.
 
@@ -69,3 +75,10 @@ class UpdaterConsumer(metaclass=ABCMeta):
 
         """
         pass
+
+    def run(self):
+        """The main entry point to consume events.
+
+        """
+        self.consume()
+        self.flush()
