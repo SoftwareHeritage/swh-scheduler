@@ -22,7 +22,7 @@ class SWHEvent:
         self.last_seen = evt.get('last_seen')
         self.rate = rate
 
-    def check(self):
+    def is_interesting(self):
         return self.type in LISTENED_EVENTS
 
     def get(self):

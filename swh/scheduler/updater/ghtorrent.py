@@ -9,12 +9,11 @@ import random
 import string
 
 from arrow import utcnow
-from collections import defaultdict
 from kombu import Connection, Exchange, Queue
 
 from swh.core.config import SWHConfig
 from swh.scheduler.updater.events import SWHEvent
-from swh.scheduler.updater.backend import SchedulerUpdaterBackend
+from swh.scheduler.updater.consumer import UpdaterConsumer
 
 
 events = {
@@ -89,6 +88,7 @@ class RabbitMQConn(SWHConfig):
         )
 
     def __init__(self, **config):
+        super().__init__()
         if config:
             self.config = config
         else:
@@ -177,7 +177,7 @@ def convert_event(event):
     })
 
 
-class GHTorrentConsumer(RabbitMQConn):
+class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
     """GHTorrent consumer
 
     """
@@ -186,37 +186,27 @@ class GHTorrentConsumer(RabbitMQConn):
         'batch': ('int', 1000),
     }
 
-    def __init__(self):
-        super().__init__()
-        self.backend = SchedulerUpdaterBackend()
+    def __init__(self, **config):
+        super().__init__(**config)
         self.debug = self.config['debug']
-        self._reset_cache()
         self.batch = self.config['batch']
 
-    def _reset_cache(self):
-        self.count = 0
-        self.seen_events = set()
-        self.events = []
+    def post_process_message(self, message):
+        """Acknowledge the read message.
 
-    def process_message(self, body, message):
-        try:
-            event = convert_event(body)
-            if self.debug:
-                print('#### body', body)
-            if event.check():
-                if event.url in self.seen_events:
-                    event.rate += 1
-                else:
-                    self.events.append(event)
-                    self.seen_events.add(event.url)
-                    self.count += 1
-            if self.count >= self.batch:
-                self.backend.cache_put(self.events)
-                self._reset_cache()
-        finally:
-            message.ack()
+        """
+        message.ack()
+
+    def convert_event(self, event):
+        """Given ghtorrent event, convert it to an swhevent instance.
+
+        """
+        return convert_event(event)
 
     def consume(self):
+        """Open a rabbitmq connection and consumes events from that endpoint.
+
+        """
         with Connection(self.conn_string) as conn:
             with conn.Consumer(self.queue, callbacks=[self.process_message],
                                auto_declare=True):

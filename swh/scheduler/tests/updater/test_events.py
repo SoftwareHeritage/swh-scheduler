@@ -33,21 +33,21 @@ class EventTest(unittest.TestCase):
 
     @istest
     @given(sampled_from(LISTENED_EVENTS))
-    def check_ok(self, event_name):
+    def is_interesting_ok(self, event_name):
         evt = self._make_event(event_name)
-        self.assertTrue(SWHEvent(evt).check())
+        self.assertTrue(SWHEvent(evt).is_interesting())
 
     @istest
     @given(text())
-    def check_with_noisy_event_should_be_ko(self, event_name):
+    def is_interested_with_noisy_event_should_be_ko(self, event_name):
         if event_name in LISTENED_EVENTS:
             # just in generation generates a real and correct name, skip it
             return
         evt = self._make_event(event_name)
-        self.assertFalse(SWHEvent(evt).check())
+        self.assertFalse(SWHEvent(evt).is_interesting())
 
     @istest
     @given(sampled_from(WRONG_EVENTS))
-    def check_ko(self, event_name):
+    def is_interesting_ko(self, event_name):
         evt = self._make_event(event_name)
-        self.assertFalse(SWHEvent(evt).check())
+        self.assertFalse(SWHEvent(evt).is_interesting())
