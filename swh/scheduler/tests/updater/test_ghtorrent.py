@@ -52,6 +52,7 @@ class GHTorrentTest(unittest.TestCase):
             'type': event_type.lower().rstrip('Event'),
             'url': 'https://github.com/%s' % name,
             'last_seen': input_event['created_at'],
+            'rate': 1,
         }
         self.assertEqual(event, expected_event)
 

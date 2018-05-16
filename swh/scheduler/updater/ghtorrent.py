@@ -9,6 +9,7 @@ import random
 import string
 
 from arrow import utcnow
+from collections import defaultdict
 from kombu import Connection, Exchange, Queue
 
 from swh.core.config import SWHConfig
@@ -176,37 +177,48 @@ def convert_event(event):
     })
 
 
-def process_message(body, message, backend, debug=False):
-    """Callback method to convert and push event to cache"""
-    try:
-        event = convert_event(body)
-        if debug:
-            print('#### body', body)
-        if event.check():
-            backend.cache_put([event])
-    finally:
-        message.ack()
-
-
 class GHTorrentConsumer(RabbitMQConn):
     """GHTorrent consumer
 
     """
     ADDITIONAL_CONFIG = {
-        'debug': (bool, False),
+        'debug': ('bool', False),
+        'batch': ('int', 1000),
     }
 
     def __init__(self):
         super().__init__()
         self.backend = SchedulerUpdaterBackend()
         self.debug = self.config['debug']
+        self._reset_cache()
+        self.batch = self.config['batch']
+
+    def _reset_cache(self):
+        self.count = 0
+        self.seen_events = set()
+        self.events = []
+
+    def process_message(self, body, message):
+        try:
+            event = convert_event(body)
+            if self.debug:
+                print('#### body', body)
+            if event.check():
+                if event.url in self.seen_events:
+                    event.rate += 1
+                else:
+                    self.events.append(event)
+                    self.seen_events.add(event.url)
+                    self.count += 1
+            if self.count >= self.batch:
+                self.backend.cache_put(self.events)
+                self._reset_cache()
+        finally:
+            message.ack()
 
     def consume(self):
-        def process_message_fn(b, m, backend=self.backend, debug=self.debug):
-            return process_message(b, m, backend=backend, debug=debug)
-
         with Connection(self.conn_string) as conn:
-            with conn.Consumer(self.queue, callbacks=[process_message_fn],
+            with conn.Consumer(self.queue, callbacks=[self.process_message],
                                auto_declare=True):
                 while True:
                     conn.drain_events()
