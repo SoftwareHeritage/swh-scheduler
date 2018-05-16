@@ -5,7 +5,6 @@
 
 
 LISTENED_EVENTS = [
-    'create',
     'delete',
     'public',
     'push'
