@@ -129,7 +129,7 @@ class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
         """
         self.conn.release()
 
-    def consume(self):
+    def consume_events(self):
         """Consume and yield queue messages
 
         """

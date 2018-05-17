@@ -12,10 +12,10 @@ class UpdaterConsumer(metaclass=ABCMeta):
     """Event consumer
 
     """
-    def __init__(self, batch=1000):
+    def __init__(self, batch=1000, backend_class=SchedulerUpdaterBackend):
         super().__init__()
         self._reset_cache()
-        self.backend = SchedulerUpdaterBackend()
+        self.backend = backend_class()
         self.batch = batch
 
     def _reset_cache(self):
@@ -82,7 +82,7 @@ class UpdaterConsumer(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def consume(self):
+    def consume_events(self):
         """The main entry point to consume events.
 
         This should either yield or return message for consumption.
@@ -109,9 +109,15 @@ class UpdaterConsumer(metaclass=ABCMeta):
         """The main entry point to consume events.
 
         """
-        self.open_connection()
-        while self.has_events():
-            for event in self.consume():
-                self.process_event(event)
-        self.close_connection()
-        self._flush()
+        try:
+            self.open_connection()
+            while self.has_events():
+                for event in self.consume_events():
+                    self.process_event(event)
+        except Exception as e:
+            # FIXME: use logging instead
+            print('Something went wrong: %s' % e)
+            raise e
+        finally:
+            self.close_connection()
+            self._flush()

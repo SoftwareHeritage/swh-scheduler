@@ -146,7 +146,7 @@ class GHTorrentConsumerTest(unittest.TestCase):
 
     @patch('swh.scheduler.updater.ghtorrent.collect_replies')
     @istest
-    def consume(self, mock_collect_replies):
+    def consume_events(self, mock_collect_replies):
         # given
         self.consumer.queue = 'fake-queue'  # hack
         self.consumer.open_connection()
@@ -160,7 +160,7 @@ class GHTorrentConsumerTest(unittest.TestCase):
 
         # when
         actual_events = []
-        for e in self.consumer.consume():
+        for e in self.consumer.consume_events():
             actual_events.append(e)
 
         # then
