@@ -68,28 +68,6 @@ class RabbitMQConn(SWHConfig):
                            auto_delete=True)
 
 
-def convert_event(event):
-    """Given ghtorrent event, convert it to an swhevent instance.
-
-    """
-    if isinstance(event, str):
-        event = json.loads(event)
-
-    keys = ['type', 'repo', 'created_at']
-    for k in keys:
-        if k not in event:
-            raise ValueError('Event should have the \'%s\' entry defined' % k)
-
-    _type = event['type'].lower().rstrip('Event')
-    _repo_name = 'https://github.com/%s' % event['repo']['name']
-
-    return SWHEvent({
-        'type': _type,
-        'url': _repo_name,
-        'last_seen': event['created_at']
-    })
-
-
 class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
     """GHTorrent events consumer
 
@@ -100,8 +78,12 @@ class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
         'rabbitmq_prefetch_read': ('int', 100),
     }
 
-    def __init__(self, **config):
-        super().__init__(**config)
+    def __init__(self, config=None, _connection_class=Connection):
+        if config is None:
+            super().__init__()
+        else:
+            self.config = config
+        self._connection_class = _connection_class
         self.debug = self.config['debug']
         self.batch = self.config['batch_cache_write']
         self.prefetch_read = self.config['rabbitmq_prefetch_read']
@@ -116,13 +98,28 @@ class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
         """Given ghtorrent event, convert it to a SWHEvent instance.
 
         """
-        return convert_event(event)
+        if isinstance(event, str):
+            event = json.loads(event)
+
+        keys = ['type', 'repo', 'created_at']
+        for k in keys:
+            if k not in event:
+                raise ValueError(
+                    'Event should have the \'%s\' entry defined' % k)
+
+        _type = event['type'].lower().rstrip('Event')
+        _repo_name = 'https://github.com/%s' % event['repo']['name']
+
+        return SWHEvent({
+            'type': _type,
+            'url': _repo_name,
+            'last_seen': event['created_at']
+        })
 
     def open_connection(self):
         """Open rabbitmq connection
 
         """
-        self.conn = Connection(self.conn_string)
         self.conn = self._connection_class(self.config['conn']['url'])
         self.conn.connect()
 
