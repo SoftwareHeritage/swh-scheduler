@@ -105,7 +105,7 @@ def convert_event(event):
 
 
 class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
-    """GHTorrent consumer
+    """GHTorrent events consumer
 
     """
     ADDITIONAL_CONFIG = {
@@ -117,7 +117,6 @@ class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
         super().__init__(**config)
         self.debug = self.config['debug']
         self.batch = self.config['batch']
-        self.messages = []
 
     def has_events(self):
         return True
@@ -127,9 +126,6 @@ class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
 
         """
         return convert_event(event)
-
-    def _on_message(self, message):
-        self.messages.append((message.body.decode('utf-8'), message))
 
     def open_connection(self):
         self.conn = Connection(self.conn_string)
