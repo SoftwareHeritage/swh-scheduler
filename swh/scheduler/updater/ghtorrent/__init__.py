@@ -41,10 +41,7 @@ class RabbitMQConn(SWHConfig):
 
     DEFAULT_CONFIG = {
         'conn': ('dict', {
-            'user': 'guest',
-            'pass': 'guest',
-            'port': 5672,
-            'server': 'localhost',
+            'url': 'amqp://guest:guest@localhost:5672',
             'exchange_name': 'ght-streams',
             'routing_key': 'something',
             'queue_name': 'fake-events'
@@ -52,17 +49,6 @@ class RabbitMQConn(SWHConfig):
     }
 
     ADDITIONAL_CONFIG = {}
-
-    def _connection_string(self):
-        """Build the connection queue string.
-
-        """
-        return 'amqp://%s:%s@%s:%s' % (
-            self.config['conn']['user'],
-            self.config['conn']['pass'],
-            self.config['conn']['server'],
-            self.config['conn']['port']
-        )
 
     def __init__(self, **config):
         super().__init__()
@@ -72,7 +58,7 @@ class RabbitMQConn(SWHConfig):
             self.config = self.parse_config_file(
                 additional_configs=[self.ADDITIONAL_CONFIG])
 
-        self.conn_string = self._connection_string()
+        self.conn_string = self.config['conn']['url']
         self.exchange = Exchange(self.config['conn']['exchange_name'],
                                  'topic', durable=True)
         self.routing_key = self.config['conn']['routing_key']
@@ -137,6 +123,7 @@ class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
 
         """
         self.conn = Connection(self.conn_string)
+        self.conn = self._connection_class(self.config['conn']['url'])
         self.conn.connect()
 
     def close_connection(self):

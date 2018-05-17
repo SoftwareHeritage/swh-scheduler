@@ -72,7 +72,7 @@ class FakeGHTorrentPublisher(RabbitMQConn):
         if not nb_messages:
             nb_messages = self.nb_messages
 
-        with Connection(self.conn_string) as conn:
+        with Connection(self.config['conn']['url']) as conn:
             with conn.Producer(serializer='json') as producer:
                 for n in range(nb_messages):
                     event = self._random_event()
