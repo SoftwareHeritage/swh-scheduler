@@ -196,12 +196,6 @@ class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
     def has_events(self):
         return True
 
-    def post_process_message(self, message):
-        """Acknowledge the read message.
-
-        """
-        pass
-
     def convert_event(self, event):
         """Given ghtorrent event, convert it to an swhevent instance.
 
@@ -219,13 +213,12 @@ class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
         self.conn.release()
 
     def consume(self):
-        """Open a rabbitmq connection and consumes events from that endpoint.
+        """Consume events from rabbitmq connection
 
         """
-        for body in collect_replies(
+        yield from collect_replies(
                 self.conn, self.conn.channel(), self.queue, no_ack=False,
-                limit=100):
-            self.process_message(body, None)
+                limit=100)
 
 
 @click.command()

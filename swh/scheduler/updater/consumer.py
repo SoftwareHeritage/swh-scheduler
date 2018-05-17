@@ -19,6 +19,9 @@ class UpdaterConsumer(metaclass=ABCMeta):
         self.batch = batch
 
     def _reset_cache(self):
+        """Reset internal cache.
+
+        """
         self.count = 0
         self.seen_events = set()
         self.events = []
@@ -39,11 +42,10 @@ class UpdaterConsumer(metaclass=ABCMeta):
         """
         pass
 
-    @abstractmethod
-    def post_process_message(self, message):
-        pass
+    def process_event(self, body):
+        """Process event
 
-    def process_message(self, body, message):
+        """
         try:
             event = self.convert_event(body)
             if self.debug:
@@ -56,13 +58,15 @@ class UpdaterConsumer(metaclass=ABCMeta):
                     self.seen_events.add(event.url)
                     self.count += 1
         finally:
-            self.post_process_message(message)
             if self.count >= self.batch:
                 if self.events:
                     self.backend.cache_put(self.events)
                 self._reset_cache()
 
-    def flush(self):
+    def _flush(self):
+        """Flush remaining internal cache if any.
+
+        """
         if self.events:
             self.backend.cache_put(self.events)
             self._reset_cache()
@@ -71,15 +75,17 @@ class UpdaterConsumer(metaclass=ABCMeta):
     def has_events(self):
         """Determine if there remains events to consume.
 
+        Returns
+            boolean value, true for remaining events, False otherwise
+
         """
         pass
 
     @abstractmethod
     def consume(self):
-        """The main entry point to consume event.
+        """The main entry point to consume events.
 
-        This should be defined per consumer and call the
-        self.process_message function.
+        This should either yield or return message for consumption.
 
         """
         pass
@@ -105,6 +111,7 @@ class UpdaterConsumer(metaclass=ABCMeta):
         """
         self.open_connection()
         while self.has_events():
-            self.consume()
+            for event in self.consume():
+                self.process_event(event)
         self.close_connection()
-        self.flush()
+        self._flush()
