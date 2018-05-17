@@ -121,23 +121,32 @@ class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
         self.prefetch_read = self.config['rabbitmq_prefetch_read']
 
     def has_events(self):
+        """Always has events
+
+        """
         return True
 
     def convert_event(self, event):
-        """Given ghtorrent event, convert it to an swhevent instance.
+        """Given ghtorrent event, convert it to a SWHEvent instance.
 
         """
         return convert_event(event)
 
     def open_connection(self):
+        """Open rabbitmq connection
+
+        """
         self.conn = Connection(self.conn_string)
         self.conn.connect()
 
     def close_connection(self):
+        """Close rabbitmq connection
+
+        """
         self.conn.release()
 
     def consume(self):
-        """Consume events from rabbitmq connection
+        """Consume and yield queue messages
 
         """
         yield from collect_replies(
