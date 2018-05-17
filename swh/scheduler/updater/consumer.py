@@ -68,10 +68,33 @@ class UpdaterConsumer(metaclass=ABCMeta):
             self._reset_cache()
 
     @abstractmethod
-    def consume(self):
-        """The main entry point to consume data.
+    def has_events(self):
+        """Determine if there remains events to consume.
 
-        This should call the self.process_message function.
+        """
+        pass
+
+    @abstractmethod
+    def consume(self):
+        """The main entry point to consume event.
+
+        This should be defined per consumer and call the
+        self.process_message function.
+
+        """
+        pass
+
+    @abstractmethod
+    def open_connection(self):
+        """Open a connection to the remote system we are supposed to consume
+           from.
+
+        """
+        pass
+
+    @abstractmethod
+    def close_connection(self):
+        """Close opened connection to the remote system.
 
         """
         pass
@@ -80,5 +103,8 @@ class UpdaterConsumer(metaclass=ABCMeta):
         """The main entry point to consume events.
 
         """
-        self.consume()
+        self.open_connection()
+        while self.has_events():
+            self.consume()
+        self.close_connection()
         self.flush()

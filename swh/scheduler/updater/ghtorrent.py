@@ -10,6 +10,7 @@ import string
 
 from arrow import utcnow
 from kombu import Connection, Exchange, Queue
+from kombu.common import collect_replies
 
 from swh.core.config import SWHConfig
 from swh.scheduler.updater.events import SWHEvent
@@ -190,12 +191,16 @@ class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
         super().__init__(**config)
         self.debug = self.config['debug']
         self.batch = self.config['batch']
+        self.messages = []
+
+    def has_events(self):
+        return True
 
     def post_process_message(self, message):
         """Acknowledge the read message.
 
         """
-        message.ack()
+        pass
 
     def convert_event(self, event):
         """Given ghtorrent event, convert it to an swhevent instance.
@@ -203,15 +208,24 @@ class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
         """
         return convert_event(event)
 
+    def _on_message(self, message):
+        self.messages.append((message.body.decode('utf-8'), message))
+
+    def open_connection(self):
+        self.conn = Connection(self.conn_string)
+        self.conn.connect()
+
+    def close_connection(self):
+        self.conn.release()
+
     def consume(self):
         """Open a rabbitmq connection and consumes events from that endpoint.
 
         """
-        with Connection(self.conn_string) as conn:
-            with conn.Consumer(self.queue, callbacks=[self.process_message],
-                               auto_declare=True):
-                while True:
-                    conn.drain_events()
+        for body in collect_replies(
+                self.conn, self.conn.channel(), self.queue, no_ack=False,
+                limit=100):
+            self.process_message(body, None)
 
 
 @click.command()
