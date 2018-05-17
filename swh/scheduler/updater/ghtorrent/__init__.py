@@ -110,13 +110,15 @@ class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
     """
     ADDITIONAL_CONFIG = {
         'debug': ('bool', False),
-        'batch': ('int', 1000),
+        'batch_cache_write': ('int', 1000),
+        'rabbitmq_prefetch_read': ('int', 100),
     }
 
     def __init__(self, **config):
         super().__init__(**config)
         self.debug = self.config['debug']
-        self.batch = self.config['batch']
+        self.batch = self.config['batch_cache_write']
+        self.prefetch_read = self.config['rabbitmq_prefetch_read']
 
     def has_events(self):
         return True
@@ -139,5 +141,5 @@ class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
 
         """
         yield from collect_replies(
-                self.conn, self.conn.channel(), self.queue, no_ack=False,
-                limit=100)
+            self.conn, self.conn.channel(), self.queue,
+            no_ack=False, limit=self.prefetch_read)
