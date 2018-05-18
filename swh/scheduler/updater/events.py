@@ -34,4 +34,4 @@ class SWHEvent:
         }
 
     def __str__(self):
-        return self.get()
+        return str(self.get())
