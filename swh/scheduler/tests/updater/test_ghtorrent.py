@@ -5,11 +5,12 @@
 
 import unittest
 
-from arrow import utcnow
 from hypothesis import given
 from hypothesis.strategies import sampled_from, from_regex
 from nose.tools import istest
 from unittest.mock import patch
+
+from swh.scheduler.tests.updater import UpdaterTestUtil
 
 from swh.scheduler.updater.events import SWHEvent
 from swh.scheduler.updater.ghtorrent import (
@@ -49,7 +50,7 @@ class FakeConnection:
         return None
 
 
-class GHTorrentConsumerTest(unittest.TestCase):
+class GHTorrentConsumerTest(UpdaterTestUtil, unittest.TestCase):
     def setUp(self):
         self.fake_config = {
             'conn': {
@@ -97,15 +98,6 @@ class GHTorrentConsumerTest(unittest.TestCase):
         self.assertFalse(self.consumer.conn._connect)
         self.assertTrue(self.consumer.conn._release)
 
-    def _make_event(self, event_type, name):
-        return {
-            'type': event_type,
-            'repo': {
-                'name': name,
-            },
-            'created_at': utcnow(),
-        }
-
     @istest
     @given(sampled_from(EVENT_TYPES),
            from_regex(r'^[a-z0-9]{5,7}/[a-z0-9]{3,10}$'))
@@ -124,11 +116,6 @@ class GHTorrentConsumerTest(unittest.TestCase):
             'rate': 1,
         }
         self.assertEqual(event, expected_event)
-
-    def _make_incomplete_event(self, event_type, name, missing_data_key):
-        event = self._make_event(event_type, name)
-        del event[missing_data_key]
-        return event
 
     @istest
     @given(sampled_from(EVENT_TYPES),

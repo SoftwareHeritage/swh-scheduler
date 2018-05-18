@@ -5,11 +5,12 @@
 
 import unittest
 
-from arrow import utcnow
 from hypothesis import given
 from hypothesis.strategies import sampled_from, from_regex, lists, tuples, text
 from itertools import chain
 from nose.tools import istest
+
+from swh.scheduler.tests.updater import UpdaterTestUtil
 
 from swh.scheduler.updater.events import SWHEvent, LISTENED_EVENTS
 from swh.scheduler.updater.consumer import UpdaterConsumer
@@ -113,7 +114,7 @@ class UpdaterConsumerNoEventTest(unittest.TestCase):
         self.assertFalse(self.updater.consume_called)
 
 
-EVENT_KEYS = ['type', 'name', 'created_at']
+EVENT_KEYS = ['type', 'repo', 'created_at']
 
 
 class FakeUpdaterConsumer(FakeUpdaterConsumerBase):
@@ -140,34 +141,13 @@ class FakeUpdaterConsumer(FakeUpdaterConsumerBase):
 
         e = {
             'type': event['type'],
-            'url': 'https://fake.url/%s' % event['name'],
+            'url': 'https://fake.url/%s' % event['repo']['name'],
             'last_seen': event['created_at']
         }
         return SWHEvent(e)
 
 
-class UpdaterConsumerWithEventTest(unittest.TestCase):
-    def _make_event(self, event_type, name):
-        return {
-            'type': event_type,
-            'name': name,
-            'created_at': utcnow(),
-        }
-
-    def _make_events(self, events):
-        for event_type, repo_name in events:
-            yield self._make_event(event_type, repo_name)
-
-    def _make_incomplete_event(self, event_type, name, missing_data_key):
-        event = self._make_event(event_type, name)
-        del event[missing_data_key]
-        return event
-
-    def _make_incomplete_events(self, events):
-        for event_type, repo_name, missing_data_key in events:
-            yield self._make_incomplete_event(event_type, repo_name,
-                                              missing_data_key)
-
+class UpdaterConsumerWithEventTest(UpdaterTestUtil, unittest.TestCase):
     @istest
     @given(lists(tuples(sampled_from(LISTENED_EVENTS),
                         from_regex(r'^[a-z0-9]{5,10}/[a-z0-9]{7,12}$')),
