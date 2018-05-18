@@ -68,6 +68,10 @@ class RabbitMQConn(SWHConfig):
                            auto_delete=True)
 
 
+# Expected interesting event keys
+EVENT_KEYS = ['type', 'repo', 'created_at']
+
+
 class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
     """GHTorrent events consumer
 
@@ -102,8 +106,7 @@ class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
         if isinstance(event, str):
             event = json.loads(event)
 
-        keys = ['type', 'repo', 'created_at']
-        for k in keys:
+        for k in EVENT_KEYS:
             if k not in event:
                 if hasattr(self, 'log'):
                     self.log.warn(
