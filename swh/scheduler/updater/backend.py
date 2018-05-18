@@ -14,22 +14,27 @@ class SchedulerUpdaterBackend(SWHConfig, DbBackend):
     DEFAULT_CONFIG = {
         'scheduling_updater_db': (
             'str', 'dbname=softwareheritage-scheduler-updater-dev'),
-        'time_window': ('str', '1 hour'),
+        'cache_read_limit': ('int', 1000),
     }
 
     def __init__(self, **override_config):
         super().__init__()
-        self.config = self.parse_config_file(global_config=False)
-        self.config.update(override_config)
+        if override_config:
+            self.config = override_config
+        else:
+            self.config = self.parse_config_file(global_config=False)
         self.db = None
         self.db_conn_dsn = self.config['scheduling_updater_db']
-        self.time_window = self.config['time_window']
+        self.limit = self.config['cache_read_limit']
         self.reconnect()
 
     cache_put_keys = ['url', 'rate', 'last_seen', 'origin_type']
 
     @autocommit
     def cache_put(self, events, timestamp=None, cursor=None):
+        """Write new events in the backend.
+
+        """
         if timestamp is None:
             timestamp = utcnow()
 
@@ -46,22 +51,30 @@ class SchedulerUpdaterBackend(SWHConfig, DbBackend):
                      'tmp_cache', self.cache_put_keys, cursor)
         cursor.execute('select swh_cache_put()')
 
-    # @autocommit
-    # def cache_get(self, event, cursor=None):
-    #     pass
-
-    # @autocommit
-    # def cache_remove(self, event, cursor=None):
-    #     pass
-
-    cache_read_keys = ['id', 'url']
+    cache_read_keys = ['id', 'url', 'rate', 'origin_type']
 
     @autocommit
-    def cache_read(self, timestamp, limit=100, cursor=None):
+    def cache_read(self, timestamp, limit=None, cursor=None):
+        """Read events from the cache prior to timestamp.
+
+        """
+        if not limit:
+            limit = self.limit
         q = self._format_query("""select {keys}
                from cache
-               where %s - interval %s <= last_seen and last_seen <= %s
+               where last_seen <= %s
                limit %s
             """, self.cache_read_keys)
-        cursor.execute(q, (timestamp, self.time_window, timestamp, limit))
-        return cursor.fetchall()
+        cursor.execute(q, (timestamp, limit))
+        for r in cursor.fetchall():
+            r['id'] = r['id'].tobytes()
+            yield r
+
+    @autocommit
+    def cache_remove(self, entries, cursor=None):
+        """Clean events from the cache
+
+        """
+        q = 'delete from cache where url in (%s)' % (
+            ', '.join(("'%s'" % e for e in entries)), )
+        cursor.execute(q)

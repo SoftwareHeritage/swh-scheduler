@@ -30,7 +30,7 @@ class SchedulerUpdaterBackendTest(SingleDbTestFixture, unittest.TestCase):
         super().setUp()
         config = {
             'scheduling_updater_db': 'dbname=' + self.TEST_DB_NAME,
-            'time_window': '1 minute',
+            'cache_read_limit': 1000,
         }
         self.backend = SchedulerUpdaterBackend(**config)
 
