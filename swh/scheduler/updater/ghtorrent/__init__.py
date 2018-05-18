@@ -128,11 +128,13 @@ class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
         """
         self.conn = self._connection_class(self.config['conn']['url'])
         self.conn.connect()
+        self.channel = self.conn.channel()
 
     def close_connection(self):
         """Close rabbitmq connection
 
         """
+        self.channel.close()
         self.conn.release()
 
     def consume_events(self):
@@ -140,5 +142,5 @@ class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
 
         """
         yield from collect_replies(
-            self.conn, self.conn.channel(), self.queue,
+            self.conn, self.channel, self.queue,
             no_ack=False, limit=self.prefetch_read)

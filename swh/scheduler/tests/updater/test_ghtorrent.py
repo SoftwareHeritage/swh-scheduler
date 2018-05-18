@@ -28,6 +28,14 @@ def ghtorrentize_event_name(event_name):
 EVENT_TYPES = sorted([ghtorrentize_event_name(e) for e in event_values()])
 
 
+class FakeChannel:
+    """Fake Channel (virtual connection inside a connection)
+
+    """
+    def close(self):
+        self.close = True
+
+
 class FakeConnection:
     """Fake Rabbitmq connection for test purposes
 
@@ -36,6 +44,7 @@ class FakeConnection:
         self._conn_string = conn_string
         self._connect = False
         self._release = False
+        self._channel = False
 
     def connect(self):
         self._connect = True
@@ -46,8 +55,8 @@ class FakeConnection:
         self._release = True
 
     def channel(self):
-        self.channel = True
-        return None
+        self._channel = True
+        return FakeChannel()
 
 
 class GHTorrentConsumerTest(UpdaterTestUtil, unittest.TestCase):
@@ -97,6 +106,7 @@ class GHTorrentConsumerTest(UpdaterTestUtil, unittest.TestCase):
         # then
         self.assertFalse(self.consumer.conn._connect)
         self.assertTrue(self.consumer.conn._release)
+        self.assertIsInstance(self.consumer.channel, FakeChannel)
 
     @istest
     @given(sampled_from(EVENT_TYPES),
@@ -153,7 +163,7 @@ class GHTorrentConsumerTest(UpdaterTestUtil, unittest.TestCase):
 
         mock_collect_replies.assert_called_once_with(
             self.consumer.conn,
-            None,
+            self.consumer.channel,
             'fake-queue',
             no_ack=False,
             limit=self.fake_config['rabbitmq_prefetch_read']
