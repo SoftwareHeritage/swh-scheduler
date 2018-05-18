@@ -10,25 +10,35 @@ class UpdaterTestUtil:
     """Mixin intended for event generation purposes
 
     """
-    def _make_event(self, event_type, name):
+    def _make_event(self, event_type, name, origin_type):
         return {
             'type': event_type,
             'repo': {
                 'name': name,
             },
             'created_at': utcnow(),
+            'origin_type': origin_type,
         }
 
     def _make_events(self, events):
-        for event_type, repo_name in events:
-            yield self._make_event(event_type, repo_name)
+        for event_type, repo_name, origin_type in events:
+            yield self._make_event(event_type, repo_name, origin_type)
 
-    def _make_incomplete_event(self, event_type, name, missing_data_key):
-        event = self._make_event(event_type, name)
+    def _make_incomplete_event(self, event_type, name, origin_type,
+                               missing_data_key):
+        event = self._make_event(event_type, name, origin_type)
         del event[missing_data_key]
         return event
 
     def _make_incomplete_events(self, events):
-        for event_type, repo_name, missing_data_key in events:
+        for event_type, repo_name, origin_type, missing_data_key in events:
             yield self._make_incomplete_event(event_type, repo_name,
-                                              missing_data_key)
+                                              origin_type, missing_data_key)
+
+    def _make_simple_event(self, event_type, name, origin_type):
+        return {
+            'type': event_type,
+            'url': 'https://fakeurl/%s' % name,
+            'origin_type': origin_type,
+            'created_at': utcnow(),
+        }

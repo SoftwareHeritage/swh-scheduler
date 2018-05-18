@@ -114,7 +114,7 @@ class UpdaterConsumerNoEventTest(unittest.TestCase):
         self.assertFalse(self.updater.consume_called)
 
 
-EVENT_KEYS = ['type', 'repo', 'created_at']
+EVENT_KEYS = ['type', 'repo', 'created_at', 'origin_type']
 
 
 class FakeUpdaterConsumer(FakeUpdaterConsumerBase):
@@ -142,25 +142,29 @@ class FakeUpdaterConsumer(FakeUpdaterConsumerBase):
         e = {
             'type': event['type'],
             'url': 'https://fake.url/%s' % event['repo']['name'],
-            'last_seen': event['created_at']
+            'last_seen': event['created_at'],
+            'origin_type': event['origin_type'],
         }
         return SWHEvent(e)
 
 
 class UpdaterConsumerWithEventTest(UpdaterTestUtil, unittest.TestCase):
     @istest
-    @given(lists(tuples(sampled_from(LISTENED_EVENTS),
-                        from_regex(r'^[a-z0-9]{5,10}/[a-z0-9]{7,12}$')),
+    @given(lists(tuples(sampled_from(LISTENED_EVENTS),  # event type
+                        from_regex(r'^[a-z0-9]{5,10}/[a-z0-9]{7,12}$'),  # name
+                        text()),                        # origin type
                  min_size=3, max_size=10),
-           lists(tuples(text(),
-                        from_regex(r'^[a-z0-9]{5,7}/[a-z0-9]{3,10}$')),
+           lists(tuples(text(),                         # event type
+                        from_regex(r'^[a-z0-9]{5,7}/[a-z0-9]{3,10}$'),  # name
+                        text()),                        # origin type
                  min_size=3, max_size=10),
-           lists(tuples(sampled_from(LISTENED_EVENTS),
-                        from_regex(r'^[a-z0-9]{5,10}/[a-z0-9]{7,12}$'),
-                        sampled_from(EVENT_KEYS)),
+           lists(tuples(sampled_from(LISTENED_EVENTS),  # event type
+                        from_regex(r'^[a-z0-9]{5,10}/[a-z0-9]{7,12}$'),  # name
+                        text(),                     # origin type
+                        sampled_from(EVENT_KEYS)),  # keys to drop
                  min_size=3, max_size=10))
     def running(self, events, uninteresting_events, incomplete_events):
-        """Interesting events are written to cache, dropping uninteresting ones
+        """Interesting events are written to cache, others are dropped
 
         """
         # given

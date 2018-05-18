@@ -21,6 +21,7 @@ class SWHEvent:
         self.url = evt['url']
         self.last_seen = evt.get('last_seen')
         self.rate = rate
+        self.origin_type = evt.get('origin_type')
 
     def is_interesting(self):
         return self.type in LISTENED_EVENTS
@@ -31,6 +32,7 @@ class SWHEvent:
             'url': self.url,
             'last_seen': self.last_seen,
             'rate': self.rate,
+            'origin_type': self.origin_type
         }
 
     def __str__(self):

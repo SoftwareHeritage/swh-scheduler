@@ -23,8 +23,8 @@ create or replace function swh_cache_put()
     language plpgsql
 as $$
 begin
-    insert into cache (id, url, rate, last_seen)
-    select hash_sha1(url), url, rate, last_seen
+    insert into cache (id, url, rate, last_seen, origin_type)
+    select hash_sha1(url), url, rate, last_seen, origin_type
     from tmp_cache t
     on conflict(id)
     do update set rate = (select rate from cache where id=excluded.id) + excluded.rate,

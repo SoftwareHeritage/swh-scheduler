@@ -68,8 +68,7 @@ class RabbitMQConn(SWHConfig):
                            auto_delete=True)
 
 
-# Expected interesting event keys
-EVENT_KEYS = ['type', 'repo', 'created_at']
+INTERESTING_EVENT_KEYS = ['type', 'repo', 'created_at']
 
 
 class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
@@ -106,7 +105,7 @@ class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
         if isinstance(event, str):
             event = json.loads(event)
 
-        for k in EVENT_KEYS:
+        for k in INTERESTING_EVENT_KEYS:
             if k not in event:
                 if hasattr(self, 'log'):
                     self.log.warn(
@@ -119,7 +118,8 @@ class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
         return SWHEvent({
             'type': _type,
             'url': _repo_name,
-            'last_seen': event['created_at']
+            'last_seen': event['created_at'],
+            'origin_type': 'git',
         })
 
     def open_connection(self):

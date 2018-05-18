@@ -26,7 +26,7 @@ class SchedulerUpdaterBackend(SWHConfig, DbBackend):
         self.time_window = self.config['time_window']
         self.reconnect()
 
-    cache_put_keys = ['url', 'rate', 'last_seen']
+    cache_put_keys = ['url', 'rate', 'last_seen', 'origin_type']
 
     @autocommit
     def cache_put(self, events, timestamp=None, cursor=None):

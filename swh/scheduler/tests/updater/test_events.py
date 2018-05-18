@@ -5,10 +5,11 @@
 
 import unittest
 
-from arrow import utcnow
 from hypothesis import given
 from hypothesis.strategies import text, sampled_from
 from nose.tools import istest
+
+from swh.scheduler.tests.updater import UpdaterTestUtil
 
 from swh.scheduler.updater.events import SWHEvent, LISTENED_EVENTS
 from swh.scheduler.updater.ghtorrent import events
@@ -23,31 +24,25 @@ def event_values_ko():
 WRONG_EVENTS = sorted(list(event_values_ko()))
 
 
-class EventTest(unittest.TestCase):
-    def _make_event(self, event_name):
-        return {
-            'type': event_name,
-            'url': 'something',
-            'last_seen': utcnow(),
-        }
-
+class EventTest(UpdaterTestUtil, unittest.TestCase):
     @istest
-    @given(sampled_from(LISTENED_EVENTS))
-    def is_interesting_ok(self, event_name):
-        evt = self._make_event(event_name)
+    @given(sampled_from(LISTENED_EVENTS), text(), text())
+    def is_interesting_ok(self, event_type, name, origin_type):
+        evt = self._make_simple_event(event_type, name, origin_type)
         self.assertTrue(SWHEvent(evt).is_interesting())
 
     @istest
-    @given(text())
-    def is_interested_with_noisy_event_should_be_ko(self, event_name):
-        if event_name in LISTENED_EVENTS:
-            # just in generation generates a real and correct name, skip it
+    @given(text(), text(), text())
+    def is_interested_with_noisy_event_should_be_ko(
+            self, event_type, name, origin_type):
+        if event_type in LISTENED_EVENTS:
+            # just in case something good is generated, skip it
             return
-        evt = self._make_event(event_name)
+        evt = self._make_simple_event(event_type, name, origin_type)
         self.assertFalse(SWHEvent(evt).is_interesting())
 
     @istest
-    @given(sampled_from(WRONG_EVENTS))
-    def is_interesting_ko(self, event_name):
-        evt = self._make_event(event_name)
+    @given(sampled_from(WRONG_EVENTS), text(), text())
+    def is_interesting_ko(self, event_type, name, origin_type):
+        evt = self._make_simple_event(event_type, name, origin_type)
         self.assertFalse(SWHEvent(evt).is_interesting())

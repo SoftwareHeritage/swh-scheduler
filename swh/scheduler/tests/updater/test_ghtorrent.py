@@ -14,7 +14,7 @@ from swh.scheduler.tests.updater import UpdaterTestUtil
 
 from swh.scheduler.updater.events import SWHEvent
 from swh.scheduler.updater.ghtorrent import (
-    events, GHTorrentConsumer)
+    events, GHTorrentConsumer, INTERESTING_EVENT_KEYS)
 
 
 def event_values():
@@ -112,7 +112,7 @@ class GHTorrentConsumerTest(UpdaterTestUtil, unittest.TestCase):
     @given(sampled_from(EVENT_TYPES),
            from_regex(r'^[a-z0-9]{5,7}/[a-z0-9]{3,10}$'))
     def convert_event_ok(self, event_type, name):
-        input_event = self._make_event(event_type, name)
+        input_event = self._make_event(event_type, name, 'git')
         actual_event = self.consumer.convert_event(input_event)
 
         self.assertTrue(isinstance(actual_event, SWHEvent))
@@ -124,16 +124,17 @@ class GHTorrentConsumerTest(UpdaterTestUtil, unittest.TestCase):
             'url': 'https://github.com/%s' % name,
             'last_seen': input_event['created_at'],
             'rate': 1,
+            'origin_type': 'git',
         }
         self.assertEqual(event, expected_event)
 
     @istest
     @given(sampled_from(EVENT_TYPES),
            from_regex(r'^[a-z0-9]{5,7}/[a-z0-9]{3,10}$'),
-           sampled_from(['type', 'repo', 'created_at']))
+           sampled_from(INTERESTING_EVENT_KEYS))
     def convert_event_ko(self, event_type, name, missing_data_key):
         input_event = self._make_incomplete_event(
-            event_type, name, missing_data_key)
+            event_type, name, 'git', missing_data_key)
 
         actual_converted_event = self.consumer.convert_event(input_event)
 
@@ -147,8 +148,8 @@ class GHTorrentConsumerTest(UpdaterTestUtil, unittest.TestCase):
         self.consumer.open_connection()
 
         fake_events = [
-            self._make_event('PushEvent', 'user/some-repo'),
-            self._make_event('PushEvent', 'user2/some-other-repo'),
+            self._make_event('PushEvent', 'user/some-repo', 'git'),
+            self._make_event('PushEvent', 'user2/some-other-repo', 'git'),
         ]
 
         mock_collect_replies.return_value = fake_events

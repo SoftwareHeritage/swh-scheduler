@@ -13,11 +13,15 @@ create domain sha1 as bytea check (length(value) = 20);
 insert into dbversion (version, release, description)
        values (1, now(), 'Work In Progress');
 
+create type origin_type as enum ('git', 'svn', 'hg', 'deb');
+comment on type origin_type is 'Url''s repository type';
+
 create table cache (
    id sha1 primary key,
    url text not null,
    rate int default 1,
-   last_seen timestamptz not null
+   last_seen timestamptz not null,
+   origin_type origin_type not null
 );
 
 create index on cache(url);
