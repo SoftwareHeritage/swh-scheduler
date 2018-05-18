@@ -20,8 +20,8 @@ class UpdaterConsumer(metaclass=ABCMeta):
         self._reset_cache()
         self.backend = backend_class()
         self.batch = batch
+        logging.basicConfig(level=logging.DEBUG)
         self.log = logging.getLogger(log_class)
-        self.log.setLevel(logging.INFO)
 
     def _reset_cache(self):
         """Reset internal cache.
@@ -34,7 +34,7 @@ class UpdaterConsumer(metaclass=ABCMeta):
     def is_interesting(self, event):
         """Determine if an event is interesting or not.
 
-        Args
+        Args:
             event (SWHEvent): SWH event
 
         """
@@ -50,7 +50,7 @@ class UpdaterConsumer(metaclass=ABCMeta):
     def process_event(self, event):
         """Process converted and interesting event.
 
-        Params:
+        Args:
             event (SWHEvent): Event to process if deemed interesting
 
         """
@@ -124,6 +124,8 @@ class UpdaterConsumer(metaclass=ABCMeta):
                         continue
                     if not self.is_interesting(event):
                         continue
+                    if self.debug:
+                        self.log.debug('Event: %s' % event)
                     try:
                         self.process_event(event)
                     except Exception:

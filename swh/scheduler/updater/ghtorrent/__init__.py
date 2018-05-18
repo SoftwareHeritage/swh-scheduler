@@ -52,7 +52,7 @@ class RabbitMQConn(SWHConfig):
 
     def __init__(self, **config):
         super().__init__()
-        if config:
+        if config and set(config.keys()) - {'log_class'} != set():
             self.config = config
         else:
             self.config = self.parse_config_file(
