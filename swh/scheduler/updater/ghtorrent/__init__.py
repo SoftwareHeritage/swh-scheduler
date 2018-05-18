@@ -80,7 +80,8 @@ class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
 
     def __init__(self, config=None, _connection_class=Connection):
         if config is None:
-            super().__init__()
+            super().__init__(
+                log_class='swh.scheduler.updater.ghtorrent.GHTorrentConsumer')
         else:
             self.config = config
         self._connection_class = _connection_class
@@ -104,8 +105,9 @@ class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
         keys = ['type', 'repo', 'created_at']
         for k in keys:
             if k not in event:
-                raise ValueError(
-                    'Event should have the \'%s\' entry defined' % k)
+                if hasattr(self, 'log'):
+                    self.log.warn(
+                        'Event should have the \'%s\' entry defined' % k)
 
         _type = event['type'].lower().rstrip('Event')
         _repo_name = 'https://github.com/%s' % event['repo']['name']
