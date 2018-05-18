@@ -8,6 +8,7 @@ import unittest
 from arrow import utcnow
 from hypothesis import given
 from hypothesis.strategies import sampled_from, from_regex, lists, tuples, text
+from itertools import chain
 from nose.tools import istest
 
 from swh.scheduler.updater.events import SWHEvent, LISTENED_EVENTS
@@ -112,6 +113,9 @@ class UpdaterConsumerNoEventTest(unittest.TestCase):
         self.assertFalse(self.updater.consume_called)
 
 
+EVENT_KEYS = ['type', 'name', 'created_at']
+
+
 class FakeUpdaterConsumer(FakeUpdaterConsumerBase):
     def __init__(self, messages):
         super().__init__()
@@ -128,7 +132,12 @@ class FakeUpdaterConsumer(FakeUpdaterConsumerBase):
             yield msg
             self.messages.pop()
 
-    def convert_event(self, event):
+    def convert_event(self, event, keys=EVENT_KEYS):
+        for k in keys:
+            v = event.get(k)
+            if v is None:
+                return None
+
         e = {
             'type': event['type'],
             'url': 'https://fake.url/%s' % event['name'],
@@ -149,21 +158,40 @@ class UpdaterConsumerWithEventTest(unittest.TestCase):
         for event_type, repo_name in events:
             yield self._make_event(event_type, repo_name)
 
+    def _make_incomplete_event(self, event_type, name, missing_data_key):
+        event = self._make_event(event_type, name)
+        del event[missing_data_key]
+        return event
+
+    def _make_incomplete_events(self, events):
+        for event_type, repo_name, missing_data_key in events:
+            yield self._make_incomplete_event(event_type, repo_name,
+                                              missing_data_key)
+
     @istest
-    @given(lists(tuples(text(),
-                 from_regex(r'^[a-z0-9]{5,7}/[a-z0-9]{3,10}$')),
+    @given(lists(tuples(sampled_from(LISTENED_EVENTS),
+                        from_regex(r'^[a-z0-9]{5,10}/[a-z0-9]{7,12}$')),
+                 min_size=3, max_size=10),
+           lists(tuples(text(),
+                        from_regex(r'^[a-z0-9]{5,7}/[a-z0-9]{3,10}$')),
                  min_size=3, max_size=10),
            lists(tuples(sampled_from(LISTENED_EVENTS),
-                 from_regex(r'^[a-z0-9]{5,10}/[a-z0-9]{7,12}$')),
+                        from_regex(r'^[a-z0-9]{5,10}/[a-z0-9]{7,12}$'),
+                        sampled_from(EVENT_KEYS)),
                  min_size=3, max_size=10))
-    def running_with_uninteresting_events(self, uninteresting_events, events):
+    def running(self, events, uninteresting_events, incomplete_events):
         """Interesting events are written to cache, dropping uninteresting ones
 
         """
         # given
-        all_events = events.copy()
-        all_events.extend(uninteresting_events)
-        updater = FakeUpdaterConsumer(list(self._make_events(all_events)))
+        ready_events = self._make_events(events)
+        ready_uninteresting_events = self._make_events(uninteresting_events)
+        ready_incomplete_events = self._make_incomplete_events(
+            incomplete_events)
+
+        updater = FakeUpdaterConsumer(list(chain(
+            ready_events, ready_incomplete_events,
+            ready_uninteresting_events)))
 
         self.assertEqual(updater.count, 0)
         self.assertEqual(updater.seen_events, set())
@@ -182,5 +210,5 @@ class UpdaterConsumerWithEventTest(unittest.TestCase):
         self.assertTrue(updater.consume_called)
 
         self.assertEqual(updater.messages, [])
-        # uninteresting_events were dropped
+        # uninteresting or incomplete events are dropped
         self.assertTrue(len(updater.backend.events), len(events))

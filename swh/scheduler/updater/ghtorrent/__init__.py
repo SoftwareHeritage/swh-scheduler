@@ -108,6 +108,7 @@ class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
                 if hasattr(self, 'log'):
                     self.log.warn(
                         'Event should have the \'%s\' entry defined' % k)
+                return None
 
         _type = event['type'].lower().rstrip('Event')
         _repo_name = 'https://github.com/%s' % event['repo']['name']

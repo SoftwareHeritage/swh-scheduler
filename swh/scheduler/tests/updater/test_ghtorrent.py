@@ -138,11 +138,9 @@ class GHTorrentConsumerTest(unittest.TestCase):
         input_event = self._make_incomplete_event(
             event_type, name, missing_data_key)
 
-        with self.assertRaisesRegex(
-                ValueError,
-                'Event should have the \'%s\' entry defined' % (
-                    missing_data_key, )):
-            self.consumer.convert_event(input_event)
+        actual_converted_event = self.consumer.convert_event(input_event)
+
+        self.assertIsNone(actual_converted_event)
 
     @patch('swh.scheduler.updater.ghtorrent.collect_replies')
     @istest

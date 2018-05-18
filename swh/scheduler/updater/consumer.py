@@ -47,21 +47,20 @@ class UpdaterConsumer(metaclass=ABCMeta):
         """
         pass
 
-    def process_event(self, body):
-        """Process event
+    def process_event(self, event):
+        """Process converted and interesting event.
+
+        Params:
+            event (SWHEvent): Event to process if deemed interesting
 
         """
         try:
-            event = self.convert_event(body)
-            if self.debug:
-                print('#### body', body)
-            if self.is_interesting(event):
-                if event.url in self.seen_events:
-                    event.rate += 1
-                else:
-                    self.events.append(event)
-                    self.seen_events.add(event.url)
-                    self.count += 1
+            if event.url in self.seen_events:
+                event.rate += 1
+            else:
+                self.events.append(event)
+                self.seen_events.add(event.url)
+                self.count += 1
         finally:
             if self.count >= self.batch:
                 if self.events:
@@ -117,10 +116,21 @@ class UpdaterConsumer(metaclass=ABCMeta):
         try:
             self.open_connection()
             while self.has_events():
-                for event in self.consume_events():
-                    self.process_event(event)
+                for _event in self.consume_events():
+                    event = self.convert_event(_event)
+                    if not event:
+                        self.log.warn(
+                            'Incomplete event dropped %s' % _event)
+                        continue
+                    if not self.is_interesting(event):
+                        continue
+                    try:
+                        self.process_event(event)
+                    except Exception:
+                        self.log.exception(
+                            'Problem when processing event %s' % _event)
+                        continue
         except Exception as e:
-            # FIXME: use logging instead
             self.log.error('Error raised during consumption: %s' % e)
             raise e
         finally:
