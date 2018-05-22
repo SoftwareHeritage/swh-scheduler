@@ -117,10 +117,9 @@ class UpdaterWriter(SWHConfig):
                 time.sleep(self.pause)
                 continue
 
-            for ids in utils.grouper(self.write_event_to_scheduler(events),
-                                     n=100):
-                _ids = list(ids)
-                self.scheduler_updater_backend.cache_remove(_ids)
+            for urls in utils.grouper(self.write_event_to_scheduler(events),
+                                      n=100):
+                self.scheduler_updater_backend.cache_remove(urls)
 
 
 @click.command()
