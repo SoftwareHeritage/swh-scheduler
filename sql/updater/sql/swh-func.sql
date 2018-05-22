@@ -23,8 +23,8 @@ create or replace function swh_cache_put()
     language plpgsql
 as $$
 begin
-    insert into cache (id, url, rate, last_seen, origin_type)
-    select hash_sha1(url), url, rate, last_seen, origin_type
+    insert into cache (id, url, origin_type, rate, last_seen)
+    select hash_sha1(url), url, origin_type, rate, last_seen
     from tmp_cache t
     on conflict(id)
     do update set rate = (select rate from cache where id=excluded.id) + excluded.rate,
@@ -32,3 +32,17 @@ begin
     return;
 end
 $$;
+
+comment on function swh_cache_put() is 'Write to cache temporary events';
+
+create or replace function swh_cache_read(ts timestamptz, lim integer)
+    returns setof cache
+    language sql stable
+as $$
+  select id, url, origin_type, rate, first_seen, last_seen
+  from cache
+  where last_seen <= ts
+  limit lim;
+$$;
+
+comment on function swh_cache_read(timestamptz, integer) is 'Read cache entries';

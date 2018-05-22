@@ -19,10 +19,11 @@ comment on type origin_type is 'Url''s repository type';
 create table cache (
    id sha1 primary key,
    url text not null,
+   origin_type origin_type not null,
    rate int default 1,
-   last_seen timestamptz not null,
-   origin_type origin_type not null
-);
+   first_seen timestamptz not null default now(),
+   last_seen timestamptz not null
+ );
 
 create index on cache(url);
 create index on cache(last_seen);

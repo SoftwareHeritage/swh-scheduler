@@ -51,7 +51,8 @@ class SchedulerUpdaterBackend(SWHConfig, DbBackend):
                      'tmp_cache', self.cache_put_keys, cursor)
         cursor.execute('select swh_cache_put()')
 
-    cache_read_keys = ['id', 'url', 'rate', 'origin_type']
+    cache_read_keys = ['id', 'url', 'origin_type', 'rate', 'first_seen',
+                       'last_seen']
 
     @autocommit
     def cache_read(self, timestamp, limit=None, cursor=None):
@@ -60,11 +61,8 @@ class SchedulerUpdaterBackend(SWHConfig, DbBackend):
         """
         if not limit:
             limit = self.limit
-        q = self._format_query("""select {keys}
-               from cache
-               where last_seen <= %s
-               limit %s
-            """, self.cache_read_keys)
+        q = self._format_query('select {keys} from swh_cache_read(%s, %s)',
+                               self.cache_read_keys)
         cursor.execute(q, (timestamp, limit))
         for r in cursor.fetchall():
             r['id'] = r['id'].tobytes()
