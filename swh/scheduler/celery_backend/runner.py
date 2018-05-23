@@ -15,7 +15,7 @@ from .config import app as main_app
 # Max batch size for tasks
 MAX_NUM_TASKS = 10000
 # Percentage of tasks with priority to schedule
-PRIORITY_SLOT = 0.4
+PRIORITY_SLOT = 0.6
 
 
 def run_ready_tasks(backend, app):
