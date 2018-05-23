@@ -12,6 +12,7 @@ from arrow import utcnow
 from swh.core.config import SWHConfig
 from swh.core import utils
 from swh.scheduler import get_scheduler
+from swh.scheduler.utils import create_oneshot_task_dict
 from swh.scheduler.updater.backend import SchedulerUpdaterBackend
 
 
@@ -57,17 +58,6 @@ class UpdaterWriter(SWHConfig):
         self.pause = self.config['pause']
         self.log = logging.getLogger(
             'swh.scheduler.updater.writer.UpdaterWriter')
-
-    def _compute_priority(self, cnt):
-        """Given a ratio, compute the task priority.
-
-        """
-        if cnt < 5:
-            return 'low'
-        elif cnt < 50:
-            return 'normal'
-        else:
-            return 'high'
         self.log.setLevel(
             logging.DEBUG if self.config['verbose'] else logging.INFO)
 
@@ -79,21 +69,13 @@ class UpdaterWriter(SWHConfig):
 
         """
         if event['origin_type'] == 'git':
-            return {
-                'type': 'origin-update-git',
-                'arguments': {
-                    'args': [event['url']],
-                    'kwargs': {},
-                },
-                'next_run': utcnow(),
-                'policy': 'oneshot',
-                'retries_left': 2,
-                'priority': self._compute_priority(event['cnt']),
-            }
-        else:
-            self.log.warn('Type %s is not supported for now, only git' % (
-                event['type'], ))
-            return None
+            return create_oneshot_task_dict(
+                'origin-update-git',
+                event['url'],
+                priority='normal')
+        self.log.warn('Type %s is not supported for now, only git' % (
+            event['type'], ))
+        return None
 
     def write_event_to_scheduler(self, events):
         """Write events to the scheduler and yield ids when done"""
