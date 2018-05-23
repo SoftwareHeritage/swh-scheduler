@@ -314,7 +314,8 @@ class SchedulerBackend(SWHConfig, DbBackend):
             timestamp = utcnow()
 
         cursor.execute(
-            'select * from swh_scheduler_peek_ready_tasks(%s, %s, %s, %s)',
+            '''select * from swh_scheduler_peek_ready_tasks(
+                %s, %s, %s :: bigint, %s :: bigint)''',
             (task_type, timestamp, num_tasks, num_tasks_priority)
         )
 
@@ -341,7 +342,8 @@ class SchedulerBackend(SWHConfig, DbBackend):
             timestamp = utcnow()
 
         cursor.execute(
-            'select * from swh_scheduler_grab_ready_tasks(%s, %s, %s, %s)',
+            '''select * from swh_scheduler_grab_ready_tasks(
+                 %s, %s, %s :: bigint, %s :: bigint)''',
             (task_type, timestamp, num_tasks, num_tasks_priority)
         )
 
