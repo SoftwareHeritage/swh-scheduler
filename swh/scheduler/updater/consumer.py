@@ -56,7 +56,7 @@ class UpdaterConsumer(metaclass=ABCMeta):
         """
         try:
             if event.url in self.seen_events:
-                event.rate += 1
+                event.cnt += 1
             else:
                 self.events.append(event)
                 self.seen_events.add(event.url)

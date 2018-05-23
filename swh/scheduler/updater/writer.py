@@ -54,13 +54,13 @@ class UpdaterWriter(SWHConfig):
             'swh.scheduler.updater.writer.UpdaterWriter')
         self.log.setLevel(logging.DEBUG)
 
-    def _compute_priority(self, rate):
+    def _compute_priority(self, cnt):
         """Given a ratio, compute the task priority.
 
         """
-        if rate < 5:
+        if cnt < 5:
             return 'low'
-        elif rate < 50:
+        elif cnt < 50:
             return 'normal'
         else:
             return 'high'
@@ -82,7 +82,7 @@ class UpdaterWriter(SWHConfig):
                 'next_run': utcnow(),
                 'policy': 'oneshot',
                 'retries_left': 2,
-                'priority': self._compute_priority(event['rate']),
+                'priority': self._compute_priority(event['cnt']),
             }
         else:
             self.log.warn('Type %s is not supported for now, only git' % (
@@ -104,7 +104,7 @@ class UpdaterWriter(SWHConfig):
                 yield event['url']
 
     def run(self):
-        """First retrieve events from cache (including origin_type, rate),
+        """First retrieve events from cache (including origin_type, cnt),
            then convert them into oneshot tasks with priority, then
            write them to the scheduler db, at last remove them from
            cache.

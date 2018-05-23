@@ -20,7 +20,7 @@ create table cache (
    id sha1 primary key,
    url text not null,
    origin_type origin_type not null,
-   rate int default 1,
+   cnt int default 1,
    first_seen timestamptz not null default now(),
    last_seen timestamptz not null
  );

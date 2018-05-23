@@ -123,7 +123,7 @@ class GHTorrentConsumerTest(UpdaterTestUtil, unittest.TestCase):
             'type': event_type.lower().rstrip('Event'),
             'url': 'https://github.com/%s' % name,
             'last_seen': input_event['created_at'],
-            'rate': 1,
+            'cnt': 1,
             'origin_type': 'git',
         }
         self.assertEqual(event, expected_event)

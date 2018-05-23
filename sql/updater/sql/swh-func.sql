@@ -23,11 +23,11 @@ create or replace function swh_cache_put()
     language plpgsql
 as $$
 begin
-    insert into cache (id, url, origin_type, rate, last_seen)
-    select hash_sha1(url), url, origin_type, rate, last_seen
+    insert into cache (id, url, origin_type, cnt, last_seen)
+    select hash_sha1(url), url, origin_type, cnt, last_seen
     from tmp_cache t
     on conflict(id)
-    do update set rate = (select rate from cache where id=excluded.id) + excluded.rate,
+    do update set cnt = (select cnt from cache where id=excluded.id) + excluded.cnt,
                   last_seen = excluded.last_seen;
     return;
 end
@@ -39,7 +39,7 @@ create or replace function swh_cache_read(ts timestamptz, lim integer)
     returns setof cache
     language sql stable
 as $$
-  select id, url, origin_type, rate, first_seen, last_seen
+  select id, url, origin_type, cnt, first_seen, last_seen
   from cache
   where last_seen <= ts
   limit lim;

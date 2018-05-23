@@ -28,7 +28,7 @@ class SchedulerUpdaterBackend(SWHConfig, DbBackend):
         self.limit = self.config['cache_read_limit']
         self.reconnect()
 
-    cache_put_keys = ['url', 'rate', 'last_seen', 'origin_type']
+    cache_put_keys = ['url', 'cnt', 'last_seen', 'origin_type']
 
     @autocommit
     def cache_put(self, events, timestamp=None, cursor=None):
@@ -51,7 +51,7 @@ class SchedulerUpdaterBackend(SWHConfig, DbBackend):
                      'tmp_cache', self.cache_put_keys, cursor)
         cursor.execute('select swh_cache_put()')
 
-    cache_read_keys = ['id', 'url', 'origin_type', 'rate', 'first_seen',
+    cache_read_keys = ['id', 'url', 'origin_type', 'cnt', 'first_seen',
                        'last_seen']
 
     @autocommit

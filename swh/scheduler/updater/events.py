@@ -15,12 +15,12 @@ class SWHEvent:
     """SWH's interesting event (resulting in an origin update)
 
     """
-    def __init__(self, evt, rate=1):
+    def __init__(self, evt, cnt=1):
         self.event = evt
         self.type = evt['type'].lower()
         self.url = evt['url']
         self.last_seen = evt.get('last_seen')
-        self.rate = rate
+        self.cnt = cnt
         self.origin_type = evt.get('origin_type')
 
     def is_interesting(self):
@@ -31,7 +31,7 @@ class SWHEvent:
             'type': self.type,
             'url': self.url,
             'last_seen': self.last_seen,
-            'rate': self.rate,
+            'cnt': self.cnt,
             'origin_type': self.origin_type
         }
 
