@@ -27,17 +27,22 @@ class UpdaterWriter(SWHConfig):
     """
     CONFIG_BASE_FILENAME = 'backend/scheduler-updater-writer'
     DEFAULT_CONFIG = {
+        # access to the scheduler backend
         'scheduler': ('dict', {
             'cls': 'local',
             'args': {
                 'scheduling_db': 'dbname=softwareheritage-scheduler-dev',
             },
         }),
+        # access to the scheduler updater cache
         'scheduler_updater': ('dict', {
             'scheduling_updater_db': 'dbname=softwareheritage-scheduler-updater-dev',  # noqa
             'cache_read_limit': 1000,
         }),
+        # waiting time between db read when no more data exists
         'pause': ('int', 10),
+        # verbose or not
+        'verbose': ('bool', False),
     }
 
     def __init__(self, **config):
@@ -52,7 +57,6 @@ class UpdaterWriter(SWHConfig):
         self.pause = self.config['pause']
         self.log = logging.getLogger(
             'swh.scheduler.updater.writer.UpdaterWriter')
-        self.log.setLevel(logging.DEBUG)
 
     def _compute_priority(self, cnt):
         """Given a ratio, compute the task priority.
@@ -64,6 +68,8 @@ class UpdaterWriter(SWHConfig):
             return 'normal'
         else:
             return 'high'
+        self.log.setLevel(
+            logging.DEBUG if self.config['verbose'] else logging.INFO)
 
     def convert_to_oneshot_task(self, event):
         """Given an event, convert it into oneshot task with priority
