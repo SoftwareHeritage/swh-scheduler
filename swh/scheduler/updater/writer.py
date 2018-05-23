@@ -37,7 +37,8 @@ class UpdaterWriter(SWHConfig):
         }),
         # access to the scheduler updater cache
         'scheduler_updater': ('dict', {
-            'scheduling_updater_db': 'dbname=softwareheritage-scheduler-updater-dev',  # noqa
+            'scheduling_updater_db':
+            'dbname=softwareheritage-scheduler-updater-dev',
             'cache_read_limit': 1000,
         }),
         # waiting time between db read when no more data exists
