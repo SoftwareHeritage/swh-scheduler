@@ -101,13 +101,11 @@ class UpdaterWriter(SWHConfig):
         while True:
             timestamp = utcnow()
             events = self.scheduler_updater_backend.cache_read(timestamp)
-            if not events:
-                time.sleep(self.pause)
-                continue
-
             for urls in utils.grouper(self.write_event_to_scheduler(events),
                                       n=100):
                 self.scheduler_updater_backend.cache_remove(urls)
+
+            time.sleep(self.pause)
 
 
 @click.command()
