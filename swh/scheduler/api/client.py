@@ -21,8 +21,9 @@ class RemoteScheduler(SWHRemoteAPI):
     """Proxy to a remote scheduler API
 
     """
-    def __init__(self, url):
-        super().__init__(api_exception=SchedulerAPIError, url=url)
+    def __init__(self, url, timeout=None):
+        super().__init__(
+            api_exception=SchedulerAPIError, url=url, timeout=timeout)
 
     def close_connection(self):
         return self.post('close_connection', {})
