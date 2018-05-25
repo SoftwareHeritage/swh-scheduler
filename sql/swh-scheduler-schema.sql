@@ -168,9 +168,22 @@ select * from task
   for update skip locked;
 $$;
 
-create or replace function swh_scheduler_peek_priority_tasks (task_type text, ts timestamptz default now(),
-                                                              num_tasks_priority bigint default NULL,
-                                                              task_priority task_priority default 'normal')
+comment on function swh_scheduler_peek_no_priority_tasks (text, timestamptz, bigint)
+is 'Retrieve tasks without priority';
+
+create or replace function swh_scheduler_nb_priority_tasks(num_tasks_priority bigint, task_priority task_priority)
+  returns numeric
+  language sql stable
+as $$
+  select ceil(num_tasks_priority * (select ratio from priority_ratio where id = task_priority)) :: numeric
+$$;
+
+comment on function swh_scheduler_nb_priority_tasks (bigint, task_priority)
+is 'Given a priority task and a total number, compute the number of tasks to read';
+
+create or replace function swh_scheduler_peek_tasks_with_priority (task_type text, ts timestamptz default now(),
+                                                                   num_tasks_priority bigint default NULL,
+                                                                   task_priority task_priority default 'normal')
   returns setof task
   language sql
   stable
@@ -182,26 +195,99 @@ as $$
         and t.status = 'next_run_not_scheduled'
         and t.priority = task_priority
   order by t.next_run
-  limit ceil(num_tasks_priority * (select ratio from priority_ratio where id = task_priority))
+  limit num_tasks_priority
   for update skip locked;
 $$;
 
+comment on function swh_scheduler_peek_tasks_with_priority(text, timestamptz, bigint, task_priority)
+is 'Retrieve tasks with a given priority';
+
+create or replace function swh_scheduler_peek_priority_tasks (task_type text, ts timestamptz default now(),
+                                                              num_tasks_priority bigint default NULL)
+  returns setof task
+  language plpgsql
+as $$
+declare
+  r record;
+  count_row bigint;
+  nb_diff bigint;
+  nb_high bigint;
+  nb_normal bigint;
+  nb_low bigint;
+begin
+    -- expected values to fetch
+    select swh_scheduler_nb_priority_tasks(num_tasks_priority, 'high') into nb_high;
+    select swh_scheduler_nb_priority_tasks(num_tasks_priority, 'normal') into nb_normal;
+    select swh_scheduler_nb_priority_tasks(num_tasks_priority, 'low') into nb_low;
+    nb_diff := 0;
+    count_row := 0;
+
+    for r in select * from swh_scheduler_peek_tasks_with_priority(task_type, ts, nb_high, 'high')
+    loop
+        count_row := count_row + 1;
+        return next r;
+    end loop;
+
+    if count_row < nb_high then
+        nb_normal := nb_normal + nb_high - count_row;
+    end if;
+
+    count_row := 0;
+    for r in select * from swh_scheduler_peek_tasks_with_priority(task_type, ts, nb_normal, 'normal')
+    loop
+        count_row := count_row + 1;
+        return next r;
+    end loop;
+
+    if count_row < nb_normal then
+        nb_low := nb_low + nb_normal - count_row;
+    end if;
+
+    return query select * from swh_scheduler_peek_tasks_with_priority(task_type, ts, nb_low, 'low');
+end
+$$;
+
+comment on function swh_scheduler_peek_priority_tasks(text, timestamptz, bigint)
+is 'Retrieve priority tasks';
 
 create or replace function swh_scheduler_peek_ready_tasks (task_type text, ts timestamptz default now(),
                                                            num_tasks bigint default NULL, num_tasks_priority bigint default NULL)
   returns setof task
-  language sql
-  stable
+  language plpgsql
 as $$
-    select * from swh_scheduler_peek_priority_tasks(task_type, ts, num_tasks_priority, 'high')
-    union
-    select * from swh_scheduler_peek_priority_tasks(task_type, ts, num_tasks_priority, 'normal')
-    union
-    select * from swh_scheduler_peek_priority_tasks(task_type, ts, num_tasks_priority, 'low')
-    union
-    select * from swh_scheduler_peek_no_priority_tasks(task_type, ts, num_tasks)
-    order by priority, next_run;
+declare
+  r record;
+  count_row bigint;
+  nb_diff bigint;
+  nb_tasks bigint;
+begin
+    count_row := 0;
+
+    for r in select * from swh_scheduler_peek_priority_tasks(task_type, ts, num_tasks_priority)
+             order by priority, next_run
+    loop
+        count_row := count_row + 1;
+        return next r;
+    end loop;
+
+    if count_row < num_tasks_priority then
+       nb_tasks := num_tasks + num_tasks_priority - count_row;
+    else
+       nb_tasks := num_tasks;
+    end if;
+
+    for r in select * from swh_scheduler_peek_no_priority_tasks(task_type, ts, nb_tasks)
+             order by priority, next_run
+    loop
+        return next r;
+    end loop;
+
+    return;
+end
 $$;
+
+comment on function swh_scheduler_peek_ready_tasks(text, timestamptz, bigint, bigint)
+is 'Retrieve tasks with/without priority in order';
 
 create or replace function swh_scheduler_grab_ready_tasks (task_type text, ts timestamptz default now(),
                                                            num_tasks bigint default NULL,
@@ -217,6 +303,9 @@ as $$
     where task.id = next_tasks.id
   returning task.*;
 $$;
+
+comment on function swh_scheduler_grab_ready_tasks (text, timestamptz, bigint, bigint)
+is 'Grab tasks ready for scheduling and change their status';
 
 create or replace function swh_scheduler_schedule_task_run (task_id bigint,
                                                             backend_id text,
