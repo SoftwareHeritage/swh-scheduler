@@ -156,13 +156,13 @@ class CommonSchedulerTest(SingleDbTestFixture):
         priority_ratio = self._priority_ratio()
         self._create_task_types()
         num_tasks_priority = 100
-        tasks = (
-            self._tasks_from_template(self.task1_template, utcnow(), 100)
-            + self._tasks_from_template(
+        tasks_1 = self._tasks_from_template(self.task1_template, utcnow(), 100)
+        tasks_2 = self._tasks_from_template(
                 self.task2_template, utcnow(), 100,
                 num_tasks_priority, priorities=priority_ratio)
-        )
-        ret = self.backend.create_tasks(tasks)
+        tasks = tasks_1 + tasks_2
+        # duplicate tasks are dropped at creation
+        ret = self.backend.create_tasks(tasks + tasks_1 + tasks_2)
         ids = set()
         actual_priorities = defaultdict(int)
 

@@ -135,11 +135,17 @@ begin
   return query
   insert into task (type, arguments, next_run, status, current_interval, policy, retries_left, priority)
     select type, arguments, next_run, 'next_run_not_scheduled',
-           (select default_interval from task_type tt where tt.type = tmp_task.type),
+           (select default_interval from task_type tt where tt.type = t.type),
            coalesce(policy, 'recurring'),
-           coalesce(retries_left, (select num_retries from task_type tt where tt.type = tmp_task.type), 0),
+           coalesce(retries_left, (select num_retries from task_type tt where tt.type = t.type), 0),
            coalesce(priority, null)
-      from tmp_task
+      from tmp_task t
+      where not exists(select 1
+                       from task
+                       where type=t.type and
+                             arguments=t.arguments and
+                             policy=t.policy and
+                             status='next_run_not_scheduled')
   returning task.*;
 end;
 $$;
