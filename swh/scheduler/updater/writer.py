@@ -80,17 +80,13 @@ class UpdaterWriter(SWHConfig):
 
     def write_event_to_scheduler(self, events):
         """Write events to the scheduler and yield ids when done"""
-        for event in events:
-            # convert event to oneshot task
-            oneshot_task = self.convert_to_oneshot_task(event)
-            if not oneshot_task:
-                continue
-
-            # write event to scheduler
-            # FIXME: deal with this in batch
-            r = self.scheduler_backend.create_tasks([oneshot_task])
-            if r:
-                yield event['url']
+        # convert events to oneshot tasks
+        oneshot_tasks = filter(lambda e: e is not None,
+                               map(self.convert_to_oneshot_task, events))
+        # write event to scheduler
+        self.scheduler_backend.create_tasks(oneshot_tasks)
+        for e in events:
+            yield e['url']
 
     def run(self):
         """First retrieve events from cache (including origin_type, cnt),
@@ -101,11 +97,13 @@ class UpdaterWriter(SWHConfig):
         """
         while True:
             timestamp = utcnow()
-            events = self.scheduler_updater_backend.cache_read(timestamp)
+            events = list(self.scheduler_updater_backend.cache_read(
+                timestamp, limit=1000))
+            if not events:
+                break
             for urls in utils.grouper(self.write_event_to_scheduler(events),
                                       n=100):
                 self.scheduler_updater_backend.cache_remove(urls)
-
             time.sleep(self.pause)
 
 
