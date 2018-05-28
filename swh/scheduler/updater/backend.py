@@ -55,12 +55,16 @@ class SchedulerUpdaterBackend(SWHConfig, DbBackend):
                        'last_seen']
 
     @autocommit
-    def cache_read(self, timestamp, limit=None, cursor=None):
+    def cache_read(self, timestamp=None, limit=None, cursor=None):
         """Read events from the cache prior to timestamp.
 
         """
+        if not timestamp:
+            timestamp = utcnow()
+
         if not limit:
             limit = self.limit
+
         q = self._format_query('select {keys} from swh_cache_read(%s, %s)',
                                self.cache_read_keys)
         cursor.execute(q, (timestamp, limit))
