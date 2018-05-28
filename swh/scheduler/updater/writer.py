@@ -41,7 +41,7 @@ class UpdaterWriter(SWHConfig):
             'dbname=softwareheritage-scheduler-updater-dev',
             'cache_read_limit': 1000,
         }),
-        # waiting time between db read when no more data exists
+        # waiting time between db reads
         'pause': ('int', 10),
         # verbose or not
         'verbose': ('bool', False),
@@ -75,7 +75,7 @@ class UpdaterWriter(SWHConfig):
                 event['url'],
                 priority='normal')
         self.log.warn('Type %s is not supported for now, only git' % (
-            event['type'], ))
+            event['origin_type'], ))
         return None
 
     def write_event_to_scheduler(self, events):
