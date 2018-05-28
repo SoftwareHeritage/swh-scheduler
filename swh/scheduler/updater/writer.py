@@ -97,8 +97,7 @@ class UpdaterWriter(SWHConfig):
         """
         while True:
             timestamp = utcnow()
-            events = list(self.scheduler_updater_backend.cache_read(
-                timestamp, limit=1000))
+            events = list(self.scheduler_updater_backend.cache_read(timestamp))
             if not events:
                 break
             for urls in utils.grouper(self.write_event_to_scheduler(events),
