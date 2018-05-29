@@ -14,4 +14,7 @@ override_dh_install:
 		mkdir -p $(CURDIR)/debian/python3-swh.scheduler.updater/usr/lib/python$$pyvers/dist-packages/swh/scheduler/updater/ ; \
 		mv $(CURDIR)/debian/python3-swh.scheduler/usr/lib/python$$pyvers/dist-packages/swh/scheduler/updater/ \
 		   $(CURDIR)/debian/python3-swh.scheduler.updater/usr/lib/python$$pyvers/dist-packages/swh/scheduler/ ; \
+		mkdir -p $(CURDIR)/debian/python3-swh.scheduler.updater/usr/lib/python$$pyvers/dist-packages/swh/scheduler/updater/tests/ ; \
+		mv $(CURDIR)/debian/python3-swh.scheduler/usr/lib/python$$pyvers/dist-packages/swh/scheduler/tests/updater/ \
+		   $(CURDIR)/debian/python3-swh.scheduler.updater/usr/lib/python$$pyvers/dist-packages/swh/scheduler/updater/tests/ ; \
 	done
