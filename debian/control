@@ -24,3 +24,9 @@ Package: python3-swh.scheduler
 Architecture: all
 Depends: python3-swh.core (>= 0.0.40~), ${misc:Depends}, ${python3:Depends}
 Description: Software Heritage Scheduler
+
+Package: python3-swh.scheduler.updater
+Architecture: all
+Depends: python3-swh.scheduler (= ${binary:Version}),
+         ${misc:Depends}, ${python3:Depends}
+Description: Software Heritage Scheduler Updater
