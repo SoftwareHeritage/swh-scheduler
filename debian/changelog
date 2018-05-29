@@ -1,3 +1,13 @@
+swh-scheduler (0.0.27-1~swh1) unstable-swh; urgency=medium
+
+  * v0.0.27
+  * scheduler: Deal with priority in tasks
+  * scheduler-update: new package python3-swh.scheduler.updater
+  * Contains tools in charge of consuming events from arbitrary sources
+  * and update the scheduler db
+
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Tue, 29 May 2018 12:27:34 +0200
+
 swh-scheduler (0.0.26-1~swh1) unstable-swh; urgency=medium
 
   * v0.0.26
