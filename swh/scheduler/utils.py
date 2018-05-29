@@ -1,10 +1,10 @@
-# Copyright (C) 2017  The Software Heritage developers
+# Copyright (C) 2017-2018  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
 
-import datetime
+from datetime import datetime, timezone
 
 
 def get_task(task_name):
@@ -38,12 +38,16 @@ def create_oneshot_task_dict(type, *args, **kwargs):
         (swh.scheduler.backend.create_tasks)
 
     """
+    priority = None
+    if 'priority' in kwargs:
+        priority = kwargs.pop('priority')
     return {
         'policy': 'oneshot',
         'type': type,
-        'next_run': datetime.datetime.now(tz=datetime.timezone.utc),
+        'next_run': datetime.now(tz=timezone.utc),
         'arguments': {
             'args': args if args else [],
             'kwargs': kwargs if kwargs else {},
-        }
+        },
+        'priority': priority,
     }

@@ -1,8 +1,12 @@
-swh-scheduler (0.0.26-1~swh1~bpo9+1) stretch-swh; urgency=medium
+swh-scheduler (0.0.27-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for stretch-backports.
+  * v0.0.27
+  * scheduler: Deal with priority in tasks
+  * scheduler-update: new package python3-swh.scheduler.updater
+  * Contains tools in charge of consuming events from arbitrary sources
+  * and update the scheduler db
 
- -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Thu, 26 Apr 2018 17:34:07 +0200
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Tue, 29 May 2018 12:27:34 +0200
 
 swh-scheduler (0.0.26-1~swh1) unstable-swh; urgency=medium
 

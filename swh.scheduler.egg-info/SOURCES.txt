@@ -29,6 +29,10 @@ sql/Makefile
 sql/swh-scheduler-data.sql
 sql/swh-scheduler-schema.sql
 sql/swh-scheduler-testdata.sql
+sql/updater/sql/Makefile
+sql/updater/sql/swh-func.sql
+sql/updater/sql/swh-init.sql
+sql/updater/sql/swh-schema.sql
 sql/updates/02.sql
 sql/updates/03.sql
 sql/updates/04.sql
@@ -36,6 +40,7 @@ sql/updates/05.sql
 sql/updates/06.sql
 sql/updates/07.sql
 sql/updates/08.sql
+sql/updates/09.sql
 swh/__init__.py
 swh.scheduler.egg-info/PKG-INFO
 swh.scheduler.egg-info/SOURCES.txt
@@ -60,3 +65,18 @@ swh/scheduler/tests/__init__.py
 swh/scheduler/tests/test_api_client.py
 swh/scheduler/tests/test_scheduler.py
 swh/scheduler/tests/test_task.py
+swh/scheduler/tests/test_utils.py
+swh/scheduler/tests/updater/__init__.py
+swh/scheduler/tests/updater/test_backend.py
+swh/scheduler/tests/updater/test_consumer.py
+swh/scheduler/tests/updater/test_events.py
+swh/scheduler/tests/updater/test_ghtorrent.py
+swh/scheduler/tests/updater/test_writer.py
+swh/scheduler/updater/__init__.py
+swh/scheduler/updater/backend.py
+swh/scheduler/updater/consumer.py
+swh/scheduler/updater/events.py
+swh/scheduler/updater/writer.py
+swh/scheduler/updater/ghtorrent/__init__.py
+swh/scheduler/updater/ghtorrent/cli.py
+swh/scheduler/updater/ghtorrent/fake.py
