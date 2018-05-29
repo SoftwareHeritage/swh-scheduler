@@ -1,3 +1,10 @@
+swh-scheduler (0.0.28-1~swh1) unstable-swh; urgency=medium
+
+  * v0.0.28
+  * Fix wrong runtime dependencies
+
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Tue, 29 May 2018 14:12:15 +0200
+
 swh-scheduler (0.0.27-1~swh1) unstable-swh; urgency=medium
 
   * v0.0.27
