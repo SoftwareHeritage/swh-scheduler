@@ -10,4 +10,6 @@ flask
 kombu
 psycopg2
 vcversioner
-hypothesis
+
+# test dependencies
+# hypothesis
