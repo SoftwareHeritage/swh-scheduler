@@ -3,6 +3,8 @@ arrow
 celery
 elasticsearch>5.4
 flask
+hypothesis
+kombu
 psycopg2
-swh.core>=0.0.38
+swh.core>=0.0.40
 vcversioner

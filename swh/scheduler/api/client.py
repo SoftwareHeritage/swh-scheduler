@@ -21,8 +21,9 @@ class RemoteScheduler(SWHRemoteAPI):
     """Proxy to a remote scheduler API
 
     """
-    def __init__(self, url):
-        super().__init__(api_exception=SchedulerAPIError, url=url)
+    def __init__(self, url, timeout=None):
+        super().__init__(
+            api_exception=SchedulerAPIError, url=url, timeout=timeout)
 
     def close_connection(self):
         return self.post('close_connection', {})
@@ -49,18 +50,22 @@ class RemoteScheduler(SWHRemoteAPI):
     def get_tasks(self, task_ids):
         return self.post('get_tasks', {'task_ids': task_ids})
 
-    def peek_ready_tasks(self, task_type, timestamp=None, num_tasks=None):
+    def peek_ready_tasks(self, task_type, timestamp=None, num_tasks=None,
+                         num_tasks_priority=None):
         return self.post('peek_ready_tasks', {
             'task_type': task_type,
             'timestamp': timestamp,
             'num_tasks': num_tasks,
+            'num_tasks_priority': num_tasks_priority,
         })
 
-    def grab_ready_tasks(self, task_type, timestamp=None, num_tasks=None):
+    def grab_ready_tasks(self, task_type, timestamp=None, num_tasks=None,
+                         num_tasks_priority=None):
         return self.post('grab_ready_tasks', {
             'task_type': task_type,
             'timestamp': timestamp,
             'num_tasks': num_tasks,
+            'num_tasks_priority': num_tasks_priority,
         })
 
     def schedule_task_run(self, task_id, backend_id, metadata=None,

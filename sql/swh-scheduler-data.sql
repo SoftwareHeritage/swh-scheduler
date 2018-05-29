@@ -75,3 +75,17 @@ values (
        'swh.loader.mercurial.tasks.LoadArchiveMercurialTsk',
        '1 day', '1 day', '1 day', 1,
        1000);
+
+insert into task_type(
+       type,
+       description,
+       backend_name,
+       default_interval, min_interval, max_interval, backoff_factor,
+       max_queue_length)
+values (
+       'origin-update-git',
+       'Update an origin of type git',
+       'swh.loader.git.tasks.UpdateGitRepository',
+       '64 days',
+       '12:00:00',
+       '64 days', 2, 100000);
