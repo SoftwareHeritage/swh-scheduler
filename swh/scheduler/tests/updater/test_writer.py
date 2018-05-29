@@ -15,7 +15,7 @@ from swh.scheduler.updater.events import SWHEvent
 from swh.scheduler.updater.writer import UpdaterWriter
 from swh.scheduler.updater.events import LISTENED_EVENTS
 
-from swh.scheduler.tests.updater import UpdaterTestUtil
+from . import UpdaterTestUtil
 
 
 TEST_DIR = os.path.dirname(os.path.abspath(__file__))

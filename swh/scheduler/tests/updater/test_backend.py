@@ -10,11 +10,14 @@ from arrow import utcnow
 from nose.plugins.attrib import attr
 from nose.tools import istest
 from hypothesis import given
-from hypothesis.strategies import sets, from_regex
+from hypothesis.strategies import sets
 
 from swh.core.tests.db_testing import SingleDbTestFixture
 from swh.scheduler.updater.backend import SchedulerUpdaterBackend
 from swh.scheduler.updater.events import SWHEvent
+
+from . import from_regex
+
 
 TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 TEST_DATA_DIR = os.path.join(TEST_DIR, '../../../../../swh-storage-testdata')

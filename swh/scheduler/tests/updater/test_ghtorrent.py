@@ -6,15 +6,15 @@
 import unittest
 
 from hypothesis import given
-from hypothesis.strategies import sampled_from, from_regex
+from hypothesis.strategies import sampled_from
 from nose.tools import istest
 from unittest.mock import patch
-
-from swh.scheduler.tests.updater import UpdaterTestUtil
 
 from swh.scheduler.updater.events import SWHEvent
 from swh.scheduler.updater.ghtorrent import (
     events, GHTorrentConsumer, INTERESTING_EVENT_KEYS)
+
+from . import from_regex, UpdaterTestUtil
 
 
 def event_values():

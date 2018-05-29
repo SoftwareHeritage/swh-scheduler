@@ -6,11 +6,12 @@
 import unittest
 
 from hypothesis import given
-from hypothesis.strategies import sampled_from, from_regex, lists, tuples, text
+from hypothesis.strategies import sampled_from, lists, tuples, text
+
 from itertools import chain
 from nose.tools import istest
 
-from swh.scheduler.tests.updater import UpdaterTestUtil
+from . import UpdaterTestUtil, from_regex
 
 from swh.scheduler.updater.events import SWHEvent, LISTENED_EVENTS
 from swh.scheduler.updater.consumer import UpdaterConsumer

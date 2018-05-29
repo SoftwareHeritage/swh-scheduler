@@ -9,10 +9,10 @@ from hypothesis import given
 from hypothesis.strategies import text, sampled_from
 from nose.tools import istest
 
-from swh.scheduler.tests.updater import UpdaterTestUtil
-
 from swh.scheduler.updater.events import SWHEvent, LISTENED_EVENTS
 from swh.scheduler.updater.ghtorrent import events
+
+from . import UpdaterTestUtil
 
 
 def event_values_ko():

@@ -5,6 +5,15 @@
 
 from arrow import utcnow
 
+try:
+    from hypothesis.strategies import from_regex
+except ImportError:
+    from hypothesis.strategies import text
+
+    # Revert to using basic text generation
+    def from_regex(*args, **kwargs):
+        return text()
+
 
 class UpdaterTestUtil:
     """Mixin intended for event generation purposes
