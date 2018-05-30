@@ -10,7 +10,7 @@ from swh.scheduler.backend import DbBackend, autocommit
 
 
 class SchedulerUpdaterBackend(SWHConfig, DbBackend):
-    CONFIG_BASE_FILENAME = 'scheduler-updater'
+    CONFIG_BASE_FILENAME = 'backend/scheduler-updater'
     DEFAULT_CONFIG = {
         'scheduling_updater_db': (
             'str', 'dbname=softwareheritage-scheduler-updater-dev'),
