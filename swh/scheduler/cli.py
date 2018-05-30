@@ -256,7 +256,7 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
             after, before, last_id=last_id, limit=batch_index)
         for index_name, tasks_group in itertools.groupby(
                 tasks_in, key=group_by_index_name):
-            log.debug('Send for indexation to index %s' % index_name)
+            log.debug('Index tasks to %s' % index_name)
             if dry_run:
                 for task in tasks_group:
                     yield task
