@@ -84,7 +84,7 @@ class UpdaterWriter(SWHConfig):
         oneshot_tasks = filter(lambda e: e is not None,
                                map(self.convert_to_oneshot_task, events))
         # write event to scheduler
-        self.scheduler_backend.create_tasks(oneshot_tasks)
+        self.scheduler_backend.create_tasks(list(oneshot_tasks))
         for e in events:
             yield e['url']
 
