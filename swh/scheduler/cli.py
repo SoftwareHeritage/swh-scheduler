@@ -237,12 +237,13 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
         log.info('**NO CLEANUP**')
 
     now = arrow.utcnow()
-    # Default to archive all tasks prior to now's last month
+
+    # Default to archive all tasks from the current month
     if not before:
-        before = now.format('YYYY-MM-01')
+        before = now.shift(months=1).format('YYYY-MM-01')
 
     if not after:
-        after = now.shift(months=-1).format('YYYY-MM-01')
+        after = now.format('YYYY-MM-01')
 
     log.debug('index: %s; cleanup: %s; period: [%s ; %s]' % (
         not dry_run, not dry_run and cleanup, after, before))
