@@ -1,3 +1,14 @@
+swh-scheduler (0.0.29-1~swh1) unstable-swh; urgency=medium
+
+  * v0.0.29
+  * swh.scheduler.cli: Change archival period to rolling month - 1 week
+  * swh.scheduler.updater.writer: Force filter resolution to list
+  * swh.scheduler.cli: Change default archival period to current month
+  * swh.scheduler.cli: Improve logging message
+  * swh.scheduler.updater.backend: Adapt configuration path accordingly
+
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Thu, 31 May 2018 11:42:51 +0200
+
 swh-scheduler (0.0.28-1~swh1) unstable-swh; urgency=medium
 
   * v0.0.28
