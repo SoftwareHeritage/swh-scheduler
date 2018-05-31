@@ -58,6 +58,7 @@ def pretty_print_task(task):
         click.style('  Interval: ', bold=True),
         str(task['current_interval']), '\n',
         click.style('  Type: ', bold=True), task['type'], '\n',
+        click.style('  Policy: ', bold=True), task['policy'], '\n',
         click.style('  Args:\n', bold=True),
         pretty_print_list(task['arguments']['args'], indent=4),
         click.style('  Keyword args:\n', bold=True),
