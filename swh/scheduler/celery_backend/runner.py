@@ -8,14 +8,12 @@ import time
 import arrow
 from celery import group
 
-from swh.scheduler import get_scheduler
+from swh.scheduler import get_scheduler, compute_nb_tasks_from
 from .config import app as main_app
 
 
 # Max batch size for tasks
 MAX_NUM_TASKS = 10000
-# Percentage of tasks with priority to schedule
-PRIORITY_SLOT = 0.6
 
 
 def run_ready_tasks(backend, app):
@@ -44,8 +42,9 @@ def run_ready_tasks(backend, app):
             else:
                 num_tasks = MAX_NUM_TASKS
             if num_tasks > 0:
-                num_tasks_priority = PRIORITY_SLOT * num_tasks
-                num_tasks = (1 - PRIORITY_SLOT) * num_tasks
+                num_tasks, num_tasks_priority = compute_nb_tasks_from(
+                    num_tasks)
+
                 pending_tasks.extend(
                     backend.grab_ready_tasks(
                         task_type_name,

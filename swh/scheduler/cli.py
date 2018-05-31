@@ -12,6 +12,7 @@ import locale
 import logging
 
 from swh.core import utils
+from . import compute_nb_tasks_from
 from .backend_es import SWHElasticSearchClient
 
 
@@ -183,9 +184,13 @@ def list_pending_tasks(ctx, task_type, limit, before):
     """List the tasks that are going to be run.
 
     You can override the number of tasks to fetch
+
     """
-    pending = ctx.obj.peek_ready_tasks(task_type,
-                                       timestamp=before, num_tasks=limit)
+    num_tasks, num_tasks_priority = compute_nb_tasks_from(limit)
+
+    pending = ctx.obj.peek_ready_tasks(
+        task_type, timestamp=before,
+        num_tasks=num_tasks, num_tasks_priority=num_tasks_priority)
     output = [
         'Found %d tasks\n' % len(pending)
     ]
