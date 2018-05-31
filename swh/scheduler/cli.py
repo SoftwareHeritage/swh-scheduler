@@ -237,12 +237,14 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
         log.info('**NO CLEANUP**')
 
     now = arrow.utcnow()
-    # Default to archive all tasks prior to now's last month
+
+    # Default to archive tasks from a rolling month starting the week
+    # prior to the current one
     if not before:
-        before = now.format('YYYY-MM-01')
+        before = now.shift(weeks=-1).format('YYYY-MM-DD')
 
     if not after:
-        after = now.shift(months=-1).format('YYYY-MM-01')
+        after = now.shift(weeks=-1).shift(months=-1).format('YYYY-MM-DD')
 
     log.debug('index: %s; cleanup: %s; period: [%s ; %s]' % (
         not dry_run, not dry_run and cleanup, after, before))
@@ -256,7 +258,7 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
             after, before, last_id=last_id, limit=batch_index)
         for index_name, tasks_group in itertools.groupby(
                 tasks_in, key=group_by_index_name):
-            log.debug('Send for indexation to index %s' % index_name)
+            log.debug('Index tasks to %s' % index_name)
             if dry_run:
                 for task in tasks_group:
                     yield task
