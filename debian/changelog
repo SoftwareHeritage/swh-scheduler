@@ -1,8 +1,11 @@
-swh-scheduler (0.0.29-1~swh1~bpo9+1) stretch-swh; urgency=medium
+swh-scheduler (0.0.30-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for stretch-backports.
+  * v0.0.30
+  * swh-scheduler-schema.sql: Archive disabled oneshot tasks as well
+  * swh.scheduler.cli: Add policy to pretty printing task routine
+  * swh.scheduler.cli: Fix broken cli list-pending since api change
 
- -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Thu, 31 May 2018 11:42:51 +0200
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Fri, 22 Jun 2018 18:07:02 +0200
 
 swh-scheduler (0.0.29-1~swh1) unstable-swh; urgency=medium
 

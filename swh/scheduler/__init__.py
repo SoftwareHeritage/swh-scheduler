@@ -4,6 +4,27 @@
 # See top-level LICENSE file for more information
 
 
+# Percentage of tasks with priority to schedule
+PRIORITY_SLOT = 0.6
+
+
+def compute_nb_tasks_from(num_tasks):
+    """Compute and returns the tuple, number of tasks without priority,
+       number of tasks with priority.
+
+    Args:
+        num_tasks (int):
+
+    Returns:
+        tuple number of tasks without priority, number of tasks with
+        priority
+
+    """
+    if not num_tasks:
+        return None, None
+    return (1 - PRIORITY_SLOT) * num_tasks, PRIORITY_SLOT * num_tasks
+
+
 def get_scheduler(cls, args={}):
     """
     Get a scheduler object of class `scheduler_class` with arguments

@@ -388,7 +388,7 @@ class CommonSchedulerTest(SingleDbTestFixture):
                           (0, 'completed'),
                           (0, 'next_run_not_scheduled')],
             'oneshot': [(0, 'next_run_not_scheduled'),
-                        (0, 'disabled'),
+                        (1, 'disabled'),
                         (1, 'completed')]
         }
 
@@ -406,9 +406,10 @@ class CommonSchedulerTest(SingleDbTestFixture):
             tasks_to_update[policy].append(task['id'])
 
         self.backend.disable_tasks(tasks_to_update['recurring'])
-        # hack: change the status to something else than completed
+        # hack: change the status to something else than completed/disabled
         self.backend.set_status_tasks(
-            _task_ids['oneshot'], status='disabled')
+            _task_ids['oneshot'], status='next_run_not_scheduled')
+        # complete the tasks to update
         self.backend.set_status_tasks(
             tasks_to_update['oneshot'], status='completed')
 
