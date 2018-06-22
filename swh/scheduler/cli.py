@@ -256,8 +256,15 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
         not dry_run, not dry_run and cleanup, after, before))
 
     def group_by_index_name(data, es_client=es_client):
-        ended = data['ended']
-        return es_client.compute_index_name(ended.year, ended.month)
+        """Given a data record, determine the index's name through its ending
+           date. This varies greatly depending on the task_run's
+           status.
+
+        """
+        date = data.get('started')
+        if not date:
+            date = data['scheduled']
+        return es_client.compute_index_name(date.year, date.month)
 
     def index_data(before, last_id, batch_index, backend=ctx.obj):
         tasks_in = backend.filter_task_to_archive(
