@@ -41,6 +41,7 @@ sql/updates/06.sql
 sql/updates/07.sql
 sql/updates/08.sql
 sql/updates/09.sql
+sql/updates/10.sql
 swh/__init__.py
 swh.scheduler.egg-info/PKG-INFO
 swh.scheduler.egg-info/SOURCES.txt
