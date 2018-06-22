@@ -12,6 +12,7 @@ import locale
 import logging
 
 from swh.core import utils
+from . import compute_nb_tasks_from
 from .backend_es import SWHElasticSearchClient
 
 
@@ -57,6 +58,7 @@ def pretty_print_task(task):
         click.style('  Interval: ', bold=True),
         str(task['current_interval']), '\n',
         click.style('  Type: ', bold=True), task['type'], '\n',
+        click.style('  Policy: ', bold=True), task['policy'], '\n',
         click.style('  Args:\n', bold=True),
         pretty_print_list(task['arguments']['args'], indent=4),
         click.style('  Keyword args:\n', bold=True),
@@ -183,9 +185,13 @@ def list_pending_tasks(ctx, task_type, limit, before):
     """List the tasks that are going to be run.
 
     You can override the number of tasks to fetch
+
     """
-    pending = ctx.obj.peek_ready_tasks(task_type,
-                                       timestamp=before, num_tasks=limit)
+    num_tasks, num_tasks_priority = compute_nb_tasks_from(limit)
+
+    pending = ctx.obj.peek_ready_tasks(
+        task_type, timestamp=before,
+        num_tasks=num_tasks, num_tasks_priority=num_tasks_priority)
     output = [
         'Found %d tasks\n' % len(pending)
     ]
@@ -250,8 +256,15 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
         not dry_run, not dry_run and cleanup, after, before))
 
     def group_by_index_name(data, es_client=es_client):
-        ended = data['ended']
-        return es_client.compute_index_name(ended.year, ended.month)
+        """Given a data record, determine the index's name through its ending
+           date. This varies greatly depending on the task_run's
+           status.
+
+        """
+        date = data.get('started')
+        if not date:
+            date = data['scheduled']
+        return es_client.compute_index_name(date.year, date.month)
 
     def index_data(before, last_id, batch_index, backend=ctx.obj):
         tasks_in = backend.filter_task_to_archive(

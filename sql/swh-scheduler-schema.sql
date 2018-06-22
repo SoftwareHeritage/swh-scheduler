@@ -8,7 +8,7 @@ create table dbversion
 comment on table dbversion is 'Schema update tracking';
 
 insert into dbversion (version, release, description)
-       values (9, now(), 'Work In Progress');
+       values (10, now(), 'Work In Progress');
 
 create table task_type (
   type text primary key,
@@ -385,10 +385,11 @@ create type task_record as (
     metadata jsonb,
     scheduled timestamptz,
     started timestamptz,
-    ended timestamptz
+    ended timestamptz,
+    task_run_status task_run_status
 );
 
-create index task_run_id_asc_idx on task_run(task asc, ended asc);
+create index task_run_id_asc_idx on task_run(task asc, started asc);
 
 create or replace function swh_scheduler_task_to_archive(
   ts_after timestamptz, ts_before timestamptz, last_id bigint default -1,
@@ -399,13 +400,13 @@ as $$
    select t.id as task_id, t.policy as task_policy,
           t.status as task_status, tr.id as task_run_id,
           t.arguments, t.type, tr.backend_id, tr.metadata,
-          tr.scheduled, tr.started, tr.ended
+          tr.scheduled, tr.started, tr.ended, tr.status as task_run_status
    from task_run tr inner join task t on tr.task=t.id
-   where ((t.policy = 'oneshot' and t.status ='completed') or
-          (t.policy = 'recurring' and t.status ='disabled')) and
-          ts_after <= tr.ended  and tr.ended < ts_before and
+   where ((t.policy = 'oneshot' and t.status in ('completed', 'disabled')) or
+          (t.policy = 'recurring' and t.status = 'disabled')) and
+          ((ts_after <= tr.started and tr.started < ts_before) or tr.started is null) and
           t.id > last_id
-   order by tr.task, tr.ended
+   order by tr.task, tr.started
    limit lim;
 $$;
 
