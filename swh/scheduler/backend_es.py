@@ -22,7 +22,8 @@ class SWHElasticSearchClient(SWHConfig):
         'storage_nodes': ('[dict]', [{'host': 'localhost', 'port': 9200}]),
         'index_name_prefix': ('str', 'swh-tasks'),
         'client_options': ('dict', {
-            'sniff': True,
+            'sniff_on_start': False,
+            'sniff_on_connection_fail': True,
             'http_compress': False,
         })
     }
@@ -34,12 +35,12 @@ class SWHElasticSearchClient(SWHConfig):
             self.config = self.parse_config_file()
 
         options = self.config['client_options']
-        sniff = options['sniff']
         self.storage = Elasticsearch(
             # nodes to use by default
             self.config['storage_nodes'],
             # auto detect cluster's status
-            sniff_on_start=sniff, sniff_on_connection_fail=sniff,
+            sniff_on_start=options['sniff_on_start'],
+            sniff_on_connection_fail=options['sniff_on_connection_fail'],
             sniffer_timeout=60,
             # compression or not
             http_compress=options['http_compress'])
