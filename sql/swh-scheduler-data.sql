@@ -127,3 +127,29 @@ values (
        '1 day',
        '1 day',
        '1 day', 1);
+
+insert into task_type(
+       type,
+       description,
+       backend_name,
+       default_interval, min_interval, max_interval, backoff_factor)
+values (
+       'swh-lister-gitlab-incremental',
+       'Incrementally list a Gitlab instance',
+       'swh.lister.github.tasks.IncrementalGitHubLister',
+       '1 day',
+       '1 day',
+       '1 day', 1);
+
+insert into task_type(
+       type,
+       description,
+       backend_name,
+       default_interval, min_interval, max_interval, backoff_factor)
+values (
+       'swh-lister-gitlab-full',
+       'Full update of a Gitlab instance''s repos list',
+       'swh.lister.gitlab.tasks.FullGitLastRelister',
+       '90 days',
+       '90 days',
+       '90 days', 1);
