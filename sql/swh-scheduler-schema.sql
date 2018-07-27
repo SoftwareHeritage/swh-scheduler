@@ -8,7 +8,7 @@ create table dbversion
 comment on table dbversion is 'Schema update tracking';
 
 insert into dbversion (version, release, description)
-       values (10, now(), 'Work In Progress');
+       values (11, now(), 'Work In Progress');
 
 create table task_type (
   type text primary key,
@@ -132,7 +132,6 @@ create or replace function swh_scheduler_create_tasks_from_temp ()
   language plpgsql
 as $$
 begin
-  return query
   insert into task (type, arguments, next_run, status, current_interval, policy, retries_left, priority)
     select type, arguments, next_run, 'next_run_not_scheduled',
            (select default_interval from task_type tt where tt.type = t.type),
@@ -145,8 +144,15 @@ begin
                        where type=t.type and
                              arguments=t.arguments and
                              policy=t.policy and
-                             status='next_run_not_scheduled')
-  returning task.*;
+                             status='next_run_not_scheduled');
+
+  return query
+    select t.*
+    from tmp_task tt inner join task t on (
+      t.type=tt.type and
+      t.arguments=tt.arguments and
+      t.policy=tt.policy and
+      t.status='next_run_not_scheduled');
 end;
 $$;
 
