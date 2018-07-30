@@ -117,42 +117,50 @@ as $$
     like task excluding indexes
   ) on commit drop;
   alter table tmp_task
-    drop column id,
-    drop column current_interval,
-    drop column status,
-    alter column policy drop not null,
-    alter column retries_left drop not null;
+    alter column retries_left drop not null,
+    drop column id;
 $$;
 
 comment on function swh_scheduler_mktemp_task () is 'Create a temporary table for bulk task creation';
-
 
 create or replace function swh_scheduler_create_tasks_from_temp ()
   returns setof task
   language plpgsql
 as $$
 begin
-  insert into task (type, arguments, next_run, status, current_interval, policy, retries_left, priority)
-    select type, arguments, next_run, 'next_run_not_scheduled',
-           (select default_interval from task_type tt where tt.type = t.type),
-           coalesce(policy, 'recurring'),
-           coalesce(retries_left, (select num_retries from task_type tt where tt.type = t.type), 0),
-           coalesce(priority, null)
-      from tmp_task t
-      where not exists(select 1
-                       from task
-                       where type=t.type and
-                             arguments=t.arguments and
-                             policy=t.policy and
-                             status='next_run_not_scheduled');
+  -- update the default values in one go
+  -- this is separated from the insert/select to avoid too much
+  -- juggling
+  update tmp_task t
+  set current_interval = tt.default_interval,
+      retries_left = coalesce(retries_left, tt.num_retries, 0)
+  from task_type tt
+  where tt.type=t.type;
+
+  insert into task (type, arguments, next_run, status, current_interval, policy,
+                    retries_left, priority)
+    select type, arguments, next_run, status, current_interval, policy,
+           retries_left, priority
+    from tmp_task t
+    where not exists(select 1
+                     from task
+                     where type = t.type and
+                           arguments = t.arguments and
+                           policy = t.policy and
+                           ((priority is null and t.priority is null)
+                            or priority = t.priority) and
+                           status = t.status);
 
   return query
-    select t.*
+    select distinct t.*
     from tmp_task tt inner join task t on (
-      t.type=tt.type and
-      t.arguments=tt.arguments and
-      t.policy=tt.policy and
-      t.status='next_run_not_scheduled');
+      t.type = tt.type and
+      t.arguments = tt.arguments and
+      t.status = tt.status and
+      ((t.priority is null and tt.priority is null)
+       or t.priority=tt.priority) and
+       t.policy=tt.policy
+    );
 end;
 $$;
 
