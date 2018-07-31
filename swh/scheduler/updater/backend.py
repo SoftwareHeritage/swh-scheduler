@@ -48,7 +48,7 @@ class SchedulerUpdaterBackend(SWHConfig, DbBackend):
 
         cursor.execute('select swh_mktemp_cache()')
         self.copy_to(prepare_events(events),
-                     'tmp_cache', self.cache_put_keys, cursor)
+                     'tmp_cache', self.cache_put_keys, cursor=cursor)
         cursor.execute('select swh_cache_put()')
 
     cache_read_keys = ['id', 'url', 'origin_type', 'cnt', 'first_seen',
