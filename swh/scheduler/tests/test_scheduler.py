@@ -161,8 +161,19 @@ class CommonSchedulerTest(SingleDbTestFixture):
                 self.task2_template, utcnow(), 100,
                 num_tasks_priority, priorities=priority_ratio)
         tasks = tasks_1 + tasks_2
-        # duplicate tasks are dropped at creation
-        ret = self.backend.create_tasks(tasks + tasks_1 + tasks_2)
+
+        # tasks are returned only once with their ids
+        ret1 = self.backend.create_tasks(tasks + tasks_1 + tasks_2)
+        set_ret1 = set([t['id'] for t in ret1])
+
+        # creating the same set result in the same ids
+        ret = self.backend.create_tasks(tasks)
+        set_ret = set([t['id'] for t in ret])
+
+        # Idempotence results
+        self.assertEqual(set_ret, set_ret1)
+        self.assertEqual(len(ret), len(ret1))
+
         ids = set()
         actual_priorities = defaultdict(int)
 
