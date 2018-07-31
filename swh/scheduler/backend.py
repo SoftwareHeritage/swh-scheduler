@@ -120,7 +120,8 @@ class DbBackend:
             ret_values,
         )
 
-    def copy_to(self, items, tblname, columns, cursor=None, item_cb=None):
+    def copy_to(self, items, tblname, columns, default_columns={},
+                cursor=None, item_cb=None):
         def escape(data):
             if data is None:
                 return ''
@@ -154,7 +155,13 @@ class DbBackend:
             for d in items:
                 if item_cb is not None:
                     item_cb(d)
-                line = [escape(d.get(k)) for k in columns]
+                line = []
+                for k in columns:
+                    v = d.get(k)
+                    if not v:
+                        v = default_columns.get(k)
+                    v = escape(v)
+                    line.append(v)
                 f.write(','.join(line))
                 f.write('\n')
             f.seek(0)
@@ -239,7 +246,8 @@ class SchedulerBackend(SWHConfig, DbBackend):
         return ret
 
     task_create_keys = [
-        'type', 'arguments', 'next_run', 'policy', 'retries_left', 'priority',
+        'type', 'arguments', 'next_run', 'policy', 'status', 'retries_left',
+        'priority'
     ]
     task_keys = task_create_keys + ['id', 'current_interval', 'status']
 
@@ -264,7 +272,12 @@ class SchedulerBackend(SWHConfig, DbBackend):
 
         """
         cursor.execute('select swh_scheduler_mktemp_task()')
-        self.copy_to(tasks, 'tmp_task', self.task_create_keys, cursor)
+        self.copy_to(tasks, 'tmp_task', self.task_create_keys,
+                     default_columns={
+                         'policy': 'recurring',
+                         'status': 'next_run_not_scheduled'
+                     },
+                     cursor=cursor)
         query = self._format_query(
             'select {keys} from swh_scheduler_create_tasks_from_temp()',
             self.task_keys,
@@ -397,7 +410,7 @@ class SchedulerBackend(SWHConfig, DbBackend):
         """
         cursor.execute('select swh_scheduler_mktemp_task_run()')
         self.copy_to(task_runs, 'tmp_task_run', self.task_run_create_keys,
-                     cursor)
+                     cursor=cursor)
         cursor.execute('select swh_scheduler_schedule_task_run_from_temp()')
 
     @autocommit

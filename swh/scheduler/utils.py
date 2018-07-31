@@ -25,6 +25,36 @@ def get_task(task_name):
     return app.tasks[task_name]
 
 
+def create_task_dict(type, policy, *args, **kwargs):
+    """Create a task with type and policy, scheduled for as soon as
+       possible.
+
+    Args:
+        type (str): Type of oneshot task as per swh-scheduler's db
+                    table task_type's column (Ex: origin-update-git,
+                    swh-deposit-archive-checks)
+        policy (str): oneshot or recurring policy
+
+    Returns:
+        Expected dictionary for the one-shot task scheduling api
+        (swh.scheduler.backend.create_tasks)
+
+    """
+    priority = None
+    if 'priority' in kwargs:
+        priority = kwargs.pop('priority')
+    return {
+        'policy': policy,
+        'type': type,
+        'next_run': datetime.now(tz=timezone.utc),
+        'arguments': {
+            'args': args if args else [],
+            'kwargs': kwargs if kwargs else {},
+        },
+        'priority': priority,
+    }
+
+
 def create_oneshot_task_dict(type, *args, **kwargs):
     """Create a oneshot task scheduled for as soon as possible.
 
@@ -38,16 +68,4 @@ def create_oneshot_task_dict(type, *args, **kwargs):
         (swh.scheduler.backend.create_tasks)
 
     """
-    priority = None
-    if 'priority' in kwargs:
-        priority = kwargs.pop('priority')
-    return {
-        'policy': 'oneshot',
-        'type': type,
-        'next_run': datetime.now(tz=timezone.utc),
-        'arguments': {
-            'args': args if args else [],
-            'kwargs': kwargs if kwargs else {},
-        },
-        'priority': priority,
-    }
+    return create_task_dict(type, 'oneshot', *args, **kwargs)

@@ -24,7 +24,6 @@ values (
        'swh.deposit.loader.tasks.LoadDepositArchiveTsk',
        '1 day', '1 day', '1 day', 1, 3, 1000);
 
-
 insert into task_type(
        type,
        description,
@@ -89,3 +88,68 @@ values (
        '64 days',
        '12:00:00',
        '64 days', 2, 100000);
+
+insert into task_type(
+       type,
+       description,
+       backend_name,
+       default_interval, min_interval, max_interval, backoff_factor)
+values (
+'swh-lister-github-incremental',
+       'Incrementally list GitHub',
+       'swh.lister.github.tasks.IncrementalGitHubLister',
+       '1 day',
+       '1 day',
+       '1 day', 1);
+
+insert into task_type(
+       type,
+       description,
+       backend_name,
+       default_interval, min_interval, max_interval, backoff_factor)
+values (
+       'swh-lister-github-full',
+       'Full update of GitHub repos list',
+       'swh.lister.github.tasks.FullGitHubRelister',
+       '90 days',
+       '90 days',
+       '90 days', 1);
+
+insert into task_type(
+       type,
+       description,
+       backend_name,
+       default_interval, min_interval, max_interval, backoff_factor)
+values (
+       'swh-lister-debian',
+       'List a Debian distribution',
+       'swh.lister.debian.tasks.DebianListerTask',
+       '1 day',
+       '1 day',
+       '1 day', 1);
+
+insert into task_type(
+       type,
+       description,
+       backend_name,
+       default_interval, min_interval, max_interval, backoff_factor)
+values (
+       'swh-lister-gitlab-incremental',
+       'Incrementally list a Gitlab instance',
+       'swh.lister.gitlab.tasks.IncrementalGitLabLister',
+       '1 day',
+       '1 day',
+       '1 day', 1);
+
+insert into task_type(
+       type,
+       description,
+       backend_name,
+       default_interval, min_interval, max_interval, backoff_factor)
+values (
+       'swh-lister-gitlab-full',
+       'Full update of a Gitlab instance''s repos list',
+       'swh.lister.gitlab.tasks.FullGitLabRelister',
+       '90 days',
+       '90 days',
+       '90 days', 1);
