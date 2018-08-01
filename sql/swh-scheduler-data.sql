@@ -153,3 +153,17 @@ values (
        '90 days',
        '90 days',
        '90 days', 1);
+
+insert into task_type(
+       type,
+       description,
+       backend_name,
+       default_interval, min_interval, max_interval, backoff_factor)
+values (
+       'swh-lister-pypi',
+       'Full pypi lister',
+       'swh.lister.pypi.tasks.PyPiListerTask',
+       '90 days',
+       '90 days',
+       '90 days', 1);
+
