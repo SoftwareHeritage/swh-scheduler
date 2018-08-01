@@ -95,7 +95,7 @@ insert into task_type(
        backend_name,
        default_interval, min_interval, max_interval, backoff_factor)
 values (
-'swh-lister-github-incremental',
+       'swh-lister-github-incremental',
        'Incrementally list GitHub',
        'swh.lister.github.tasks.IncrementalGitHubLister',
        '1 day',
