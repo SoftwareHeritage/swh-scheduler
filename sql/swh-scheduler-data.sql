@@ -167,3 +167,15 @@ values (
        '90 days',
        '90 days', 1);
 
+insert into task_type(
+       type,
+       description,
+       backend_name,
+       default_interval, min_interval, max_interval, backoff_factor,
+       max_queue_length)
+values (
+       'origin-update-pypi',
+       'Load Pypi origin',
+       'swh.loader.pypi.tasks.LoadPyPiTsk',
+       '64 days', '12:00:00', '64 days', 2,
+       100000);
