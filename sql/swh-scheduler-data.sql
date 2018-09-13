@@ -163,9 +163,9 @@ values (
        'swh-lister-pypi',
        'Full pypi lister',
        'swh.lister.pypi.tasks.PyPiListerTask',
-       '90 days',
-       '90 days',
-       '90 days', 1);
+       '1 days',
+       '1 days',
+       '1 days', 1);
 
 insert into task_type(
        type,
@@ -176,6 +176,6 @@ insert into task_type(
 values (
        'origin-update-pypi',
        'Load Pypi origin',
-       'swh.loader.pypi.tasks.LoadPyPiTsk',
+       'swh.loader.pypi.tasks.LoadPyPi',
        '64 days', '12:00:00', '64 days', 2,
        100000);
