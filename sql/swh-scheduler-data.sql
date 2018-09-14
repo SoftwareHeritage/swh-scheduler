@@ -176,6 +176,6 @@ insert into task_type(
 values (
        'origin-update-pypi',
        'Load Pypi origin',
-       'swh.loader.pypi.tasks.LoadPyPi',
+       'swh.loader.pypi.tasks.LoadPyPI',
        '64 days', '12:00:00', '64 days', 2,
        100000);
