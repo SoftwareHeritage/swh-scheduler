@@ -162,7 +162,7 @@ insert into task_type(
 values (
        'swh-lister-pypi',
        'Full pypi lister',
-       'swh.lister.pypi.tasks.PyPiListerTask',
+       'swh.lister.pypi.tasks.PyPIListerTask',
        '1 days',
        '1 days',
        '1 days', 1);
