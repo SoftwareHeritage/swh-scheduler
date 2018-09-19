@@ -87,7 +87,7 @@ values (
        'swh.loader.git.tasks.UpdateGitRepository',
        '64 days',
        '12:00:00',
-       '64 days', 2, 100000);
+       '64 days', 2, 5000);
 
 insert into task_type(
        type,
@@ -178,4 +178,4 @@ values (
        'Load Pypi origin',
        'swh.loader.pypi.tasks.LoadPyPI',
        '64 days', '12:00:00', '64 days', 2,
-       100000);
+       5000);
