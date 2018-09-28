@@ -7,7 +7,7 @@ insert into task_type(
 values (
        'swh-loader-mount-dump-and-load-svn-repository',
        'Loading svn repositories from svn dump',
-       'swh.loader.svn.tasks.MountAndLoadSvnRepositoryTsk',
+       'swh.loader.svn.tasks.MountAndLoadSvnRepository',
        '1 day', '1 day', '1 day', 1,
        1000);
 
