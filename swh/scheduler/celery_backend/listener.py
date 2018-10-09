@@ -26,7 +26,7 @@ class ReliableEventReceiver(EventReceiver):
             queue_arguments = self._get_queue_arguments()
         except AttributeError:  # HACK: buster's celery version does
                                 # not support this
-            queue_arguments = None
+            queue_arguments = self.queue.queue_arguments
 
         self.queue = Queue('.'.join([self.queue_prefix, self.node_id]),
                            exchange=self.exchange,
