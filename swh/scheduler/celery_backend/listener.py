@@ -5,6 +5,7 @@
 
 import click
 import datetime
+import logging
 import socket
 
 from arrow import utcnow
@@ -41,8 +42,8 @@ class ReliableEventReceiver(EventReceiver):
                          accept=self.accept)]
 
     def _receive(self, body, message):
-        print('## event-receiver: body', body)
-        print('## event-receiver: message', message)
+        logging.debug('## event-receiver: body: %s' % body)
+        logging.debug('## event-receiver: message: %s' % message)
         if isinstance(body, list):  # HACK: buster's celery version
                                     # sometimes returns body as list
                                     # of 1 element
@@ -54,9 +55,9 @@ class ReliableEventReceiver(EventReceiver):
         """Process the received event by dispatching it to the appropriate
         handler."""
         handler = self.handlers.get(type) or self.handlers.get('*')
-        print('## event-receiver: type', type)
-        print('## event-receiver: event', event)
-        print('## event-receiver: handler', handler)
+        logging.debug('## event-receiver: type: %s' % type)
+        logging.debug('## event-receiver: event: %s' % event)
+        logging.debug('## event-receiver: handler: %s' % handler)
         handler and handler(event, message)
 
 
@@ -108,8 +109,8 @@ def event_monitor(app, backend):
         try_perform_actions()
 
     def task_started(event, message):
-        print('#### task_started: event', event)
-        print('#### task_started: message', message)
+        logging.debug('#### task_started: event: %s' % event)
+        logging.debug('#### task_started: message: %s' % message)
 
         queue_action({
             'action': 'start_task_run',
@@ -124,11 +125,11 @@ def event_monitor(app, backend):
         })
 
     def task_succeeded(event, message):
-        print('#### task_succeeded: event', event)
-        print('#### task_succeeded: message', message)
+        logging.debug('#### task_succeeded: event: %s' % event)
+        logging.debug('#### task_succeeded: message: %s' % message)
         result = event['result']
 
-        print('#### task_succeeded: result', result)
+        logging.debug('#### task_succeeded: result: %s' % result)
         try:
             status = result.get('status')
             if status == 'success':
@@ -148,8 +149,8 @@ def event_monitor(app, backend):
         })
 
     def task_failed(event, message):
-        print('#### task_failed: event', event)
-        print('#### task_failed: message', message)
+        logging.debug('#### task_failed: event: %s' % event)
+        logging.debug('#### task_failed: message: %s' % message)
 
         queue_action({
             'action': 'end_task_run',
@@ -183,7 +184,12 @@ def event_monitor(app, backend):
     '--database', '-d', help='Scheduling database DSN')
 @click.option('--url', '-u',
               help="(Optional) Scheduler's url access")
-def main(cls, database, url):
+@click.option('--verbose', is_flag=True, default=False,
+              help='Default to be silent')
+def main(cls, database, url, verbose):
+    if verbose:
+        logging.basicConfig(level=logging.DEBUG if verbose else logging.INFO)
+
     scheduler = None
     override_config = {}
     if cls == 'local':
