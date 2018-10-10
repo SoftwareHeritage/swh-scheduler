@@ -34,15 +34,14 @@ class ReliableEventReceiver(EventReceiver):
                          callbacks=[self._receive], no_ack=False,
                          accept=self.accept)]
 
-    def _receive(self, body, message):
-        logging.debug('## event-receiver: body: %s' % body)
+    def _receive(self, bodies, message):
+        logging.debug('## event-receiver: bodies: %s' % bodies)
         logging.debug('## event-receiver: message: %s' % message)
-        if isinstance(body, list):  # HACK: buster's celery version
-                                    # sometimes returns body as list
-                                    # of 1 element
-            body = body[0]
-        type, body = self.event_from_message(body)
-        self.process(type, body, message)
+        if not isinstance(bodies, list):  # celery<4 returned body as element
+            bodies = [bodies]
+        for body in bodies:
+            type, body = self.event_from_message(body)
+            self.process(type, body, message)
 
     def process(self, type, event, message):
         """Process the received event by dispatching it to the appropriate
