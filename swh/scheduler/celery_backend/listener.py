@@ -23,18 +23,11 @@ class ReliableEventReceiver(EventReceiver):
         super(ReliableEventReceiver, self).__init__(
             channel, handlers, routing_key, node_id, app, queue_prefix, accept)
 
-        try:
-            queue_arguments = self._get_queue_arguments()
-        except AttributeError:  # HACK: buster's celery version does
-                                # not support this
-            queue_arguments = self.queue.queue_arguments
-
         self.queue = Queue('.'.join([self.queue_prefix, self.node_id]),
                            exchange=self.exchange,
                            routing_key=self.routing_key,
                            auto_delete=False,
-                           durable=True,
-                           queue_arguments=queue_arguments)
+                           durable=True)
 
     def get_consumers(self, consumer, channel):
         return [consumer(queues=[self.queue],
