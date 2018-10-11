@@ -10,7 +10,25 @@ activities (e.g., loading a specific version of a source package).
 
 # Tests
 
-Unit tests may require a running celery broker on your system (rabitmq by
+## Running test manually
+
+### Test data
+
+To be able to run (unit) tests, you need to have the
+[[https://forge.softwareheritage.org/source/swh-storage-testdata.git|swh-storage-testdata]]
+in the parent directory. If you have set your environment following the
+[[ https://docs.softwareheritage.org/devel/getting-started.html#getting-started|Getting started]]
+document everythong should be set up just fine.
+
+Otherwise:
+
+```
+~/.../swh-scheduler$ git clone https://forge.softwareheritage.org/source/swh-storage-testdata.git ../swh-storage-testdata
+```
+
+### Required services
+
+Unit tests may require a running celery broker on your system (rabbitmq by
 default). You can set the `BROKER_URL` environment variable to specify the url
 to be used.
 
