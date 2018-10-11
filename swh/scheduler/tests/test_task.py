@@ -8,9 +8,10 @@ import unittest
 from nose.tools import istest
 
 from swh.scheduler import task
+from .celery_testing import CeleryTestFixture
 
 
-class Task(unittest.TestCase):
+class Task(CeleryTestFixture, unittest.TestCase):
 
     @istest
     def not_implemented_task(self):
