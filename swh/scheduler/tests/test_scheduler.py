@@ -18,16 +18,14 @@ import psycopg2
 
 from swh.core.tests.db_testing import SingleDbTestFixture
 from swh.scheduler import get_scheduler
-
-
-TEST_DIR = os.path.dirname(os.path.abspath(__file__))
-TEST_DATA_DIR = os.path.join(TEST_DIR, '../../../../swh-storage-testdata')
+from . import DATA_DIR
 
 
 @attr('db')
 class CommonSchedulerTest(SingleDbTestFixture):
     TEST_DB_NAME = 'softwareheritage-scheduler-test'
-    TEST_DB_DUMP = os.path.join(TEST_DATA_DIR, 'dumps/swh-scheduler.dump')
+    TEST_DB_DUMP = os.path.join(DATA_DIR, 'dumps/swh-scheduler.sql')
+    TEST_DB_DUMP_TYPE = 'psql'
 
     def setUp(self):
         super().setUp()

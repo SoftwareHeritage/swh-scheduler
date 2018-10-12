@@ -16,18 +16,15 @@ from swh.core.tests.db_testing import SingleDbTestFixture
 from swh.scheduler.updater.backend import SchedulerUpdaterBackend
 from swh.scheduler.updater.events import SWHEvent
 
+from swh.scheduler.tests import DATA_DIR
 from . import from_regex
-
-
-TEST_DIR = os.path.dirname(os.path.abspath(__file__))
-TEST_DATA_DIR = os.path.join(TEST_DIR, '../../../../../swh-storage-testdata')
 
 
 @attr('db')
 class SchedulerUpdaterBackendTest(SingleDbTestFixture, unittest.TestCase):
     TEST_DB_NAME = 'softwareheritage-scheduler-updater-test'
-    TEST_DB_DUMP = os.path.join(TEST_DATA_DIR,
-                                'dumps/swh-scheduler-updater.dump')
+    TEST_DB_DUMP = os.path.join(DATA_DIR, 'dumps/swh-scheduler-updater.sql')
+    TEST_DB_DUMP_TYPE = 'psql'
 
     def setUp(self):
         super().setUp()

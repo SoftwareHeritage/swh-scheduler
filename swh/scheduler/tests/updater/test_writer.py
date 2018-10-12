@@ -15,27 +15,28 @@ from swh.scheduler.updater.events import SWHEvent
 from swh.scheduler.updater.writer import UpdaterWriter
 from swh.scheduler.updater.events import LISTENED_EVENTS
 
+from swh.scheduler.tests import DATA_DIR
 from . import UpdaterTestUtil
-
-
-TEST_DIR = os.path.dirname(os.path.abspath(__file__))
-TEST_DATA_DIR = os.path.join(TEST_DIR, '../../../../../swh-storage-testdata')
 
 
 @attr('db')
 class CommonSchedulerTest(DbTestFixture):
     TEST_SCHED_DB = 'softwareheritage-scheduler-test'
-    TEST_SCHED_DUMP = os.path.join(TEST_DATA_DIR,
-                                   'dumps/swh-scheduler.dump')
+    TEST_SCHED_DUMP = os.path.join(
+        DATA_DIR, 'dumps/swh-scheduler.sql')
+    TEST_SCHED_DUMP_TYPE = 'psql'
 
     TEST_SCHED_UPDATER_DB = 'softwareheritage-scheduler-updater-test'
-    TEST_SCHED_UPDATER_DUMP = os.path.join(TEST_DATA_DIR,
-                                           'dumps/swh-scheduler-updater.dump')
+    TEST_SCHED_UPDATER_DUMP = os.path.join(
+        DATA_DIR, 'dumps/swh-scheduler-updater.sql')
+    TEST_SCHED_UPDATER_DUMP_TYPE = 'psql'
 
     @classmethod
     def setUpClass(cls):
-        cls.add_db(cls.TEST_SCHED_DB, cls.TEST_SCHED_DUMP)
-        cls.add_db(cls.TEST_SCHED_UPDATER_DB, cls.TEST_SCHED_UPDATER_DUMP)
+        cls.add_db(cls.TEST_SCHED_DB, cls.TEST_SCHED_DUMP,
+                   cls.TEST_SCHED_DUMP_TYPE)
+        cls.add_db(cls.TEST_SCHED_UPDATER_DB, cls.TEST_SCHED_UPDATER_DUMP,
+                   cls.TEST_SCHED_UPDATER_DUMP_TYPE)
         super().setUpClass()
 
     def tearDown(self):
