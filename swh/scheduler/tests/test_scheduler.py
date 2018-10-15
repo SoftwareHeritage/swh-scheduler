@@ -9,15 +9,15 @@ import os
 import random
 import unittest
 import uuid
-
-from arrow import utcnow
 from collections import defaultdict
-from nose.plugins.attrib import attr
-from nose.tools import istest
+
 import psycopg2
+from arrow import utcnow
+from nose.plugins.attrib import attr
 
 from swh.core.tests.db_testing import SingleDbTestFixture
 from swh.scheduler import get_scheduler
+
 from . import DATA_DIR
 
 
@@ -85,8 +85,7 @@ class CommonSchedulerTest(SingleDbTestFixture):
             self.cursor.execute('truncate table %s cascade' % table)
         self.conn.commit()
 
-    @istest
-    def add_task_type(self):
+    def test_add_task_type(self):
         tt, tt2 = self.task_types.values()
         self.backend.create_task_type(tt)
         self.assertEqual(tt, self.backend.get_task_type(tt['type']))
@@ -97,8 +96,7 @@ class CommonSchedulerTest(SingleDbTestFixture):
         self.assertEqual(tt, self.backend.get_task_type(tt['type']))
         self.assertEqual(tt2, self.backend.get_task_type(tt2['type']))
 
-    @istest
-    def get_task_types(self):
+    def test_get_task_types(self):
         tt, tt2 = self.task_types.values()
         self.backend.create_task_type(tt)
         self.backend.create_task_type(tt2)
@@ -149,8 +147,7 @@ class CommonSchedulerTest(SingleDbTestFixture):
         for tt in self.task_types.values():
             self.backend.create_task_type(tt)
 
-    @istest
-    def create_tasks(self):
+    def test_create_tasks(self):
         priority_ratio = self._priority_ratio()
         self._create_task_types()
         num_tasks_priority = 100
@@ -206,8 +203,7 @@ class CommonSchedulerTest(SingleDbTestFixture):
             for priority, ratio in priority_ratio.items()
         })
 
-    @istest
-    def peek_ready_tasks_no_priority(self):
+    def test_peek_ready_tasks_no_priority(self):
         self._create_task_types()
         t = utcnow()
         task_type = self.task1_template['type']
@@ -258,8 +254,7 @@ class CommonSchedulerTest(SingleDbTestFixture):
             priority_ratio[row[0]] = row[1]
         return priority_ratio
 
-    @istest
-    def peek_ready_tasks_mixed_priorities(self):
+    def test_peek_ready_tasks_mixed_priorities(self):
         priority_ratio = self._priority_ratio()
         self._create_task_types()
         t = utcnow()
@@ -317,8 +312,7 @@ class CommonSchedulerTest(SingleDbTestFixture):
 
         self.assertEqual(count_tasks_per_priority[None], num_tasks)
 
-    @istest
-    def grab_ready_tasks(self):
+    def test_grab_ready_tasks(self):
         priority_ratio = self._priority_ratio()
         self._create_task_types()
         t = utcnow()
@@ -347,8 +341,7 @@ class CommonSchedulerTest(SingleDbTestFixture):
             self.assertEqual(peeked, grabbed)
             self.assertEqual(peeked['priority'], grabbed['priority'])
 
-    @istest
-    def get_tasks(self):
+    def test_get_tasks(self):
         self._create_task_types()
         t = utcnow()
         tasks = self._tasks_from_template(self.task1_template, t, 100)
@@ -362,8 +355,7 @@ class CommonSchedulerTest(SingleDbTestFixture):
             ret = self.backend.get_tasks(task['id'] for task in cur_tasks)
             self.assertCountEqual(ret, cur_tasks)
 
-    @istest
-    def filter_task_to_archive(self):
+    def test_filter_task_to_archive(self):
         """Filtering only list disabled recurring or completed oneshot tasks
 
         """
@@ -439,8 +431,7 @@ class CommonSchedulerTest(SingleDbTestFixture):
 
         self.assertEqual(actual_filtered_per_status, status_per_policy)
 
-    @istest
-    def delete_archived_tasks(self):
+    def test_delete_archived_tasks(self):
         self._create_task_types()
         _time = utcnow()
         recurring = self._tasks_from_template(

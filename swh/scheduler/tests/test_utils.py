@@ -4,9 +4,7 @@
 # See top-level LICENSE file for more information
 
 import unittest
-
 from datetime import timezone
-from nose.tools import istest
 from unittest.mock import patch
 
 from swh.scheduler import utils
@@ -14,9 +12,8 @@ from swh.scheduler import utils
 
 class UtilsTest(unittest.TestCase):
 
-    @istest
     @patch('swh.scheduler.utils.datetime')
-    def create_oneshot_task_dict_simple(self, mock_datetime):
+    def test_create_oneshot_task_dict_simple(self, mock_datetime):
         mock_datetime.now.return_value = 'some-date'
 
         actual_task = utils.create_oneshot_task_dict('some-task-type')
@@ -35,9 +32,8 @@ class UtilsTest(unittest.TestCase):
         self.assertEqual(actual_task, expected_task)
         mock_datetime.now.assert_called_once_with(tz=timezone.utc)
 
-    @istest
     @patch('swh.scheduler.utils.datetime')
-    def create_oneshot_task_dict_other_call(self, mock_datetime):
+    def test_create_oneshot_task_dict_other_call(self, mock_datetime):
         mock_datetime.now.return_value = 'some-other-date'
 
         actual_task = utils.create_oneshot_task_dict(

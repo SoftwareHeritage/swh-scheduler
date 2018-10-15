@@ -6,16 +6,13 @@
 import os
 import unittest
 
-
 from nose.plugins.attrib import attr
-from nose.tools import istest
 
 from swh.core.tests.db_testing import DbTestFixture
-from swh.scheduler.updater.events import SWHEvent
-from swh.scheduler.updater.writer import UpdaterWriter
-from swh.scheduler.updater.events import LISTENED_EVENTS
-
 from swh.scheduler.tests import DATA_DIR
+from swh.scheduler.updater.events import LISTENED_EVENTS, SWHEvent
+from swh.scheduler.updater.writer import UpdaterWriter
+
 from . import UpdaterTestUtil
 
 
@@ -75,8 +72,7 @@ class UpdaterWriterTest(UpdaterTestUtil, CommonSchedulerTest,
         self.scheduler_updater_backend.close_connection()
         super().tearDown()
 
-    @istest
-    def run_ko(self):
+    def test_run_ko(self):
         """Only git tasks are supported for now, other types are dismissed.
 
         """
@@ -108,8 +104,7 @@ class UpdaterWriterTest(UpdaterTestUtil, CommonSchedulerTest,
         # other reads after writes are still empty since it's not supported
         self.assertEqual(len(r), 0)
 
-    @istest
-    def run_ok(self):
+    def test_run_ok(self):
         """Only git origin are supported for now
 
         """

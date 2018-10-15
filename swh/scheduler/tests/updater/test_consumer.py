@@ -4,17 +4,15 @@
 # See top-level LICENSE file for more information
 
 import unittest
+from itertools import chain
 
 from hypothesis import given
-from hypothesis.strategies import sampled_from, lists, tuples, text
+from hypothesis.strategies import lists, sampled_from, text, tuples
 
-from itertools import chain
-from nose.tools import istest
+from swh.scheduler.updater.consumer import UpdaterConsumer
+from swh.scheduler.updater.events import LISTENED_EVENTS, SWHEvent
 
 from . import UpdaterTestUtil, from_regex
-
-from swh.scheduler.updater.events import SWHEvent, LISTENED_EVENTS
-from swh.scheduler.updater.consumer import UpdaterConsumer
 
 
 class FakeSchedulerUpdaterBackend:
@@ -57,8 +55,7 @@ class UpdaterConsumerRaisingTest(unittest.TestCase):
     def setUp(self):
         self.updater = FakeUpdaterConsumerRaise()
 
-    @istest
-    def running_raise(self):
+    def test_running_raise(self):
         """Raising during run should finish fine.
 
         """
@@ -94,8 +91,7 @@ class UpdaterConsumerNoEventTest(unittest.TestCase):
     def setUp(self):
         self.updater = FakeUpdaterConsumerNoEvent()
 
-    @istest
-    def running_does_not_consume(self):
+    def test_running_does_not_consume(self):
         """Run with no events should do just fine"""
         # given
         self.assertEqual(self.updater.count, 0)
@@ -150,7 +146,6 @@ class FakeUpdaterConsumer(FakeUpdaterConsumerBase):
 
 
 class UpdaterConsumerWithEventTest(UpdaterTestUtil, unittest.TestCase):
-    @istest
     @given(lists(tuples(sampled_from(LISTENED_EVENTS),  # event type
                         from_regex(r'^[a-z0-9]{5,10}/[a-z0-9]{7,12}$'),  # name
                         text()),                        # origin type
@@ -164,7 +159,7 @@ class UpdaterConsumerWithEventTest(UpdaterTestUtil, unittest.TestCase):
                         text(),                     # origin type
                         sampled_from(EVENT_KEYS)),  # keys to drop
                  min_size=3, max_size=10))
-    def running(self, events, uninteresting_events, incomplete_events):
+    def test_running(self, events, uninteresting_events, incomplete_events):
         """Interesting events are written to cache, others are dropped
 
         """
