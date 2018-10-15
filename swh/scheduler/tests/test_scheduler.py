@@ -91,7 +91,7 @@ class CommonSchedulerTest(SingleDbTestFixture):
         self.backend.create_task_type(tt)
         self.assertEqual(tt, self.backend.get_task_type(tt['type']))
         with self.assertRaisesRegex(psycopg2.IntegrityError,
-                                    '\(type\)=\(%s\)' % tt['type']):
+                                    r'\(type\)=\(%s\)' % tt['type']):
             self.backend.create_task_type(tt)
         self.backend.create_task_type(tt2)
         self.assertEqual(tt, self.backend.get_task_type(tt['type']))
