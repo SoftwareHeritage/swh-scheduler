@@ -18,14 +18,13 @@ from nose.plugins.attrib import attr
 from swh.core.tests.db_testing import SingleDbTestFixture
 from swh.scheduler import get_scheduler
 
-from . import DATA_DIR
+from . import SQL_DIR
 
 
 @attr('db')
 class CommonSchedulerTest(SingleDbTestFixture):
     TEST_DB_NAME = 'softwareheritage-scheduler-test'
-    TEST_DB_DUMP = os.path.join(DATA_DIR, 'dumps/swh-scheduler.sql')
-    TEST_DB_DUMP_TYPE = 'psql'
+    TEST_DB_DUMP = os.path.join(SQL_DIR, '*.sql')
 
     def setUp(self):
         super().setUp()
