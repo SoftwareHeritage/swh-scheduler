@@ -1,35 +1,16 @@
 import os
-import urllib
-
-from celery import current_app
-
-
-CELERY_BROKER_PROTOCOLS = ['amqp', 'redis', 'sqs']
 
 
 def setup_celery():
-    broker_url = None
-    if 'BROKER_URL' in os.environ:
-        broker_url = os.environ['BROKER_URL']
-
-    elif 'PIFPAF_URLS' in os.environ:
-        urls = os.environ['PIFPAF_URLS'].split(';')
-        urls = [x.replace('rabbit://', 'amqp://') for x in urls]
-        for url in urls:
-            scheme = urllib.parse.splittype(url)[0]
-            if scheme in CELERY_BROKER_PROTOCOLS:
-                broker_url = url
-                break
-    if broker_url:
-        current_app.conf.broker_url = broker_url
+    os.environ.setdefault('CELERY_BROKER_URL', 'memory://')
+    os.environ.setdefault('CELERY_RESULT_BACKEND', 'cache+memory://')
 
 
 class CeleryTestFixture:
-    """Mix this in a test subject class to get Celery testing support configured
-    via environment variables, typically set up by pifpaf.
+    """Mix this in a test subject class to setup Celery config for testing
+    purpose.
 
-    It expect a connection url to a celery broker either as a BROKER_URL or a
-    url listed in a PIFPAF_URL environment variable.
+    Can be overriden by CELERY_BROKER_URL and CELERY_RESULT_BACKEND env vars.
     """
 
     def setUp(sel):

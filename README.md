@@ -28,20 +28,14 @@ Otherwise:
 
 ### Required services
 
-Unit tests may require a running celery broker on your system (rabbitmq by
-default). You can set the `BROKER_URL` environment variable to specify the url
-to be used.
-
-If you do not want to use your system's broker (or do not want to have one
-running), you shold use [[ https://github.com/jd/pifpaf | pifpaf ]] to take
-care of that for you.
-
+Unit tests that require a running celery broker uses an in memory broker/result
+backend by default, but you can choose to use a true broker by setting
+`CELERY_BROKER_URL` and `CELERY_RESULT_BACKEND` environment variables up.
 
 For example:
 
 ```
-$ pifpaf --env-prefix PG run postgresql -- \
-  pifpaf --env-prefix AMQP run rabbitmq nosetests
+$ CELERY_BROKER_URL=amqp://localhost pifpaf run postgresql nosetests
 
 .....................................
 ----------------------------------------------------------------------
