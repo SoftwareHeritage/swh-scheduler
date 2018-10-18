@@ -74,7 +74,7 @@ class UpdaterWriter(SWHConfig):
                 'origin-update-git',
                 event['url'],
                 priority='normal')
-        self.log.warn('Type %s is not supported for now, only git' % (
+        self.log.warning('Type %s is not supported for now, only git' % (
             event['origin_type'], ))
         return None
 

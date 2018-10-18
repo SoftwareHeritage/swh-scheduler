@@ -134,14 +134,14 @@ class UpdaterWriterTest(UpdaterTestUtil, CommonSchedulerTest,
         r = self.scheduler_backend.peek_ready_tasks(
             'origin-update-git')
 
-        self.assertEquals(len(r), expected_length)
+        self.assertEqual(len(r), expected_length)
 
         # Check the task has been scheduled
         for t in r:
-            self.assertEquals(t['type'], 'origin-update-git')
-            self.assertEquals(t['priority'], 'normal')
-            self.assertEquals(t['policy'], 'oneshot')
-            self.assertEquals(t['status'], 'next_run_not_scheduled')
+            self.assertEqual(t['type'], 'origin-update-git')
+            self.assertEqual(t['priority'], 'normal')
+            self.assertEqual(t['policy'], 'oneshot')
+            self.assertEqual(t['status'], 'next_run_not_scheduled')
 
         # writer has nothing to do now
         self.writer.run()
@@ -155,4 +155,4 @@ class UpdaterWriterTest(UpdaterTestUtil, CommonSchedulerTest,
         r = self.scheduler_backend.peek_ready_tasks(
             'origin-update-git')
 
-        self.assertEquals(len(r), expected_length)
+        self.assertEqual(len(r), expected_length)
