@@ -9,7 +9,7 @@ import unittest
 from arrow import utcnow
 from hypothesis import given
 from hypothesis.strategies import sets
-from nose.plugins.attrib import attr
+import pytest
 
 from swh.core.tests.db_testing import SingleDbTestFixture
 from swh.scheduler.tests import SQL_DIR
@@ -19,7 +19,7 @@ from swh.scheduler.updater.events import SWHEvent
 from . import from_regex
 
 
-@attr('db')
+@pytest.mark.db
 class SchedulerUpdaterBackendTest(SingleDbTestFixture, unittest.TestCase):
     TEST_DB_NAME = 'softwareheritage-scheduler-updater-test'
     TEST_DB_DUMP = os.path.join(SQL_DIR, 'updater', '*.sql')

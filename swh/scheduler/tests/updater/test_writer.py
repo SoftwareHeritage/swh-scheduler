@@ -7,7 +7,7 @@ import os
 import unittest
 from glob import glob
 
-from nose.plugins.attrib import attr
+import pytest
 
 from swh.core.utils import numfile_sortkey as sortkey
 from swh.core.tests.db_testing import DbTestFixture
@@ -18,7 +18,7 @@ from swh.scheduler.updater.writer import UpdaterWriter
 from . import UpdaterTestUtil
 
 
-@attr('db')
+@pytest.mark.db
 class CommonSchedulerTest(DbTestFixture):
     TEST_SCHED_DB = 'softwareheritage-scheduler-test'
     TEST_SCHED_DUMP = os.path.join(SQL_DIR, '*.sql')
