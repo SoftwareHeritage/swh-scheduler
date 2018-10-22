@@ -5,23 +5,20 @@
 
 import unittest
 
-from nose.tools import istest
-
 from swh.scheduler import task
+from .celery_testing import CeleryTestFixture
 
 
-class Task(unittest.TestCase):
+class Task(CeleryTestFixture, unittest.TestCase):
 
-    @istest
-    def not_implemented_task(self):
+    def test_not_implemented_task(self):
         class NotImplementedTask(task.Task):
             pass
 
         with self.assertRaises(NotImplementedError):
             NotImplementedTask().run()
 
-    @istest
-    def add_task(self):
+    def test_add_task(self):
         class AddTask(task.Task):
             def run_task(self, x, y):
                 return x + y

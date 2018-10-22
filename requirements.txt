@@ -5,7 +5,7 @@
 arrow
 celery
 Click
-elasticsearch>5.4
+elasticsearch > 5.4
 flask
 kombu
 psycopg2

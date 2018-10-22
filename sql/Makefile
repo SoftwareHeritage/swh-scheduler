@@ -3,25 +3,39 @@
 DBNAME = softwareheritage-scheduler-dev
 DOCDIR = autodoc
 
-SQL_SCHEMA  = swh-scheduler-schema.sql
-SQL_DATA    = swh-scheduler-data.sql
+SQL_SCHEMA  = 30-swh-schema.sql
+SQL_DATA    = 40-swh-data.sql
 SQLS = $(SQL_SCHEMA) $(SQL_DATA)
+SQL_FILES = $(abspath $(addprefix $(CURDIR)/../swh/scheduler/sql/,$(SQLS)))
 
 PSQL_BIN = psql
 PSQL_FLAGS = --echo-all -X -v ON_ERROR_STOP=1
 PSQL = $(PSQL_BIN) $(PSQL_FLAGS)
 
+PIFPAF=$(findstring postgresql://,$(PIFPAF_URLS))
+
 all:
 
 createdb: createdb-stamp
-createdb-stamp: $(SQL_INIT)
+createdb-stamp: $(SQL_FILES)
+ifndef PIFPAF
+	-dropdb $(DBNAME)
+endif
 	createdb $(DBNAME)
+ifndef PIFPAF
 	touch $@
+else
+	rm -f $@
+endif
 
 filldb: filldb-stamp
 filldb-stamp: createdb-stamp
-	cat $(SQLS) | $(PSQL) $(DBNAME)
+	cat $(SQL_FILES) | $(PSQL) $(DBNAME)
+ifndef PIFPAF
 	touch $@
+else
+	rm -f $@
+endif
 
 dropdb:
 	-dropdb $(DBNAME)
@@ -30,15 +44,23 @@ dumpdb: swh-scheduler.dump
 swh-scheduler.dump: filldb-stamp
 	pg_dump -Fc $(DBNAME) > $@
 
-doc: autodoc-stamp $(DOCDIR)/swh-scheduler.pdf
-autodoc-stamp: filldb-stamp
+$(DOCDIR):
 	test -d $(DOCDIR)/ || mkdir $(DOCDIR)
-	postgresql_autodoc -d $(DBNAME) -f $(DOCDIR)/swh
-	cp -a $(DOCDIR)/swh-scheduler.dot $(DOCDIR)/swh-scheduler.dot.orig
-	touch $@
 
-$(DOCDIR)/swh-scheduler.pdf: autodoc-stamp
-	dot -T pdf $(DOCDIR)/swh-scheduler.dot > $(DOCDIR)/swh-scheduler.pdf
+doc: autodoc-stamp $(DOCDIR)/swh-scheduler.pdf
+autodoc-stamp: filldb-stamp $(DOCDIR)
+	postgresql_autodoc -d $(DBNAME) -f $(DOCDIR)/swh-scheduler
+	cp -a $(DOCDIR)/swh-scheduler.dot $(DOCDIR)/swh-scheduler.dot.orig
+ifndef PIFPAF
+	touch $@
+else
+	rm -f $@
+endif
+
+$(DOCDIR)/swh-scheduler.pdf: $(DOCDIR)/swh-scheduler.dot autodoc-stamp
+	dot -T pdf $< > $@
+$(DOCDIR)/swh-scheduler.svg: $(DOCDIR)/swh-scheduler.dot autodoc-stamp
+	dot -T svg $< > $@
 
 clean:
 	rm -rf *-stamp $(DOCDIR)/

@@ -4,7 +4,9 @@ LICENSE
 LICENSE.Celery
 MANIFEST.in
 Makefile
+README.md
 requirements-swh.txt
+requirements-test.txt
 requirements.txt
 setup.py
 version.txt
@@ -26,13 +28,7 @@ docs/_static/.placeholder
 docs/_templates/.placeholder
 sql/.gitignore
 sql/Makefile
-sql/swh-scheduler-data.sql
-sql/swh-scheduler-schema.sql
-sql/swh-scheduler-testdata.sql
 sql/updater/sql/Makefile
-sql/updater/sql/swh-func.sql
-sql/updater/sql/swh-init.sql
-sql/updater/sql/swh-schema.sql
 sql/updates/02.sql
 sql/updates/03.sql
 sql/updates/04.sql
@@ -43,6 +39,7 @@ sql/updates/08.sql
 sql/updates/09.sql
 sql/updates/10.sql
 sql/updates/11.sql
+sql/updates/12.sql
 swh/__init__.py
 swh.scheduler.egg-info/PKG-INFO
 swh.scheduler.egg-info/SOURCES.txt
@@ -63,7 +60,13 @@ swh/scheduler/celery_backend/__init__.py
 swh/scheduler/celery_backend/config.py
 swh/scheduler/celery_backend/listener.py
 swh/scheduler/celery_backend/runner.py
+swh/scheduler/sql/30-swh-schema.sql
+swh/scheduler/sql/40-swh-data.sql
+swh/scheduler/sql/updater/10-swh-init.sql
+swh/scheduler/sql/updater/30-swh-schema.sql
+swh/scheduler/sql/updater/40-swh-func.sql
 swh/scheduler/tests/__init__.py
+swh/scheduler/tests/celery_testing.py
 swh/scheduler/tests/test_api_client.py
 swh/scheduler/tests/test_scheduler.py
 swh/scheduler/tests/test_task.py

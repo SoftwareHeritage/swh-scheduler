@@ -7,27 +7,22 @@ import os
 import unittest
 
 from arrow import utcnow
-from nose.plugins.attrib import attr
-from nose.tools import istest
 from hypothesis import given
 from hypothesis.strategies import sets
+from nose.plugins.attrib import attr
 
 from swh.core.tests.db_testing import SingleDbTestFixture
+from swh.scheduler.tests import SQL_DIR
 from swh.scheduler.updater.backend import SchedulerUpdaterBackend
 from swh.scheduler.updater.events import SWHEvent
 
 from . import from_regex
 
 
-TEST_DIR = os.path.dirname(os.path.abspath(__file__))
-TEST_DATA_DIR = os.path.join(TEST_DIR, '../../../../../swh-storage-testdata')
-
-
 @attr('db')
 class SchedulerUpdaterBackendTest(SingleDbTestFixture, unittest.TestCase):
     TEST_DB_NAME = 'softwareheritage-scheduler-updater-test'
-    TEST_DB_DUMP = os.path.join(TEST_DATA_DIR,
-                                'dumps/swh-scheduler-updater.dump')
+    TEST_DB_DUMP = os.path.join(SQL_DIR, 'updater', '*.sql')
 
     def setUp(self):
         super().setUp()
@@ -51,12 +46,11 @@ class SchedulerUpdaterBackendTest(SingleDbTestFixture, unittest.TestCase):
         self._empty_tables()
         super().tearDown()
 
-    @istest
     @given(sets(
         from_regex(
             r'^https://somewhere[.]org/[a-z0-9]{5,7}/[a-z0-9]{3,10}$'),
         min_size=10, max_size=15))
-    def cache_read(self, urls):
+    def test_cache_read(self, urls):
         def gen_events(urls):
             for url in urls:
                 yield SWHEvent({
