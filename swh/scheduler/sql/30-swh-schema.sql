@@ -8,7 +8,7 @@ create table dbversion
 comment on table dbversion is 'Schema update tracking';
 
 insert into dbversion (version, release, description)
-       values (11, now(), 'Work In Progress');
+       values (12, now(), 'Work In Progress');
 
 create table task_type (
   type text primary key,
@@ -145,21 +145,21 @@ begin
     where not exists(select 1
                      from task
                      where type = t.type and
-                           arguments = t.arguments and
+                           arguments->'args' = t.arguments->'args' and
+                           arguments->'kwargs' = t.arguments->'kwargs' and
                            policy = t.policy and
-                           ((priority is null and t.priority is null)
-                            or priority = t.priority) and
+                           priority is not distinct from t.priority and
                            status = t.status);
 
   return query
     select distinct t.*
     from tmp_task tt inner join task t on (
-      t.type = tt.type and
-      t.arguments = tt.arguments and
-      t.status = tt.status and
-      ((t.priority is null and tt.priority is null)
-       or t.priority=tt.priority) and
-       t.policy=tt.policy
+      tt.type = t.type and
+      tt.arguments->'args' = t.arguments->'args' and
+      tt.arguments->'kwargs' = t.arguments->'kwargs' and
+      tt.policy = t.policy and
+      tt.priority is not distinct from t.priority and
+      tt.status = t.status
     );
 end;
 $$;
