@@ -7,8 +7,8 @@ import unittest
 
 from swh.core.tests.server_testing import ServerTestFixture
 from swh.scheduler import get_scheduler
-from swh.scheduler.tests.test_scheduler import CommonSchedulerTest
 from swh.scheduler.api.server import app
+from swh.scheduler.tests.test_scheduler import CommonSchedulerTest
 
 
 class RemoteSchedulerTest(CommonSchedulerTest, ServerTestFixture,

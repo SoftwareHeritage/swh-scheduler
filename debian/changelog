@@ -1,8 +1,16 @@
-swh-scheduler (0.0.31-1~swh1~bpo9+1) stretch-swh; urgency=medium
+swh-scheduler (0.0.32-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for stretch-backports.
+  * v0.0.32
+  * tests: Add celery fixture to ease tests
+  * tests: make tests use sql/ files from the package
+  * tests: Starting migration towards pytest
+  * listener: Make the listener code compatible with new celery (debian
+    buster)
+  * Make swh_scheduler_create_tasks_from_temp use indexes
+  * setup: prepare for pypi upload
+  * docs: add a simple README file
 
- -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Tue, 31 Jul 2018 06:55:39 +0200
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Mon, 22 Oct 2018 15:37:51 +0200
 
 swh-scheduler (0.0.31-1~swh1) unstable-swh; urgency=medium
 

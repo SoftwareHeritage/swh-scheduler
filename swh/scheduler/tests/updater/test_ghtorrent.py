@@ -4,17 +4,16 @@
 # See top-level LICENSE file for more information
 
 import unittest
+from unittest.mock import patch
 
 from hypothesis import given
 from hypothesis.strategies import sampled_from
-from nose.tools import istest
-from unittest.mock import patch
 
 from swh.scheduler.updater.events import SWHEvent
-from swh.scheduler.updater.ghtorrent import (
-    events, GHTorrentConsumer, INTERESTING_EVENT_KEYS)
+from swh.scheduler.updater.ghtorrent import (INTERESTING_EVENT_KEYS,
+                                             GHTorrentConsumer, events)
 
-from . import from_regex, UpdaterTestUtil
+from . import UpdaterTestUtil, from_regex
 
 
 def event_values():
@@ -73,7 +72,6 @@ class GHTorrentConsumerTest(UpdaterTestUtil, unittest.TestCase):
         self.consumer = GHTorrentConsumer(self.fake_config,
                                           _connection_class=FakeConnection)
 
-    @istest
     def test_init(self):
         # given
         # check init is ok
@@ -85,11 +83,9 @@ class GHTorrentConsumerTest(UpdaterTestUtil, unittest.TestCase):
                          self.fake_config['rabbitmq_prefetch_read'])
         self.assertEqual(self.consumer.config, self.fake_config)
 
-    @istest
     def test_has_events(self):
         self.assertTrue(self.consumer.has_events())
 
-    @istest
     def test_connection(self):
         # when
         self.consumer.open_connection()
@@ -108,10 +104,9 @@ class GHTorrentConsumerTest(UpdaterTestUtil, unittest.TestCase):
         self.assertTrue(self.consumer.conn._release)
         self.assertIsInstance(self.consumer.channel, FakeChannel)
 
-    @istest
     @given(sampled_from(EVENT_TYPES),
            from_regex(r'^[a-z0-9]{5,7}/[a-z0-9]{3,10}$'))
-    def convert_event_ok(self, event_type, name):
+    def test_convert_event_ok(self, event_type, name):
         input_event = self._make_event(event_type, name, 'git')
         actual_event = self.consumer.convert_event(input_event)
 
@@ -128,11 +123,10 @@ class GHTorrentConsumerTest(UpdaterTestUtil, unittest.TestCase):
         }
         self.assertEqual(event, expected_event)
 
-    @istest
     @given(sampled_from(EVENT_TYPES),
            from_regex(r'^[a-z0-9]{5,7}/[a-z0-9]{3,10}$'),
            sampled_from(INTERESTING_EVENT_KEYS))
-    def convert_event_ko(self, event_type, name, missing_data_key):
+    def test_convert_event_ko(self, event_type, name, missing_data_key):
         input_event = self._make_incomplete_event(
             event_type, name, 'git', missing_data_key)
 
@@ -141,8 +135,7 @@ class GHTorrentConsumerTest(UpdaterTestUtil, unittest.TestCase):
         self.assertIsNone(actual_converted_event)
 
     @patch('swh.scheduler.updater.ghtorrent.collect_replies')
-    @istest
-    def consume_events(self, mock_collect_replies):
+    def test_consume_events(self, mock_collect_replies):
         # given
         self.consumer.queue = 'fake-queue'  # hack
         self.consumer.open_connection()

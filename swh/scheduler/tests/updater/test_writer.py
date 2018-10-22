@@ -5,37 +5,35 @@
 
 import os
 import unittest
-
+from glob import glob
 
 from nose.plugins.attrib import attr
-from nose.tools import istest
 
+from swh.core.utils import numfile_sortkey as sortkey
 from swh.core.tests.db_testing import DbTestFixture
-from swh.scheduler.updater.events import SWHEvent
+from swh.scheduler.tests import SQL_DIR
+from swh.scheduler.updater.events import LISTENED_EVENTS, SWHEvent
 from swh.scheduler.updater.writer import UpdaterWriter
-from swh.scheduler.updater.events import LISTENED_EVENTS
 
 from . import UpdaterTestUtil
-
-
-TEST_DIR = os.path.dirname(os.path.abspath(__file__))
-TEST_DATA_DIR = os.path.join(TEST_DIR, '../../../../../swh-storage-testdata')
 
 
 @attr('db')
 class CommonSchedulerTest(DbTestFixture):
     TEST_SCHED_DB = 'softwareheritage-scheduler-test'
-    TEST_SCHED_DUMP = os.path.join(TEST_DATA_DIR,
-                                   'dumps/swh-scheduler.dump')
+    TEST_SCHED_DUMP = os.path.join(SQL_DIR, '*.sql')
 
     TEST_SCHED_UPDATER_DB = 'softwareheritage-scheduler-updater-test'
-    TEST_SCHED_UPDATER_DUMP = os.path.join(TEST_DATA_DIR,
-                                           'dumps/swh-scheduler-updater.dump')
+    TEST_SCHED_UPDATER_DUMP = os.path.join(SQL_DIR, 'updater', '*.sql')
 
     @classmethod
     def setUpClass(cls):
-        cls.add_db(cls.TEST_SCHED_DB, cls.TEST_SCHED_DUMP)
-        cls.add_db(cls.TEST_SCHED_UPDATER_DB, cls.TEST_SCHED_UPDATER_DUMP)
+        cls.add_db(cls.TEST_SCHED_DB,
+                   [(sqlfn, 'psql') for sqlfn in
+                    sorted(glob(cls.TEST_SCHED_DUMP), key=sortkey)])
+        cls.add_db(cls.TEST_SCHED_UPDATER_DB,
+                   [(sqlfn, 'psql') for sqlfn in
+                    sorted(glob(cls.TEST_SCHED_UPDATER_DUMP), key=sortkey)])
         super().setUpClass()
 
     def tearDown(self):
@@ -74,8 +72,7 @@ class UpdaterWriterTest(UpdaterTestUtil, CommonSchedulerTest,
         self.scheduler_updater_backend.close_connection()
         super().tearDown()
 
-    @istest
-    def run_ko(self):
+    def test_run_ko(self):
         """Only git tasks are supported for now, other types are dismissed.
 
         """
@@ -107,8 +104,7 @@ class UpdaterWriterTest(UpdaterTestUtil, CommonSchedulerTest,
         # other reads after writes are still empty since it's not supported
         self.assertEqual(len(r), 0)
 
-    @istest
-    def run_ok(self):
+    def test_run_ok(self):
         """Only git origin are supported for now
 
         """

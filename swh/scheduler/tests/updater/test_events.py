@@ -6,10 +6,9 @@
 import unittest
 
 from hypothesis import given
-from hypothesis.strategies import text, sampled_from
-from nose.tools import istest
+from hypothesis.strategies import sampled_from, text
 
-from swh.scheduler.updater.events import SWHEvent, LISTENED_EVENTS
+from swh.scheduler.updater.events import LISTENED_EVENTS, SWHEvent
 from swh.scheduler.updater.ghtorrent import events
 
 from . import UpdaterTestUtil
@@ -25,15 +24,13 @@ WRONG_EVENTS = sorted(list(event_values_ko()))
 
 
 class EventTest(UpdaterTestUtil, unittest.TestCase):
-    @istest
     @given(sampled_from(LISTENED_EVENTS), text(), text())
-    def is_interesting_ok(self, event_type, name, origin_type):
+    def test_is_interesting_ok(self, event_type, name, origin_type):
         evt = self._make_simple_event(event_type, name, origin_type)
         self.assertTrue(SWHEvent(evt).is_interesting())
 
-    @istest
     @given(text(), text(), text())
-    def is_interested_with_noisy_event_should_be_ko(
+    def test_is_interested_with_noisy_event_should_be_ko(
             self, event_type, name, origin_type):
         if event_type in LISTENED_EVENTS:
             # just in case something good is generated, skip it
@@ -41,8 +38,7 @@ class EventTest(UpdaterTestUtil, unittest.TestCase):
         evt = self._make_simple_event(event_type, name, origin_type)
         self.assertFalse(SWHEvent(evt).is_interesting())
 
-    @istest
     @given(sampled_from(WRONG_EVENTS), text(), text())
-    def is_interesting_ko(self, event_type, name, origin_type):
+    def test_is_interesting_ko(self, event_type, name, origin_type):
         evt = self._make_simple_event(event_type, name, origin_type)
         self.assertFalse(SWHEvent(evt).is_interesting())
