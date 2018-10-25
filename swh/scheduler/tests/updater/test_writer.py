@@ -7,7 +7,7 @@ import os
 import unittest
 from glob import glob
 
-from nose.plugins.attrib import attr
+import pytest
 
 from swh.core.utils import numfile_sortkey as sortkey
 from swh.core.tests.db_testing import DbTestFixture
@@ -18,7 +18,7 @@ from swh.scheduler.updater.writer import UpdaterWriter
 from . import UpdaterTestUtil
 
 
-@attr('db')
+@pytest.mark.db
 class CommonSchedulerTest(DbTestFixture):
     TEST_SCHED_DB = 'softwareheritage-scheduler-test'
     TEST_SCHED_DUMP = os.path.join(SQL_DIR, '*.sql')
@@ -134,14 +134,14 @@ class UpdaterWriterTest(UpdaterTestUtil, CommonSchedulerTest,
         r = self.scheduler_backend.peek_ready_tasks(
             'origin-update-git')
 
-        self.assertEquals(len(r), expected_length)
+        self.assertEqual(len(r), expected_length)
 
         # Check the task has been scheduled
         for t in r:
-            self.assertEquals(t['type'], 'origin-update-git')
-            self.assertEquals(t['priority'], 'normal')
-            self.assertEquals(t['policy'], 'oneshot')
-            self.assertEquals(t['status'], 'next_run_not_scheduled')
+            self.assertEqual(t['type'], 'origin-update-git')
+            self.assertEqual(t['priority'], 'normal')
+            self.assertEqual(t['policy'], 'oneshot')
+            self.assertEqual(t['status'], 'next_run_not_scheduled')
 
         # writer has nothing to do now
         self.writer.run()
@@ -155,4 +155,4 @@ class UpdaterWriterTest(UpdaterTestUtil, CommonSchedulerTest,
         r = self.scheduler_backend.peek_ready_tasks(
             'origin-update-git')
 
-        self.assertEquals(len(r), expected_length)
+        self.assertEqual(len(r), expected_length)

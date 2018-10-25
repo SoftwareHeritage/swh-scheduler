@@ -13,7 +13,7 @@ from collections import defaultdict
 
 import psycopg2
 from arrow import utcnow
-from nose.plugins.attrib import attr
+import pytest
 
 from swh.core.tests.db_testing import SingleDbTestFixture
 from swh.scheduler import get_scheduler
@@ -21,7 +21,7 @@ from swh.scheduler import get_scheduler
 from . import SQL_DIR
 
 
-@attr('db')
+@pytest.mark.db
 class CommonSchedulerTest(SingleDbTestFixture):
     TEST_DB_NAME = 'softwareheritage-scheduler-test'
     TEST_DB_DUMP = os.path.join(SQL_DIR, '*.sql')
