@@ -1,3 +1,10 @@
+swh-scheduler (0.0.34-1~swh1) unstable-swh; urgency=medium
+
+  * v0.0.34
+  * Finalize pytest migration
+
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Thu, 25 Oct 2018 17:52:03 +0200
+
 swh-scheduler (0.0.33-1~swh1) unstable-swh; urgency=medium
 
   * v0.0.33
