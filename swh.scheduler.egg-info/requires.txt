@@ -11,4 +11,4 @@ vcversioner
 [testing]
 celery
 hypothesis
-nose
+pytest

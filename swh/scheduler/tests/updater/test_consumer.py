@@ -6,7 +6,7 @@
 import unittest
 from itertools import chain
 
-from hypothesis import given
+from hypothesis import given, settings, HealthCheck
 from hypothesis.strategies import lists, sampled_from, text, tuples
 
 from swh.scheduler.updater.consumer import UpdaterConsumer
@@ -146,6 +146,7 @@ class FakeUpdaterConsumer(FakeUpdaterConsumerBase):
 
 
 class UpdaterConsumerWithEventTest(UpdaterTestUtil, unittest.TestCase):
+    @settings(suppress_health_check=[HealthCheck.too_slow])
     @given(lists(tuples(sampled_from(LISTENED_EVENTS),  # event type
                         from_regex(r'^[a-z0-9]{5,10}/[a-z0-9]{7,12}$'),  # name
                         text()),                        # origin type
