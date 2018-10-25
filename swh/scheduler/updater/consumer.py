@@ -119,7 +119,7 @@ class UpdaterConsumer(metaclass=ABCMeta):
                 for _event in self.consume_events():
                     event = self.convert_event(_event)
                     if not event:
-                        self.log.warn(
+                        self.log.warning(
                             'Incomplete event dropped %s' % _event)
                         continue
                     if not self.is_interesting(event):
