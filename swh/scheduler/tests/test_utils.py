@@ -26,7 +26,6 @@ class UtilsTest(unittest.TestCase):
                 'args': [],
                 'kwargs': {},
             },
-            'priority': None,
         }
 
         self.assertEqual(actual_task, expected_task)
@@ -50,6 +49,30 @@ class UtilsTest(unittest.TestCase):
                 'kwargs': {'other_stuff': 'normal'},
             },
             'priority': 'high',
+        }
+
+        self.assertEqual(actual_task, expected_task)
+        mock_datetime.now.assert_called_once_with(tz=timezone.utc)
+
+    @patch('swh.scheduler.utils.datetime')
+    def test_create_task_dict(self, mock_datetime):
+        mock_datetime.now.return_value = 'date'
+
+        actual_task = utils.create_task_dict(
+            'task-type', 'recurring', 'arg0', 'arg1',
+            priority='low', other_stuff='normal', retries_left=3
+        )
+
+        expected_task = {
+            'policy': 'recurring',
+            'type': 'task-type',
+            'next_run': 'date',
+            'arguments': {
+                'args': ('arg0', 'arg1'),
+                'kwargs': {'other_stuff': 'normal'},
+            },
+            'priority': 'low',
+            'retries_left': 3,
         }
 
         self.assertEqual(actual_task, expected_task)

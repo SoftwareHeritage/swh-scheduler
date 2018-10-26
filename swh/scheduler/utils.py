@@ -40,10 +40,7 @@ def create_task_dict(type, policy, *args, **kwargs):
         (swh.scheduler.backend.create_tasks)
 
     """
-    priority = None
-    if 'priority' in kwargs:
-        priority = kwargs.pop('priority')
-    return {
+    task = {
         'policy': policy,
         'type': type,
         'next_run': datetime.now(tz=timezone.utc),
@@ -51,8 +48,14 @@ def create_task_dict(type, policy, *args, **kwargs):
             'args': args if args else [],
             'kwargs': kwargs if kwargs else {},
         },
-        'priority': priority,
     }
+
+    for extra_key in ['priority', 'retries_left']:
+        if extra_key in kwargs:
+            extra_val = kwargs.pop(extra_key)
+            task[extra_key] = extra_val
+
+    return task
 
 
 def create_oneshot_task_dict(type, *args, **kwargs):
