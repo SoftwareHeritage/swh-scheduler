@@ -69,7 +69,9 @@ swh/scheduler/sql/updater/30-swh-schema.sql
 swh/scheduler/sql/updater/40-swh-func.sql
 swh/scheduler/tests/__init__.py
 swh/scheduler/tests/celery_testing.py
+swh/scheduler/tests/scheduler_testing.py
 swh/scheduler/tests/test_api_client.py
+swh/scheduler/tests/test_fixtures.py
 swh/scheduler/tests/test_scheduler.py
 swh/scheduler/tests/test_task.py
 swh/scheduler/tests/test_utils.py
