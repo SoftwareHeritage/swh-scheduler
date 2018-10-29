@@ -40,6 +40,12 @@ def create_task_dict(type, policy, *args, **kwargs):
         (swh.scheduler.backend.create_tasks)
 
     """
+    task_extra = {}
+    for extra_key in ['priority', 'retries_left']:
+        if extra_key in kwargs:
+            extra_val = kwargs.pop(extra_key)
+            task_extra[extra_key] = extra_val
+
     task = {
         'policy': policy,
         'type': type,
@@ -49,12 +55,7 @@ def create_task_dict(type, policy, *args, **kwargs):
             'kwargs': kwargs if kwargs else {},
         },
     }
-
-    for extra_key in ['priority', 'retries_left']:
-        if extra_key in kwargs:
-            extra_val = kwargs.pop(extra_key)
-            task[extra_key] = extra_val
-
+    task.update(task_extra)
     return task
 
 
