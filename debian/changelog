@@ -1,3 +1,12 @@
+swh-scheduler (0.0.35-1~swh1) unstable-swh; urgency=medium
+
+  * v0.0.35
+  * tests: Add SchedulerTestFixture
+  * swh.scheduler.utils: Allow to add more task information
+  * sql/40-swh-data: Update new indexer task types for local db
+
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Mon, 29 Oct 2018 10:07:08 +0100
+
 swh-scheduler (0.0.34-1~swh1) unstable-swh; urgency=medium
 
   * v0.0.34
