@@ -3,8 +3,6 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import time
-
 import arrow
 from celery import group
 
@@ -23,9 +21,23 @@ def run_ready_tasks(backend, app):
         backend (Scheduler): backend to read tasks to schedule
         app (App): Celery application to send tasks to
 
+    Returns:
+        A list of dictionaries:
+        {
+            'task': the scheduler's task id,
+            'backend_id': Celery's task id,
+            'scheduler': arrow.utcnow()
+        }
+
+    The result can be used to block-wait for the tasks' results:
+
+        backend_tasks = run_ready_tasks(self.scheduler, app)
+        for task in backend_tasks:
+            AsyncResult(id=task['backend_id']).get()
+
     """
+    all_backend_tasks = []
     while True:
-        throttled = False
         cursor = backend.cursor()
         task_types = {}
         pending_tasks = []
@@ -33,8 +45,8 @@ def run_ready_tasks(backend, app):
             task_type_name = task_type['type']
             task_types[task_type_name] = task_type
             max_queue_length = task_type['max_queue_length']
-            if max_queue_length:
-                backend_name = task_type['backend_name']
+            backend_name = task_type['backend_name']
+            if max_queue_length and backend_name in app.tasks:
                 queue_name = app.tasks[backend_name].task_queue
                 queue_length = app.get_queue_length(queue_name)
                 num_tasks = min(max_queue_length - queue_length,
@@ -53,7 +65,7 @@ def run_ready_tasks(backend, app):
                         cursor=cursor))
 
         if not pending_tasks:
-            break
+            return all_backend_tasks
 
         celery_tasks = []
         for task in pending_tasks:
@@ -78,8 +90,7 @@ def run_ready_tasks(backend, app):
 
         backend.commit()
 
-        if throttled:
-            time.sleep(10)
+        all_backend_tasks.extend(backend_tasks)
 
 
 if __name__ == '__main__':
