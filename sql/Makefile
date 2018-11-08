@@ -18,11 +18,11 @@ all:
 
 createdb: createdb-stamp
 createdb-stamp: $(SQL_FILES)
-ifndef PIFPAF
+ifeq ($(PIFPAF),)
 	-dropdb $(DBNAME)
 endif
 	createdb $(DBNAME)
-ifndef PIFPAF
+ifeq ($(PIFPAF),)
 	touch $@
 else
 	rm -f $@
@@ -31,7 +31,7 @@ endif
 filldb: filldb-stamp
 filldb-stamp: createdb-stamp
 	cat $(SQL_FILES) | $(PSQL) $(DBNAME)
-ifndef PIFPAF
+ifeq ($(PIFPAF),)
 	touch $@
 else
 	rm -f $@
@@ -51,7 +51,7 @@ doc: autodoc-stamp $(DOCDIR)/swh-scheduler.pdf
 autodoc-stamp: filldb-stamp $(DOCDIR)
 	postgresql_autodoc -d $(DBNAME) -f $(DOCDIR)/swh-scheduler
 	cp -a $(DOCDIR)/swh-scheduler.dot $(DOCDIR)/swh-scheduler.dot.orig
-ifndef PIFPAF
+ifeq ($(PIFPAF),)
 	touch $@
 else
 	rm -f $@
