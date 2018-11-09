@@ -17,23 +17,24 @@ MAX_NUM_TASKS = 10000
 def run_ready_tasks(backend, app):
     """Run tasks that are ready
 
-    Args
+    Args:
         backend (Scheduler): backend to read tasks to schedule
         app (App): Celery application to send tasks to
 
     Returns:
-        A list of dictionaries:
-        {
+        A list of dictionaries::
+
+          {
             'task': the scheduler's task id,
             'backend_id': Celery's task id,
             'scheduler': arrow.utcnow()
-        }
+          }
 
-    The result can be used to block-wait for the tasks' results:
+        The result can be used to block-wait for the tasks' results::
 
-        backend_tasks = run_ready_tasks(self.scheduler, app)
-        for task in backend_tasks:
-            AsyncResult(id=task['backend_id']).get()
+          backend_tasks = run_ready_tasks(self.scheduler, app)
+          for task in backend_tasks:
+              AsyncResult(id=task['backend_id']).get()
 
     """
     all_backend_tasks = []
