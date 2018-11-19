@@ -239,6 +239,20 @@ insert into task_type(
        default_interval, min_interval, max_interval, backoff_factor,
        max_queue_length)
 values (
+       'indexer_range_mimetype',
+       'Mimetype Range indexer task',
+       'swh.indexer.tasks.ContentRangeMimetype',
+       '1 day', '12:00:00', '1 days', 2,
+       5000);
+
+
+insert into task_type(
+       type,
+       description,
+       backend_name,
+       default_interval, min_interval, max_interval, backoff_factor,
+       max_queue_length)
+values (
        'indexer_fossology_license',
        'Fossology license indexer task',
        'swh.indexer.tasks.ContentFossologyLicense',
