@@ -200,32 +200,6 @@ insert into task_type(
        default_interval, min_interval, max_interval, backoff_factor,
        max_queue_length)
 values (
-       'orchestrator',
-       'swh.indexer orchestrator task',
-       'swh.indexer.tasks.OrchestratorAllContents',
-       '1 day', '12:00:00', '1 days', 2,
-       5000);
-
-insert into task_type(
-       type,
-       description,
-       backend_name,
-       default_interval, min_interval, max_interval, backoff_factor,
-       max_queue_length)
-values (
-       'orchestrator_text',
-       'swh.indexer text orchestrator task',
-       'swh.indexer.tasks.OrchestratorTextContents',
-       '1 day', '12:00:00', '1 days', 2,
-       5000);
-
-insert into task_type(
-       type,
-       description,
-       backend_name,
-       default_interval, min_interval, max_interval, backoff_factor,
-       max_queue_length)
-values (
        'indexer_mimetype',
        'Mimetype indexer task',
        'swh.indexer.tasks.ContentMimetype',
