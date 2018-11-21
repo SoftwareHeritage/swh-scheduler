@@ -258,3 +258,16 @@ values (
        'swh.indexer.tasks.OriginHead',
        '1 day', '12:00:00', '1 days', 2,
        5000);
+
+insert into task_type(
+       type,
+       description,
+       backend_name,
+       default_interval, min_interval, max_interval, backoff_factor,
+       max_queue_length)
+values (
+       'indexer_revision_metadata',
+       'Revision Metadata indexer task',
+       'swh.indexer.tasks.RevisionMetadata',
+       '1 day', '12:00:00', '1 days', 2,
+       5000);
