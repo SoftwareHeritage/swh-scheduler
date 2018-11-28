@@ -18,7 +18,7 @@ To be able to run (unit) tests, you need to have the
 [[https://forge.softwareheritage.org/source/swh-storage-testdata.git|swh-storage-testdata]]
 in the parent directory. If you have set your environment following the
 [[ https://docs.softwareheritage.org/devel/getting-started.html#getting-started|Getting started]]
-document everythong should be set up just fine.
+document everything should be set up just fine.
 
 Otherwise:
 
