@@ -98,7 +98,8 @@ class CustomCelery(Celery):
         Arguments:
           queue_name: name of the queue to check
 
-        Returns a dictionary raw from the RabbitMQ management API.
+        Returns a dictionary raw from the RabbitMQ management API;
+        or `None` if the current configuration does not use RabbitMQ.
 
         Interesting keys:
          - consumers (number of consumers for the queue)
@@ -110,6 +111,9 @@ class CustomCelery(Celery):
         """
 
         conn_info = self.connection().info()
+        if conn_info['transport'] == 'memory':
+            # We're running in a test environment, without RabbitMQ.
+            return None
         url = 'http://{hostname}:{port}/api/queues/{vhost}/{queue}'.format(
             hostname=conn_info['hostname'],
             port=conn_info['port'] + 10000,
@@ -125,7 +129,9 @@ class CustomCelery(Celery):
 
     def get_queue_length(self, queue_name):
         """Shortcut to get a queue's length"""
-        return self.get_queue_stats(queue_name)['messages']
+        stats = self.get_queue_stats(queue_name)
+        if stats:
+            return stats['messages']
 
 
 INSTANCE_NAME = os.environ.get(CONFIG_NAME_ENVVAR)
