@@ -3,6 +3,8 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import itertools
+import importlib
 import logging
 import os
 import urllib.parse
@@ -16,6 +18,8 @@ from kombu import Exchange, Queue
 from kombu.five import monotonic as _monotonic
 
 import requests
+
+from swh.scheduler.task import Task
 
 from swh.core.config import load_named_config
 from swh.core.logger import JournalHandler
@@ -78,6 +82,33 @@ def setup_log_handler(loglevel=None, logfile=None, format=None,
 
 @celeryd_after_setup.connect
 def setup_queues_and_tasks(sender, instance, **kwargs):
+    """Signal called on worker start.
+
+    This automatically registers swh.scheduler.task.Task subclasses as
+    available celery tasks.
+
+    This also subscribes the worker to the "implicit" per-task queues defined
+    for these task classes.
+
+    """
+
+    for module_name in itertools.chain(
+            # celery worker -I flag
+            instance.app.conf['include'],
+            # set from the celery / swh worker instance configuration file
+            instance.app.conf['imports'],
+    ):
+        module = importlib.import_module(module_name)
+        for name in dir(module):
+            obj = getattr(module, name)
+            if (
+                    isinstance(obj, type)
+                    and issubclass(obj, Task)
+                    and obj != Task  # Don't register the abstract class itself
+            ):
+                class_name = '%s.%s' % (module_name, name)
+                instance.app.register_task_class(class_name, obj)
+
     for task_name in instance.app.tasks:
         if task_name.startswith('swh.'):
             instance.app.amqp.queues.select_add(task_name)
@@ -139,6 +170,15 @@ class CustomCelery(Celery):
         stats = self.get_queue_stats(queue_name)
         if stats:
             return stats.get('messages')
+
+    def register_task_class(self, name, cls):
+        """Register a class-based task under the given name"""
+        if name in self.tasks:
+            return
+
+        task_instance = cls()
+        task_instance.name = name
+        self.register_task(task_instance)
 
 
 INSTANCE_NAME = os.environ.get(CONFIG_NAME_ENVVAR)
