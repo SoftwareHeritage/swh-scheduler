@@ -153,57 +153,58 @@ for queue in CONFIG['task_queues']:
 app = CustomCelery()
 app.conf.update(
     # The broker
-    BROKER_URL=CONFIG['task_broker'],
+    broker_url=CONFIG['task_broker'],
     # Timezone configuration: all in UTC
-    CELERY_ENABLE_UTC=True,
-    CELERY_TIMEZONE='UTC',
+    enable_utc=True,
+    timezone='UTC',
     # Imported modules
-    CELERY_IMPORTS=CONFIG['task_modules'],
+    imports=CONFIG['task_modules'],
     # Time (in seconds, or a timedelta object) for when after stored task
     # tombstones will be deleted. None means to never expire results.
-    CELERY_TASK_RESULT_EXPIRES=None,
+    result_expires=None,
     # A string identifying the default serialization method to use. Can
     # be json (default), pickle, yaml, msgpack, or any custom
     # serialization methods that have been registered with
-    CELERY_TASK_SERIALIZER='msgpack',
+    task_serializer='msgpack',
     # Result serialization format
-    CELERY_RESULT_SERIALIZER='msgpack',
+    result_serializer='msgpack',
     # Late ack means the task messages will be acknowledged after the task has
     # been executed, not just before, which is the default behavior.
-    CELERY_ACKS_LATE=True,
+    task_acks_late=True,
     # A string identifying the default serialization method to use.
     # Can be pickle (default), json, yaml, msgpack or any custom serialization
     # methods that have been registered with kombu.serialization.registry
-    CELERY_ACCEPT_CONTENT=['msgpack', 'json'],
+    accept_content=['msgpack', 'json'],
     # If True the task will report its status as “started”
     # when the task is executed by a worker.
-    CELERY_TRACK_STARTED=True,
+    task_track_started=True,
     # Default compression used for task messages. Can be gzip, bzip2
     # (if available), or any custom compression schemes registered
     # in the Kombu compression registry.
-    # CELERY_MESSAGE_COMPRESSION='bzip2',
+    # result_compression='bzip2',
+    # task_compression='bzip2',
     # Disable all rate limits, even if tasks has explicit rate limits set.
     # (Disabling rate limits altogether is recommended if you don’t have any
     # tasks using them.)
-    CELERY_DISABLE_RATE_LIMITS=True,
+    worker_disable_rate_limits=True,
     # Task hard time limit in seconds. The worker processing the task will be
     # killed and replaced with a new one when this is exceeded.
-    # CELERYD_TASK_TIME_LIMIT=3600,
+    # task_time_limit=3600,
     # Task soft time limit in seconds.
     # The SoftTimeLimitExceeded exception will be raised when this is exceeded.
     # The task can catch this to e.g. clean up before the hard time limit
     # comes.
-    CELERYD_TASK_SOFT_TIME_LIMIT=CONFIG['task_soft_time_limit'],
+    task_soft_time_limit=CONFIG['task_soft_time_limit'],
     # Task routing
-    CELERY_ROUTES=TaskRouter(),
+    task_routes=TaskRouter(),
     # Task queues this worker will consume from
-    CELERY_QUEUES=CELERY_QUEUES,
+    task_queues=CELERY_QUEUES,
     # Allow pool restarts from remote
-    CELERYD_POOL_RESTARTS=True,
+    worker_pool_restarts=True,
     # Do not prefetch tasks
-    CELERYD_PREFETCH_MULTIPLIER=1,
+    worker_prefetch_multiplier=1,
     # Send events
-    CELERY_SEND_EVENTS=True,
+    worker_send_task_events=True,
     # Do not send useless task_sent events
-    CELERY_SEND_TASK_SENT_EVENT=False,
+    task_send_sent_event=False,
 )
