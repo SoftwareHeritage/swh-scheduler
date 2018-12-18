@@ -122,6 +122,8 @@ class CustomCelery(Celery):
         )
         credentials = (conn_info['userid'], conn_info['password'])
         r = requests.get(url, auth=credentials)
+        if r.status_code == 404:
+            return {}
         if r.status_code != 200:
             raise ValueError('Got error %s when reading queue stats: %s' % (
                 r.status_code, r.json()))
@@ -131,7 +133,7 @@ class CustomCelery(Celery):
         """Shortcut to get a queue's length"""
         stats = self.get_queue_stats(queue_name)
         if stats:
-            return stats['messages']
+            return stats.get('messages')
 
 
 INSTANCE_NAME = os.environ.get(CONFIG_NAME_ENVVAR)

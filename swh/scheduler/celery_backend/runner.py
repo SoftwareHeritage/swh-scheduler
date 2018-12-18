@@ -49,7 +49,11 @@ def run_ready_tasks(backend, app):
             backend_name = task_type['backend_name']
             if max_queue_length and backend_name in app.tasks:
                 queue_name = app.tasks[backend_name].task_queue
-                queue_length = app.get_queue_length(queue_name)
+                try:
+                    queue_length = app.get_queue_length(queue_name)
+                except ValueError:
+                    queue_length = None
+
                 if queue_length is None:
                     # Running without RabbitMQ (probably a test env).
                     num_tasks = MAX_NUM_TASKS
