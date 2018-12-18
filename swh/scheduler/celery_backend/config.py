@@ -8,7 +8,7 @@ import os
 import urllib.parse
 
 from celery import Celery
-from celery.signals import setup_logging
+from celery.signals import setup_logging, celeryd_after_setup
 from celery.utils.log import ColorFormatter
 from celery.worker.control import Panel
 
@@ -74,6 +74,13 @@ def setup_log_handler(loglevel=None, logfile=None, format=None,
     # get_task_logger makes the swh tasks loggers children of celery.task
     celery_task_logger = logging.getLogger('celery.task')
     celery_task_logger.setLevel(loglevel)
+
+
+@celeryd_after_setup.connect
+def setup_queues_and_tasks(sender, instance, **kwargs):
+    for task_name in instance.app.tasks:
+        if task_name.startswith('swh.'):
+            instance.app.amqp.queues.select_add(task_name)
 
 
 @Panel.register
