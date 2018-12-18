@@ -13,6 +13,6 @@ class CeleryTestFixture:
     Can be overriden by CELERY_BROKER_URL and CELERY_RESULT_BACKEND env vars.
     """
 
-    def setUp(sel):
+    def setUp(self):
         setup_celery()
         super().setUp()
