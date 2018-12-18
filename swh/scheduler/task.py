@@ -136,7 +136,7 @@ if TaskType is type:
 class Task(celery.app.task.Task, metaclass=TaskType):
     """a schedulable task (abstract class)
 
-    Sub-classes must implement the run() method.  Sub-classes that
+    Sub-classes must implement the run_task() method.  Sub-classes that
     want their tasks to get routed to a non-default task queue must
     override the task_queue attribute.
 
