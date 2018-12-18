@@ -174,7 +174,7 @@ app.conf.update(
     # A string identifying the default serialization method to use.
     # Can be pickle (default), json, yaml, msgpack or any custom serialization
     # methods that have been registered with kombu.serialization.registry
-    CELERY_ACCEPT_CONTENT=['msgpack', 'json', 'pickle'],
+    CELERY_ACCEPT_CONTENT=['msgpack', 'json'],
     # If True the task will report its status as “started”
     # when the task is executed by a worker.
     CELERY_TRACK_STARTED=True,
