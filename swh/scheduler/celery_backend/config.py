@@ -84,11 +84,9 @@ def monotonic(state):
 
 class TaskRouter:
     """Route tasks according to the task_queue attribute in the task class"""
-    def route_for_task(self, task, args=None, kwargs=None):
-        task_class = app.tasks[task]
-        if hasattr(task_class, 'task_queue'):
-            return {'queue': task_class.task_queue}
-        return None
+    def route_for_task(self, task, *args, **kwargs):
+        if task.startswith('swh.'):
+            return {'queue': task}
 
 
 class CustomCelery(Celery):

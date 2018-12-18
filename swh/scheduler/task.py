@@ -147,7 +147,6 @@ class Task(celery.app.task.Task, metaclass=TaskType):
     """
 
     abstract = True
-    task_queue = 'celery'
 
     def run(self, *args, **kwargs):
         """This method is called by the celery worker when a task is received.

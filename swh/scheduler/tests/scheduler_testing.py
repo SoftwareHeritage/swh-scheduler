@@ -44,6 +44,11 @@ class SchedulerTestFixture(CeleryTestFixture, DbTestFixture):
     def run_ready_tasks(self):
         """Runs the scheduler and a Celery worker, then blocks until
         all tasks are completed."""
+
+        # Make sure the worker is listening to all task-specific queues
+        for task in self.scheduler.get_task_types():
+            app.amqp.queues.select_add(task['backend_name'])
+
         with start_worker(app):
             backend_tasks = run_ready_tasks(self.scheduler, app)
             for task in backend_tasks:
