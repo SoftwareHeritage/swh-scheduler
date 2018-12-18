@@ -288,6 +288,8 @@ class SchedulerBackend(SWHConfig, DbBackend):
     @autocommit
     def set_status_tasks(self, task_ids, status='disabled', cursor=None):
         """Set the tasks' status whose ids are listed."""
+        if not task_ids:
+            return
         query = "UPDATE task SET status = %s WHERE id IN %s"
         cursor.execute(query, (status, tuple(task_ids),))
         return None
