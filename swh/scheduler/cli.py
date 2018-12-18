@@ -68,6 +68,15 @@ def pretty_print_task(task):
     return ''.join(lines)
 
 
+def list_task_types(ctx, param, value):
+    if not value or ctx.resilient_parsing:
+        return
+    click.echo("Known task types:")
+    for tasktype in ctx.obj.get_task_types():
+        click.echo('{type}:\n  {description}'.format(**tasktype))
+    ctx.exit()
+
+
 @click.group(context_settings=CONTEXT_SETTINGS)
 @click.option('--cls', '-c', default='local',
               help="Scheduler's class, default to 'local'")
@@ -102,6 +111,8 @@ def cli(ctx, cls, database, url):
 
 
 @cli.group('task')
+@click.option('--list-types', '-l', is_flag=True, default=False, is_eager=True,
+              expose_value=False, callback=list_task_types)
 @click.pass_context
 def task(ctx):
     """Manipulate tasks."""
