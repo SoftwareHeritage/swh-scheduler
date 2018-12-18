@@ -184,6 +184,49 @@ def schedule_tasks(ctx, columns, delimiter, file):
     click.echo_via_pager('\n'.join(output))
 
 
+@task.command('add')
+@click.argument('type', nargs=1, required=True)
+@click.argument('options', nargs=-1)
+@click.option('--policy', '-p', default='recurring',
+              type=click.Choice(['recurring', 'oneshot']))
+@click.option('--next-run', '-n', default=None)
+@click.pass_context
+def schedule_task(ctx, type, options, policy, next_run):
+    """Schedule one task from arguments.
+
+    Use sample:
+
+    swh-scheduler --database 'service=swh-scheduler' \
+        task add swh-lister-pypi
+
+    swh-scheduler --database 'service=swh-scheduler' \
+        task add swh-lister-debian --policy=oneshot distribution=stretch
+
+    """
+    now = arrow.utcnow()
+
+    args = [x for x in options if '=' not in x]
+    kw = dict(x.split('=', 1) for x in options if '=' in x)
+    task = {'type': type,
+            'policy': policy,
+            'arguments': {
+                'args': args,
+                'kwargs': kw,
+                },
+            'next_run': DATETIME.convert(next_run or now,
+                                         None, None),
+            }
+    created = ctx.obj.create_tasks([task])
+
+    output = [
+        'Created %d tasks\n' % len(created),
+    ]
+    for task in created:
+        output.append(pretty_print_task(task))
+
+    click.echo('\n'.join(output))
+
+
 @task.command('list-pending')
 @click.option('--task-type', '-t', required=True,
               help='The tasks\' type concerned by the listing')
