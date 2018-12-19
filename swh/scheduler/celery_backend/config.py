@@ -100,6 +100,8 @@ def setup_queues_and_tasks(sender, instance, **kwargs):
 
     logger.info('Setup Queues & Tasks for %s', sender)
 
+    instance.app.conf['worker_name'] = sender
+
     for module_name in itertools.chain(
             # celery worker -I flag
             instance.app.conf['include'],
