@@ -120,11 +120,10 @@ def monotonic(state):
     return {'monotonic': _monotonic()}
 
 
-class TaskRouter:
+def route_for_task(name, args, kwargs, options, task=None, **kw):
     """Route tasks according to the task_queue attribute in the task class"""
-    def route_for_task(self, task, *args, **kwargs):
-        if task.startswith('swh.'):
-            return {'queue': task}
+    if name is not None and name.startswith('swh.'):
+        return {'queue': name}
 
 
 class CustomCelery(Celery):
@@ -243,7 +242,7 @@ app.conf.update(
     # comes.
     task_soft_time_limit=CONFIG['task_soft_time_limit'],
     # Task routing
-    task_routes=TaskRouter(),
+    task_routes=route_for_task,
     # Task queues this worker will consume from
     task_queues=CELERY_QUEUES,
     # Allow pool restarts from remote
