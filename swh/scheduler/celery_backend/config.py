@@ -44,9 +44,10 @@ def setup_log_handler(loglevel=None, logfile=None, format=None,
     We use the command-line loglevel for tasks only, as we never
     really care about the debug messages from celery.
     """
-
     if loglevel is None:
         loglevel = logging.DEBUG
+    if isinstance(loglevel, str):
+        loglevel = logging._nameToLevel[loglevel]
 
     formatter = logging.Formatter(format)
 
@@ -65,19 +66,18 @@ def setup_log_handler(loglevel=None, logfile=None, format=None,
     systemd_journal.setFormatter(formatter)
     root_logger.addHandler(systemd_journal)
 
-    celery_logger = logging.getLogger('celery')
-    celery_logger.setLevel(logging.INFO)
-
+    logging.getLogger('celery').setLevel(logging.INFO)
+    # Silence amqp heartbeat_tick messages
+    logger = logging.getLogger('amqp')
+    logger.addFilter(lambda record: not record.msg.startswith(
+        'heartbeat_tick'))
+    logger.setLevel(logging.DEBUG)
     # Silence useless "Starting new HTTP connection" messages
-    urllib3_logger = logging.getLogger('urllib3')
-    urllib3_logger.setLevel(logging.WARNING)
+    logging.getLogger('urllib3').setLevel(logging.WARNING)
 
-    swh_logger = logging.getLogger('swh')
-    swh_logger.setLevel(loglevel)
-
+    logging.getLogger('swh').setLevel(loglevel)
     # get_task_logger makes the swh tasks loggers children of celery.task
-    celery_task_logger = logging.getLogger('celery.task')
-    celery_task_logger.setLevel(loglevel)
+    logging.getLogger('celery.task').setLevel(loglevel)
 
 
 @celeryd_after_setup.connect
