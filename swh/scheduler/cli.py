@@ -10,8 +10,9 @@ import itertools
 import json
 import locale
 import logging
+import time
 
-from swh.core import utils
+from swh.core import utils, config
 from . import compute_nb_tasks_from
 from .backend_es import SWHElasticSearchClient
 
@@ -110,6 +111,7 @@ def cli(ctx, cls, database, url):
         raise ValueError('Scheduler class (local/remote) must be instantiated')
 
     ctx.obj['scheduler'] = scheduler
+    ctx.obj['config'] = {'cls': cls, 'args': override_config}
 
 
 @cli.group('task')
@@ -355,11 +357,67 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
                 len(task_ids), task_ids[0]))
 
 
-@cli.group('task-run')
+@cli.command('runner')
+@click.option('--period', '-p', default=0,
+              help=('Period (in s) at witch pending tasks are checked and '
+                    'executed. Set to 0 (default) for a one shot.'))
 @click.pass_context
-def task_run(ctx):
-    """Manipulate task runs."""
-    pass
+def runner(ctx, period):
+    """Starts a swh-scheduler runner service.
+
+    This process is responsible for checking for ready-to-run tasks and
+    schedule them."""
+    from swh.scheduler.celery_backend.runner import main
+    try:
+        while True:
+            main()
+            if not period:
+                break
+            time.sleep(period)
+    except KeyboardInterrupt:
+        ctx.exit(0)
+
+
+@cli.command('listener')
+@click.option('--log-level', '-l', default='INFO',
+              type=click.Choice(logging._nameToLevel.keys()),
+              help='Log level (default to INFO)')
+@click.pass_context
+def listener(ctx, log_level):
+    """Starts a swh-scheduler listener service.
+
+    This service is responsible for listening at task lifecycle events and
+    handle their workflow status in the database."""
+    from swh.scheduler.celery_backend.listener import (
+        event_monitor, main_app, setup_log_handler)
+    setup_log_handler(loglevel=log_level, colorize=False,
+                      format='[%(levelname)s] %(name)s -- %(message)s')
+    event_monitor(main_app, backend=ctx.obj['scheduler'])
+
+
+@cli.command('api-server')
+@click.argument('config-path', required=1)
+@click.option('--host', default='0.0.0.0',
+              help="Host to run the scheduler server api")
+@click.option('--port', default=5008, type=click.INT,
+              help="Binding port of the server")
+@click.option('--debug/--nodebug', default=True,
+              help="Indicates if the server should run in debug mode")
+@click.pass_context
+def api_server(ctx, config_path, host, port, debug):
+    """Starts a swh-scheduler API HTTP server.
+    """
+    if ctx.obj['config']['cls'] == 'remote':
+        click.echo("The API server can only be started with a 'local' "
+                   "configuration", err=True)
+        ctx.exit(1)
+
+    from swh.scheduler.api.server import app, DEFAULT_CONFIG
+    conf = config.read(config_path, DEFAULT_CONFIG)
+    if ctx.obj['config']['args']:
+        conf['scheduler']['args'].update(ctx.obj['config']['args'])
+    app.config.update(conf)
+    app.run(host, port=port, debug=bool(debug))
 
 
 if __name__ == '__main__':
