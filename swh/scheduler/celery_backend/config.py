@@ -78,6 +78,7 @@ def setup_log_handler(loglevel=None, logfile=None, format=None,
     logging.getLogger('swh').setLevel(loglevel)
     # get_task_logger makes the swh tasks loggers children of celery.task
     logging.getLogger('celery.task').setLevel(loglevel)
+    return loglevel
 
 
 @celeryd_after_setup.connect
