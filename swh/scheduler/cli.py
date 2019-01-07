@@ -80,11 +80,12 @@ def list_task_types(ctx, param, value):
 
 @click.group(context_settings=CONTEXT_SETTINGS)
 @click.option('--cls', '-c', default='local',
+              type=click.Choice(['local', 'remote']),
               help="Scheduler's class, default to 'local'")
 @click.option('--database', '-d',
-              help='Scheduling database DSN')
+              help="Scheduling database DSN (if cls is 'local')")
 @click.option('--url', '-u',
-              help="(Optional) Scheduler's url access")
+              help="Scheduler's url access (if cls is 'remote')")
 @click.pass_context
 def cli(ctx, cls, database, url):
     """Software Heritage Scheduler CLI interface
@@ -97,18 +98,16 @@ def cli(ctx, cls, database, url):
 
     scheduler = None
     override_config = {}
-    from . import get_scheduler
-    if cls == 'local':
-        if database:
+    try:
+        if cls == 'local' and database:
             override_config = {'scheduling_db': database}
-        scheduler = get_scheduler(cls, args=override_config)
-    elif cls == 'remote':
-        if url:
+        elif cls == 'remote' and url:
             override_config = {'url': url}
         scheduler = get_scheduler(cls, args=override_config)
-
-    if not scheduler:
-        raise ValueError('Scheduler class (local/remote) must be instantiated')
+    except Exception:
+        # it's the subcommand to decide whether not having a proper
+        # scheduler instance is a problem.
+        pass
 
     ctx.obj['scheduler'] = scheduler
     ctx.obj['config'] = {'cls': cls, 'args': override_config}
@@ -163,6 +162,9 @@ def schedule_tasks(ctx, columns, delimiter, file):
     """
     tasks = []
     now = arrow.utcnow()
+    scheduler = ctx.obj['scheduler']
+    if not scheduler:
+        raise ValueError('Scheduler class (local/remote) must be instantiated')
 
     reader = csv.reader(file, delimiter=delimiter)
     for line in reader:
@@ -177,7 +179,7 @@ def schedule_tasks(ctx, columns, delimiter, file):
                                             None, None)
         tasks.append(task)
 
-    created = ctx.obj['scheduler'].create_tasks(tasks)
+    created = scheduler.create_tasks(tasks)
 
     output = [
         'Created %d tasks\n' % len(created),
@@ -207,6 +209,10 @@ def schedule_task(ctx, type, options, policy, next_run):
         task add swh-lister-debian --policy=oneshot distribution=stretch
 
     """
+    scheduler = ctx.obj['scheduler']
+    if not scheduler:
+        raise ValueError('Scheduler class (local/remote) must be instantiated')
+
     now = arrow.utcnow()
 
     args = [x for x in options if '=' not in x]
@@ -220,7 +226,7 @@ def schedule_task(ctx, type, options, policy, next_run):
             'next_run': DATETIME.convert(next_run or now,
                                          None, None),
             }
-    created = ctx.obj['scheduler'].create_tasks([task])
+    created = scheduler.create_tasks([task])
 
     output = [
         'Created %d tasks\n' % len(created),
@@ -244,11 +250,15 @@ def list_pending_tasks(ctx, task_types, limit, before):
     You can override the number of tasks to fetch
 
     """
+    scheduler = ctx.obj['scheduler']
+    if not scheduler:
+        raise ValueError('Scheduler class (local/remote) must be instantiated')
+
     num_tasks, num_tasks_priority = compute_nb_tasks_from(limit)
 
     output = []
     for task_type in task_types:
-        pending = ctx.obj['scheduler'].peek_ready_tasks(
+        pending = scheduler.peek_ready_tasks(
             task_type, timestamp=before,
             num_tasks=num_tasks, num_tasks_priority=num_tasks_priority)
         output.append('Found %d %s tasks\n' % (
@@ -291,6 +301,10 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
        With --dry-run flag set (default), only list those.
 
     """
+    scheduler = ctx.obj['scheduler']
+    if not scheduler:
+        raise ValueError('Scheduler class (local/remote) must be instantiated')
+
     es_client = SWHElasticSearchClient()
     logging.basicConfig(level=logging.DEBUG if verbose else logging.INFO)
     log = logging.getLogger('swh.scheduler.cli.archive')
@@ -326,8 +340,7 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
         return es_client.compute_index_name(date.year, date.month)
 
     def index_data(before, last_id, batch_index):
-        backend = ctx.obj['scheduler']
-        tasks_in = backend.filter_task_to_archive(
+        tasks_in = scheduler.filter_task_to_archive(
             after, before, last_id=last_id, limit=batch_index)
         for index_name, tasks_group in itertools.groupby(
                 tasks_in, key=group_by_index_name):
@@ -388,11 +401,15 @@ def listener(ctx, log_level):
 
     This service is responsible for listening at task lifecycle events and
     handle their workflow status in the database."""
+    scheduler = ctx.obj['scheduler']
+    if not scheduler:
+        raise ValueError('Scheduler class (local/remote) must be instantiated')
+
     from swh.scheduler.celery_backend.listener import (
         event_monitor, main_app, setup_log_handler)
     setup_log_handler(loglevel=log_level, colorize=False,
                       format='[%(levelname)s] %(name)s -- %(message)s')
-    event_monitor(main_app, backend=ctx.obj['scheduler'])
+    event_monitor(main_app, backend=scheduler)
 
 
 @cli.command('api-server')
