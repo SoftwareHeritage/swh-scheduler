@@ -72,7 +72,7 @@ def list_task_types(ctx, param, value):
     if not value or ctx.resilient_parsing:
         return
     click.echo("Known task types:")
-    for tasktype in ctx.obj.get_task_types():
+    for tasktype in ctx.obj['scheduler'].get_task_types():
         click.echo('{type}:\n  {description}'.format(**tasktype))
     ctx.exit()
 
@@ -92,6 +92,8 @@ def cli(ctx, cls, database, url):
     main scheduler db).
 
     """
+    ctx.ensure_object(dict)
+
     scheduler = None
     override_config = {}
     from . import get_scheduler
@@ -107,7 +109,7 @@ def cli(ctx, cls, database, url):
     if not scheduler:
         raise ValueError('Scheduler class (local/remote) must be instantiated')
 
-    ctx.obj = scheduler
+    ctx.obj['scheduler'] = scheduler
 
 
 @cli.group('task')
@@ -173,7 +175,7 @@ def schedule_tasks(ctx, columns, delimiter, file):
                                             None, None)
         tasks.append(task)
 
-    created = ctx.obj.create_tasks(tasks)
+    created = ctx.obj['scheduler'].create_tasks(tasks)
 
     output = [
         'Created %d tasks\n' % len(created),
@@ -216,7 +218,7 @@ def schedule_task(ctx, type, options, policy, next_run):
             'next_run': DATETIME.convert(next_run or now,
                                          None, None),
             }
-    created = ctx.obj.create_tasks([task])
+    created = ctx.obj['scheduler'].create_tasks([task])
 
     output = [
         'Created %d tasks\n' % len(created),
@@ -244,7 +246,7 @@ def list_pending_tasks(ctx, task_types, limit, before):
 
     output = []
     for task_type in task_types:
-        pending = ctx.obj.peek_ready_tasks(
+        pending = ctx.obj['scheduler'].peek_ready_tasks(
             task_type, timestamp=before,
             num_tasks=num_tasks, num_tasks_priority=num_tasks_priority)
         output.append('Found %d %s tasks\n' % (
@@ -321,7 +323,8 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
             date = data['scheduled']
         return es_client.compute_index_name(date.year, date.month)
 
-    def index_data(before, last_id, batch_index, backend=ctx.obj):
+    def index_data(before, last_id, batch_index):
+        backend = ctx.obj['scheduler']
         tasks_in = backend.filter_task_to_archive(
             after, before, last_id=last_id, limit=batch_index)
         for index_name, tasks_group in itertools.groupby(
@@ -344,7 +347,7 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
                 len(task_ids), task_ids[0]))
             if dry_run:  # no clean up
                 continue
-            ctx.obj.delete_archived_tasks(task_ids)
+            ctx.obj['scheduler'].delete_archived_tasks(task_ids)
     else:
         for task_ids in utils.grouper(gen, n=batch_index):
             task_ids = list(task_ids)
