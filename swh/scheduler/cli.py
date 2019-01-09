@@ -393,14 +393,16 @@ def runner(ctx, period):
     from swh.scheduler.celery_backend.runner import run_ready_tasks
     from swh.scheduler.celery_backend.config import app
 
+    logger = logging.getLogger(__name__ + '.runner')
     scheduler = ctx.obj['scheduler']
     try:
         while True:
+            logger.info('Run ready tasks')
             try:
                 run_ready_tasks(scheduler, app)
             except Exception:
                 scheduler.rollback()
-                raise
+                logger.exception('Unexpected error in run_ready_tasks()')
             if not period:
                 break
             time.sleep(period)
