@@ -254,7 +254,8 @@ CELERY_DEFAULT_CONFIG = dict(
     )
 
 # Instantiate the Celery app
-app = Celery(broker=CONFIG['task_broker'])
+app = Celery(broker=CONFIG['task_broker'],
+             task_cls='swh.scheduler.task:SWHTask')
 app.add_defaults(CELERY_DEFAULT_CONFIG)
 
 # XXX for BW compat
