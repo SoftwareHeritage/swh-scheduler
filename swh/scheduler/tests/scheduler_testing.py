@@ -1,11 +1,11 @@
 import glob
-import pytest
 import os.path
 import datetime
 
 from celery.result import AsyncResult
 from celery.contrib.testing.worker import start_worker
 import celery.contrib.testing.tasks  # noqa           
+import pytest
 
 from swh.core.tests.db_testing import DbTestFixture, DB_DUMP_TYPES
 from swh.core.utils import numfile_sortkey as sortkey
@@ -26,7 +26,8 @@ class SchedulerTestFixture(CeleryTestFixture, DbTestFixture):
     the `scheduler` attribute."""
     SCHEDULER_DB_NAME = 'softwareheritage-scheduler-test-fixture'
 
-    def add_scheduler_task_type(self, task_type, backend_name):
+    def add_scheduler_task_type(self, task_type, backend_name,
+                                task_class=None):
         task_type = {
             'type': task_type,
             'description': 'Update a git repository',
@@ -40,13 +41,21 @@ class SchedulerTestFixture(CeleryTestFixture, DbTestFixture):
             'retry_delay': datetime.timedelta(hours=2),
         }
         self.scheduler.create_task_type(task_type)
+        if task_class:
+            app.register_task_class(backend_name, task_class)
 
     def run_ready_tasks(self):
         """Runs the scheduler and a Celery worker, then blocks until
         all tasks are completed."""
+
+        # Make sure the worker is listening to all task-specific queues
+        for task in self.scheduler.get_task_types():
+            app.amqp.queues.select_add(task['backend_name'])
+
         with start_worker(app):
             backend_tasks = run_ready_tasks(self.scheduler, app)
             for task in backend_tasks:
+                # Make sure the task completed
                 AsyncResult(id=task['backend_id']).get()
 
     @classmethod

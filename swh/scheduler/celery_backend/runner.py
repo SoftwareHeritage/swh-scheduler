@@ -4,7 +4,6 @@
 # See top-level LICENSE file for more information
 
 import arrow
-from celery import group
 
 from swh.scheduler import get_scheduler, compute_nb_tasks_from
 from .config import app as main_app
@@ -17,23 +16,24 @@ MAX_NUM_TASKS = 10000
 def run_ready_tasks(backend, app):
     """Run tasks that are ready
 
-    Args
+    Args:
         backend (Scheduler): backend to read tasks to schedule
         app (App): Celery application to send tasks to
 
     Returns:
-        A list of dictionaries:
-        {
+        A list of dictionaries::
+
+          {
             'task': the scheduler's task id,
             'backend_id': Celery's task id,
             'scheduler': arrow.utcnow()
-        }
+          }
 
-    The result can be used to block-wait for the tasks' results:
+        The result can be used to block-wait for the tasks' results::
 
-        backend_tasks = run_ready_tasks(self.scheduler, app)
-        for task in backend_tasks:
-            AsyncResult(id=task['backend_id']).get()
+          backend_tasks = run_ready_tasks(self.scheduler, app)
+          for task in backend_tasks:
+              AsyncResult(id=task['backend_id']).get()
 
     """
     all_backend_tasks = []
@@ -46,11 +46,18 @@ def run_ready_tasks(backend, app):
             task_types[task_type_name] = task_type
             max_queue_length = task_type['max_queue_length']
             backend_name = task_type['backend_name']
-            if max_queue_length and backend_name in app.tasks:
-                queue_name = app.tasks[backend_name].task_queue
-                queue_length = app.get_queue_length(queue_name)
-                num_tasks = min(max_queue_length - queue_length,
-                                MAX_NUM_TASKS)
+            if max_queue_length:
+                try:
+                    queue_length = app.get_queue_length(backend_name)
+                except ValueError:
+                    queue_length = None
+
+                if queue_length is None:
+                    # Running without RabbitMQ (probably a test env).
+                    num_tasks = MAX_NUM_TASKS
+                else:
+                    num_tasks = min(max_queue_length - queue_length,
+                                    MAX_NUM_TASKS)
             else:
                 num_tasks = MAX_NUM_TASKS
             if num_tasks > 0:
@@ -67,24 +74,23 @@ def run_ready_tasks(backend, app):
         if not pending_tasks:
             return all_backend_tasks
 
-        celery_tasks = []
+        backend_tasks = []
         for task in pending_tasks:
             args = task['arguments']['args']
             kwargs = task['arguments']['kwargs']
 
-            celery_task = app.tasks[
-                task_types[task['type']]['backend_name']
-            ].s(*args, **kwargs)
+            backend_name = task_types[task['type']]['backend_name']
+            celery_result = app.send_task(
+                backend_name, args=args, kwargs=kwargs,
+            )
 
-            celery_tasks.append(celery_task)
+            data = {
+                'task': task['id'],
+                'backend_id': celery_result.id,
+                'scheduled': arrow.utcnow(),
+            }
 
-        group_result = group(celery_tasks).delay()
-
-        backend_tasks = [{
-            'task': task['id'],
-            'backend_id': group_result.results[i].id,
-            'scheduled': arrow.utcnow(),
-        } for i, task in enumerate(pending_tasks)]
+            backend_tasks.append(data)
 
         backend.mass_schedule_task_runs(backend_tasks, cursor=cursor)
 

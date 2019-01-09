@@ -1,14 +1,14 @@
-Click
 arrow
-celery
+celery>=4
+Click
 elasticsearch>5.4
 flask
 kombu
 psycopg2
-swh.core>=0.0.44
 vcversioner
+swh.core>=0.0.48
 
 [testing]
-celery
 hypothesis
 pytest
+celery>=4
