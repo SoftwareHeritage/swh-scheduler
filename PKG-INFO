@@ -1,14 +1,14 @@
 Metadata-Version: 2.1
 Name: swh.scheduler
-Version: 0.0.35
+Version: 0.0.38
 Summary: Software Heritage Scheduler
 Home-page: https://forge.softwareheritage.org/diffusion/DSCH/
 Author: Software Heritage developers
 Author-email: swh-devel@inria.fr
 License: UNKNOWN
-Project-URL: Bug Reports, https://forge.softwareheritage.org/maniphest
-Project-URL: Funding, https://www.softwareheritage.org/donate
 Project-URL: Source, https://forge.softwareheritage.org/source/swh-scheduler
+Project-URL: Funding, https://www.softwareheritage.org/donate
+Project-URL: Bug Reports, https://forge.softwareheritage.org/maniphest
 Description: swh-scheduler
         =============
         
@@ -29,7 +29,7 @@ Description: swh-scheduler
         [[https://forge.softwareheritage.org/source/swh-storage-testdata.git|swh-storage-testdata]]
         in the parent directory. If you have set your environment following the
         [[ https://docs.softwareheritage.org/devel/getting-started.html#getting-started|Getting started]]
-        document everythong should be set up just fine.
+        document everything should be set up just fine.
         
         Otherwise:
         

@@ -3,12 +3,14 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import itertools
+import importlib
 import logging
 import os
 import urllib.parse
 
 from celery import Celery
-from celery.signals import setup_logging
+from celery.signals import setup_logging, celeryd_after_setup
 from celery.utils.log import ColorFormatter
 from celery.worker.control import Panel
 
@@ -16,6 +18,8 @@ from kombu import Exchange, Queue
 from kombu.five import monotonic as _monotonic
 
 import requests
+
+from swh.scheduler.task import Task
 
 from swh.core.config import load_named_config
 from swh.core.logger import JournalHandler
@@ -76,6 +80,40 @@ def setup_log_handler(loglevel=None, logfile=None, format=None,
     celery_task_logger.setLevel(loglevel)
 
 
+@celeryd_after_setup.connect
+def setup_queues_and_tasks(sender, instance, **kwargs):
+    """Signal called on worker start.
+
+    This automatically registers swh.scheduler.task.Task subclasses as
+    available celery tasks.
+
+    This also subscribes the worker to the "implicit" per-task queues defined
+    for these task classes.
+
+    """
+
+    for module_name in itertools.chain(
+            # celery worker -I flag
+            instance.app.conf['include'],
+            # set from the celery / swh worker instance configuration file
+            instance.app.conf['imports'],
+    ):
+        module = importlib.import_module(module_name)
+        for name in dir(module):
+            obj = getattr(module, name)
+            if (
+                    isinstance(obj, type)
+                    and issubclass(obj, Task)
+                    and obj != Task  # Don't register the abstract class itself
+            ):
+                class_name = '%s.%s' % (module_name, name)
+                instance.app.register_task_class(class_name, obj)
+
+    for task_name in instance.app.tasks:
+        if task_name.startswith('swh.'):
+            instance.app.amqp.queues.select_add(task_name)
+
+
 @Panel.register
 def monotonic(state):
     """Get the current value for the monotonic clock"""
@@ -84,11 +122,9 @@ def monotonic(state):
 
 class TaskRouter:
     """Route tasks according to the task_queue attribute in the task class"""
-    def route_for_task(self, task, args=None, kwargs=None):
-        task_class = app.tasks[task]
-        if hasattr(task_class, 'task_queue'):
-            return {'queue': task_class.task_queue}
-        return None
+    def route_for_task(self, task, *args, **kwargs):
+        if task.startswith('swh.'):
+            return {'queue': task}
 
 
 class CustomCelery(Celery):
@@ -98,7 +134,8 @@ class CustomCelery(Celery):
         Arguments:
           queue_name: name of the queue to check
 
-        Returns a dictionary raw from the RabbitMQ management API.
+        Returns a dictionary raw from the RabbitMQ management API;
+        or `None` if the current configuration does not use RabbitMQ.
 
         Interesting keys:
          - consumers (number of consumers for the queue)
@@ -110,6 +147,9 @@ class CustomCelery(Celery):
         """
 
         conn_info = self.connection().info()
+        if conn_info['transport'] == 'memory':
+            # We're running in a test environment, without RabbitMQ.
+            return None
         url = 'http://{hostname}:{port}/api/queues/{vhost}/{queue}'.format(
             hostname=conn_info['hostname'],
             port=conn_info['port'] + 10000,
@@ -118,6 +158,8 @@ class CustomCelery(Celery):
         )
         credentials = (conn_info['userid'], conn_info['password'])
         r = requests.get(url, auth=credentials)
+        if r.status_code == 404:
+            return {}
         if r.status_code != 200:
             raise ValueError('Got error %s when reading queue stats: %s' % (
                 r.status_code, r.json()))
@@ -125,7 +167,18 @@ class CustomCelery(Celery):
 
     def get_queue_length(self, queue_name):
         """Shortcut to get a queue's length"""
-        return self.get_queue_stats(queue_name)['messages']
+        stats = self.get_queue_stats(queue_name)
+        if stats:
+            return stats.get('messages')
+
+    def register_task_class(self, name, cls):
+        """Register a class-based task under the given name"""
+        if name in self.tasks:
+            return
+
+        task_instance = cls()
+        task_instance.name = name
+        self.register_task(task_instance)
 
 
 INSTANCE_NAME = os.environ.get(CONFIG_NAME_ENVVAR)
@@ -147,57 +200,58 @@ for queue in CONFIG['task_queues']:
 app = CustomCelery()
 app.conf.update(
     # The broker
-    BROKER_URL=CONFIG['task_broker'],
+    broker_url=CONFIG['task_broker'],
     # Timezone configuration: all in UTC
-    CELERY_ENABLE_UTC=True,
-    CELERY_TIMEZONE='UTC',
+    enable_utc=True,
+    timezone='UTC',
     # Imported modules
-    CELERY_IMPORTS=CONFIG['task_modules'],
+    imports=CONFIG['task_modules'],
     # Time (in seconds, or a timedelta object) for when after stored task
     # tombstones will be deleted. None means to never expire results.
-    CELERY_TASK_RESULT_EXPIRES=None,
+    result_expires=None,
     # A string identifying the default serialization method to use. Can
     # be json (default), pickle, yaml, msgpack, or any custom
     # serialization methods that have been registered with
-    CELERY_TASK_SERIALIZER='msgpack',
+    task_serializer='msgpack',
     # Result serialization format
-    CELERY_RESULT_SERIALIZER='msgpack',
+    result_serializer='msgpack',
     # Late ack means the task messages will be acknowledged after the task has
     # been executed, not just before, which is the default behavior.
-    CELERY_ACKS_LATE=True,
+    task_acks_late=True,
     # A string identifying the default serialization method to use.
     # Can be pickle (default), json, yaml, msgpack or any custom serialization
     # methods that have been registered with kombu.serialization.registry
-    CELERY_ACCEPT_CONTENT=['msgpack', 'json', 'pickle'],
+    accept_content=['msgpack', 'json'],
     # If True the task will report its status as “started”
     # when the task is executed by a worker.
-    CELERY_TRACK_STARTED=True,
+    task_track_started=True,
     # Default compression used for task messages. Can be gzip, bzip2
     # (if available), or any custom compression schemes registered
     # in the Kombu compression registry.
-    # CELERY_MESSAGE_COMPRESSION='bzip2',
+    # result_compression='bzip2',
+    # task_compression='bzip2',
     # Disable all rate limits, even if tasks has explicit rate limits set.
     # (Disabling rate limits altogether is recommended if you don’t have any
     # tasks using them.)
-    CELERY_DISABLE_RATE_LIMITS=True,
+    worker_disable_rate_limits=True,
     # Task hard time limit in seconds. The worker processing the task will be
     # killed and replaced with a new one when this is exceeded.
-    # CELERYD_TASK_TIME_LIMIT=3600,
+    # task_time_limit=3600,
     # Task soft time limit in seconds.
     # The SoftTimeLimitExceeded exception will be raised when this is exceeded.
     # The task can catch this to e.g. clean up before the hard time limit
     # comes.
-    CELERYD_TASK_SOFT_TIME_LIMIT=CONFIG['task_soft_time_limit'],
+    task_soft_time_limit=CONFIG['task_soft_time_limit'],
     # Task routing
-    CELERY_ROUTES=TaskRouter(),
+    task_routes=TaskRouter(),
     # Task queues this worker will consume from
-    CELERY_QUEUES=CELERY_QUEUES,
+    task_queues=CELERY_QUEUES,
     # Allow pool restarts from remote
-    CELERYD_POOL_RESTARTS=True,
+    worker_pool_restarts=True,
     # Do not prefetch tasks
-    CELERYD_PREFETCH_MULTIPLIER=1,
+    worker_prefetch_multiplier=1,
     # Send events
-    CELERY_SEND_EVENTS=True,
+    worker_send_task_events=True,
     # Do not send useless task_sent events
-    CELERY_SEND_TASK_SENT_EVENT=False,
+    task_send_sent_event=False,
 )

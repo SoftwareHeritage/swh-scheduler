@@ -24,7 +24,9 @@ class FixtureTest(SchedulerTestFixture, unittest.TestCase):
         super().setUp()
         self.add_scheduler_task_type(
             'some_test_task_type',
-            'swh.scheduler.tests.test_fixtures.SomeTestTask')
+            'swh.scheduler.tests.test_fixtures.SomeTestTask',
+            SomeTestTask,
+        )
 
     def test_task_run(self):
         self.scheduler.create_tasks([create_task_dict(
@@ -32,7 +34,6 @@ class FixtureTest(SchedulerTestFixture, unittest.TestCase):
             'oneshot',
             foo='bar',
             )])
-
         self.assertEqual(task_has_run, False)
         self.run_ready_tasks()
         self.assertEqual(task_has_run, True)

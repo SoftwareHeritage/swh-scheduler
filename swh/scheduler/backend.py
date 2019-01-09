@@ -252,7 +252,7 @@ class SchedulerBackend(SWHConfig, DbBackend):
     task_keys = task_create_keys + ['id', 'current_interval', 'status']
 
     @autocommit
-    def create_tasks(self, tasks, cursor=None):
+    def create_tasks(self, tasks, policy='recurring', cursor=None):
         """Create new tasks.
 
         Args:
@@ -274,7 +274,7 @@ class SchedulerBackend(SWHConfig, DbBackend):
         cursor.execute('select swh_scheduler_mktemp_task()')
         self.copy_to(tasks, 'tmp_task', self.task_create_keys,
                      default_columns={
-                         'policy': 'recurring',
+                         'policy': policy,
                          'status': 'next_run_not_scheduled'
                      },
                      cursor=cursor)
@@ -288,6 +288,8 @@ class SchedulerBackend(SWHConfig, DbBackend):
     @autocommit
     def set_status_tasks(self, task_ids, status='disabled', cursor=None):
         """Set the tasks' status whose ids are listed."""
+        if not task_ids:
+            return
         query = "UPDATE task SET status = %s WHERE id IN %s"
         cursor.execute(query, (status, tuple(task_ids),))
         return None
