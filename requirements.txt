@@ -3,7 +3,7 @@
 # dependency lines, see https://pip.readthedocs.org/en/1.1/requirements.html
 
 arrow
-celery
+celery >= 4
 Click
 elasticsearch > 5.4
 flask
