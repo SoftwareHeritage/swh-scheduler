@@ -4,7 +4,6 @@
 # See top-level LICENSE file for more information
 
 import logging
-import click
 
 from flask import request
 
@@ -140,18 +139,5 @@ def run_from_webserver(environ, start_response,
     return app(environ, start_response)
 
 
-@click.command()
-@click.argument('config-path', required=1)
-@click.option('--host', default='0.0.0.0',
-              help="Host to run the scheduler server api")
-@click.option('--port', default=5008, type=click.INT,
-              help="Binding port of the server")
-@click.option('--debug/--nodebug', default=True,
-              help="Indicates if the server should run in debug mode")
-def launch(config_path, host, port, debug):
-    app.config.update(config.read(config_path, DEFAULT_CONFIG))
-    app.run(host, port=port, debug=bool(debug))
-
-
 if __name__ == '__main__':
-    launch()
+    print('Please use the "swh-scheduler api-server" command')
