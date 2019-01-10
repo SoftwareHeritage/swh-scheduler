@@ -205,12 +205,14 @@ def schedule_tasks(ctx, columns, delimiter, file):
 @click.argument('options', nargs=-1)
 @click.option('--policy', '-p', default='recurring',
               type=click.Choice(['recurring', 'oneshot']))
+@click.option('--priority', '-P', default=None,
+              type=click.Choice(['low', 'normal', 'high']))
 @click.option('--next-run', '-n', default=None)
 @click.pass_context
-def schedule_task(ctx, type, options, policy, next_run):
+def schedule_task(ctx, type, options, policy, priority, next_run):
     """Schedule one task from arguments.
 
-    Use sample:
+    Usage sample:
 
     swh-scheduler --database 'service=swh-scheduler' \
         task add swh-lister-pypi
@@ -218,6 +220,8 @@ def schedule_task(ctx, type, options, policy, next_run):
     swh-scheduler --database 'service=swh-scheduler' \
         task add swh-lister-debian --policy=oneshot distribution=stretch
 
+    Note: if the priority is not given, the task won't have the priority set,
+    which is considered as the lowest priority level.
     """
     scheduler = ctx.obj['scheduler']
     if not scheduler:
@@ -229,6 +233,7 @@ def schedule_task(ctx, type, options, policy, next_run):
     kw = dict(x.split('=', 1) for x in options if '=' in x)
     task = {'type': type,
             'policy': policy,
+            'priority': priority,
             'arguments': {
                 'args': args,
                 'kwargs': kw,
