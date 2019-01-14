@@ -347,6 +347,37 @@ def list_tasks(ctx, task_id, task_type, limit, status, policy, priority,
     click.echo('\n'.join(output))
 
 
+@task.command('respawn')
+@click.argument('task-ids', required=True, nargs=-1)
+@click.option('--next-run', '-n', required=False, type=DATETIME,
+              metavar='DATETIME', default=None,
+              help='Re spawn the selected tasks at this date')
+@click.pass_context
+def respawn_tasks(ctx, task_ids, next_run):
+    """Respawn tasks.
+
+    Respawn tasks given by their ids (see the 'task list' command to
+    find task ids) at the given date (immediately by default).
+
+    Eg.
+
+       swh-scheduler task respawn 1 3 12
+    """
+    scheduler = ctx.obj['scheduler']
+    if not scheduler:
+        raise ValueError('Scheduler class (local/remote) must be instantiated')
+    if next_run is None:
+        next_run = arrow.utcnow()
+    output = []
+
+    scheduler.set_status_tasks(
+        task_ids, status='next_run_not_scheduled', next_run=next_run)
+    output.append('Respawn tasks %s\n' % (
+        task_ids))
+
+    click.echo('\n'.join(output))
+
+
 @task.command('archive')
 @click.option('--before', '-b', default=None,
               help='''Task whose ended date is anterior will be archived.
