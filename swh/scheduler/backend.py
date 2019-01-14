@@ -221,11 +221,11 @@ class SchedulerBackend(SWHConfig, DbBackend):
                   for this task type
 
         """
+        keys = [key for key in self.task_type_keys if key in task_type]
         query = self._format_query(
             """insert into task_type ({keys}) values ({placeholders})""",
-            self.task_type_keys,
-        )
-        cursor.execute(query, [task_type[key] for key in self.task_type_keys])
+            keys)
+        cursor.execute(query, [task_type[key] for key in keys])
 
     @autocommit
     def get_task_type(self, task_type_name, cursor=None):
