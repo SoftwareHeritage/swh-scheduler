@@ -8,6 +8,7 @@ import datetime
 from functools import wraps
 import json
 import tempfile
+import logging
 
 from arrow import Arrow, utcnow
 import psycopg2
@@ -15,6 +16,9 @@ import psycopg2.extras
 from psycopg2.extensions import AsIs
 
 from swh.core.config import SWHConfig
+
+
+logger = logging.getLogger(__name__)
 
 
 def adapt_arrow(arrow):
@@ -185,6 +189,7 @@ class SchedulerBackend(SWHConfig, DbBackend):
         self.db = None
         self.db_conn_dsn = self.config['scheduling_db']
         self.reconnect()
+        logger.debug('SchedulerBackend config=%s' % self.config)
 
     task_type_keys = [
         'type', 'description', 'backend_name', 'default_interval',
@@ -333,7 +338,7 @@ class SchedulerBackend(SWHConfig, DbBackend):
                 %s, %s, %s :: bigint, %s :: bigint)''',
             (task_type, timestamp, num_tasks, num_tasks_priority)
         )
-
+        logger.debug('PEEK %s => %s' % (task_type, cursor.rowcount))
         return cursor.fetchall()
 
     @autocommit
@@ -355,13 +360,12 @@ class SchedulerBackend(SWHConfig, DbBackend):
         """
         if timestamp is None:
             timestamp = utcnow()
-
         cursor.execute(
             '''select * from swh_scheduler_grab_ready_tasks(
                  %s, %s, %s :: bigint, %s :: bigint)''',
             (task_type, timestamp, num_tasks, num_tasks_priority)
         )
-
+        logger.debug('GRAB %s => %s' % (task_type, cursor.rowcount))
         return cursor.fetchall()
 
     task_run_create_keys = ['task', 'backend_id', 'scheduled', 'metadata']
