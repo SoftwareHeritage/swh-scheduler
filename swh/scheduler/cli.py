@@ -70,15 +70,6 @@ def pretty_print_task(task):
     return ''.join(lines)
 
 
-def list_task_types(ctx, param, value):
-    if not value or ctx.resilient_parsing:
-        return
-    click.echo("Known task types:")
-    for tasktype in ctx.obj['scheduler'].get_task_types():
-        click.echo('{type}:\n  {description}'.format(**tasktype))
-    ctx.exit()
-
-
 @click.group(context_settings=CONTEXT_SETTINGS)
 @click.option('--cls', '-c', default='local',
               type=click.Choice(['local', 'remote']),
@@ -124,8 +115,6 @@ def cli(ctx, cls, database, url, log_level):
 
 
 @cli.group('task')
-@click.option('--list-types', '-l', is_flag=True, default=False, is_eager=True,
-              expose_value=False, callback=list_task_types)
 @click.pass_context
 def task(ctx):
     """Manipulate tasks."""
@@ -459,6 +448,41 @@ def api_server(ctx, config_path, host, port, debug):
         debug = ctx.obj['loglevel'] <= logging.DEBUG
 
     app.run(host, port=port, debug=bool(debug))
+
+
+@cli.group('task-type')
+@click.pass_context
+def task_type(ctx):
+    """Manipulate task types."""
+    pass
+
+
+@task_type.command('list')
+@click.option('--verbose', '-v', is_flag=True, default=False)
+@click.option('--task_type', '-t', multiple=True, default=None,
+              help='List task types of given type')
+@click.option('--task_name', '-n', multiple=True, default=None,
+              help='List task types of given backend task name')
+@click.pass_context
+def list_task_types(ctx, verbose, task_type, task_name):
+    click.echo("Known task types:")
+    if verbose:
+        tmpl = click.style('{type}: ', bold=True) + '''{backend_name}
+  {description}
+  interval: {default_interval} [{min_interval}, {max_interval}]
+  backoff_factor: {backoff_factor}
+  max_queue_length: {max_queue_length}
+  num_retries: {num_retries}
+  retry_delay: {retry_delay}
+'''
+    else:
+        tmpl = '{type}:\n  {description}'
+    for tasktype in ctx.obj['scheduler'].get_task_types():
+        if task_type and tasktype['type'] not in task_type:
+            continue
+        if task_name and tasktype['backend_name'] not in task_name:
+            continue
+        click.echo(tmpl.format(**tasktype))
 
 
 if __name__ == '__main__':
