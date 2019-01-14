@@ -286,6 +286,67 @@ def list_pending_tasks(ctx, task_types, limit, before):
     click.echo('\n'.join(output))
 
 
+@task.command('list')
+@click.option('--task-id', '-i', default=None, multiple=True, metavar='ID',
+              help='List only tasks whose id is ID.')
+@click.option('--task-type', '-t', default=None, multiple=True, metavar='TYPE',
+              help='List only tasks of type TYPE')
+@click.option('--limit', '-l', required=False, type=click.INT,
+              help='The maximum number of tasks to fetch.')
+@click.option('--status', '-s', multiple=True, metavar='STATUS',
+              default=None,
+              help='List tasks whose status is STATUS.')
+@click.option('--policy', '-p', default=None,
+              type=click.Choice(['recurring', 'oneshot']),
+              help='List tasks whose policy is POLICY.')
+@click.option('--priority', '-P', default=None, multiple=True,
+              type=click.Choice(['all', 'low', 'normal', 'high']),
+              help='List tasks whose priority is PRIORITY.')
+@click.option('--before', '-b', required=False, type=DATETIME,
+              metavar='DATETIME',
+              help='Limit to tasks supposed to run before the given date.')
+@click.option('--after', '-a', required=False, type=DATETIME,
+              metavar='DATETIME',
+              help='Limit to tasks supposed to run after the given date.')
+@click.pass_context
+def list_tasks(ctx, task_id, task_type, limit, status, policy, priority,
+               before, after):
+    """List tasks.
+    """
+    scheduler = ctx.obj['scheduler']
+    if not scheduler:
+        raise ValueError('Scheduler class (local/remote) must be instantiated')
+
+    if not task_type:
+        task_type = [x['type'] for x in scheduler.get_task_types()]
+
+    # if task_id is not given, default value for status is
+    #  'next_run_not_scheduled'
+    # if task_id is given, default status is 'all'
+    if task_id is None and status is None:
+        status = ['next_run_not_scheduled']
+    if status and 'all' in status:
+        status = None
+
+    if priority and 'all' in priority:
+        priority = None
+
+    output = []
+    tasks = scheduler.search_tasks(
+        task_id=task_id,
+        task_type=task_type,
+        status=status, priority=priority, policy=policy,
+        before=before, after=after,
+        limit=limit)
+
+    output.append('Found %d tasks\n' % (
+        len(tasks)))
+    for task in tasks:
+        output.append(pretty_print_task(task, full=True))
+
+    click.echo('\n'.join(output))
+
+
 @task.command('archive')
 @click.option('--before', '-b', default=None,
               help='''Task whose ended date is anterior will be archived.
