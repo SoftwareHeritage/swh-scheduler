@@ -291,13 +291,23 @@ class SchedulerBackend(SWHConfig, DbBackend):
         return cursor.fetchall()
 
     @autocommit
-    def set_status_tasks(self, task_ids, status='disabled', cursor=None):
-        """Set the tasks' status whose ids are listed."""
+    def set_status_tasks(self, task_ids,
+                         status='disabled', next_run=None, cursor=None):
+        """Set the tasks' status whose ids are listed.
+
+        If given, also set the next_run date.
+        """
         if not task_ids:
             return
-        query = "UPDATE task SET status = %s WHERE id IN %s"
-        cursor.execute(query, (status, tuple(task_ids),))
-        return None
+        query = ["UPDATE task SET status = %s"]
+        args = [status]
+        if next_run:
+            query.append(', next_run = %s')
+            args.append(next_run)
+        query.append(" WHERE id IN %s")
+        args.append(tuple(task_ids))
+
+        cursor.execute(''.join(query), args)
 
     @autocommit
     def disable_tasks(self, task_ids, cursor=None):
