@@ -485,5 +485,42 @@ def list_task_types(ctx, verbose, task_type, task_name):
         click.echo(tmpl.format(**tasktype))
 
 
+@task_type.command('add')
+@click.argument('type', required=1)
+@click.argument('task-name', required=1)
+@click.argument('description', required=1)
+@click.option('--default-interval', '-i', default='90 days',
+              help='Default interval ("90 days" by default)')
+@click.option('--min-interval', default=None,
+              help='Minimum interval (default interval if not set)')
+@click.option('--max-interval', '-i', default=None,
+              help='Maximal interval (default interval if not set)')
+@click.option('--backoff-factor', '-f', type=float, default=1,
+              help='Backoff factor')
+@click.pass_context
+def add_task_type(ctx, type, task_name, description,
+                  default_interval, min_interval, max_interval,
+                  backoff_factor):
+    """Create a new task type
+    """
+    scheduler = ctx.obj['scheduler']
+    if not scheduler:
+        raise ValueError('Scheduler class (local/remote) must be instantiated')
+    task_type = dict(
+        type=type,
+        backend_name=task_name,
+        description=description,
+        default_interval=default_interval,
+        min_interval=min_interval,
+        max_interval=max_interval,
+        backoff_factor=backoff_factor,
+        max_queue_length=None,
+        num_retries=None,
+        retry_delay=None,
+        )
+    scheduler.create_task_type(task_type)
+    click.echo('OK')
+
+
 if __name__ == '__main__':
     cli()
