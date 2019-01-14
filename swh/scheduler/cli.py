@@ -108,6 +108,7 @@ def cli(ctx, cls, database, url, log_level):
 
     ctx.ensure_object(dict)
 
+    logger = logging.getLogger(__name__)
     scheduler = None
     override_config = {}
     try:
@@ -115,6 +116,8 @@ def cli(ctx, cls, database, url, log_level):
             override_config = {'scheduling_db': database}
         elif cls == 'remote' and url:
             override_config = {'url': url}
+        logger.debug('Instanciating scheduler %s with %s' % (
+            cls, override_config))
         scheduler = get_scheduler(cls, args=override_config)
     except Exception:
         # it's the subcommand to decide whether not having a proper
@@ -493,6 +496,7 @@ def runner(ctx, period):
 
     logger = logging.getLogger(__name__ + '.runner')
     scheduler = ctx.obj['scheduler']
+    logger.debug('Scheduler %s' % scheduler)
     try:
         while True:
             logger.info('Run ready tasks')
