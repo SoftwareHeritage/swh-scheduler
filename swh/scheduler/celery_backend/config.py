@@ -30,6 +30,7 @@ CONFIG_NAME_TEMPLATE = 'worker/%s'
 
 DEFAULT_CONFIG = {
     'task_broker': ('str', 'amqp://guest@localhost//'),
+    'result_backend': ('str', 'rpc://'),
     'task_modules': ('list[str]', []),
     'task_queues': ('list[str]', []),
     'task_soft_time_limit': ('int', 0),
@@ -255,6 +256,7 @@ CELERY_DEFAULT_CONFIG = dict(
 
 # Instantiate the Celery app
 app = Celery(broker=CONFIG['task_broker'],
+             backend=CONFIG['result_backend'],
              task_cls='swh.scheduler.task:SWHTask')
 app.add_defaults(CELERY_DEFAULT_CONFIG)
 
