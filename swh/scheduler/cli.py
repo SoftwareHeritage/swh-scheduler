@@ -48,8 +48,11 @@ def pretty_print_dict(dict, indent):
                    for key, value in dict.items())
 
 
-def pretty_print_task(task):
-    """Pretty-print a task"""
+def pretty_print_task(task, full=False):
+    """Pretty-print a task
+
+    If 'full' is True, also print the status and priority fields.
+    """
     next_run = arrow.get(task['next_run'])
     lines = [
         '%s %s\n' % (click.style('Task', bold=True), task['id']),
@@ -59,8 +62,17 @@ def pretty_print_task(task):
         '\n',
         click.style('  Interval: ', bold=True),
         str(task['current_interval']), '\n',
-        click.style('  Type: ', bold=True), task['type'], '\n',
-        click.style('  Policy: ', bold=True), task['policy'], '\n',
+        click.style('  Type: ', bold=True), task['type'] or '', '\n',
+        click.style('  Policy: ', bold=True), task['policy'] or '', '\n',
+        ]
+    if full:
+        lines += [
+            click.style('  Status: ', bold=True),
+            task['status'] or '', '\n',
+            click.style('  Priority: ', bold=True),
+            task['priority'] or '', '\n',
+        ]
+    lines += [
         click.style('  Args:\n', bold=True),
         pretty_print_list(task['arguments']['args'], indent=4),
         click.style('  Keyword args:\n', bold=True),
