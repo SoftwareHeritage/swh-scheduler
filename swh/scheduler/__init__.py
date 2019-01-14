@@ -16,13 +16,14 @@ def compute_nb_tasks_from(num_tasks):
         num_tasks (int):
 
     Returns:
-        tuple number of tasks without priority, number of tasks with
-        priority
+        tuple number of tasks without priority (int), number of tasks with
+        priority (int)
 
     """
     if not num_tasks:
         return None, None
-    return (1 - PRIORITY_SLOT) * num_tasks, PRIORITY_SLOT * num_tasks
+    return (int((1 - PRIORITY_SLOT) * num_tasks),
+            int(PRIORITY_SLOT * num_tasks))
 
 
 def get_scheduler(cls, args={}):
