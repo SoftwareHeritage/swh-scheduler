@@ -50,6 +50,14 @@ class RemoteScheduler(SWHRemoteAPI):
     def get_tasks(self, task_ids):
         return self.post('get_tasks', {'task_ids': task_ids})
 
+    def search_tasks(self, task_id=None, task_type=None, status=None,
+                     priority=None, policy=None, before=None, after=None,
+                     limit=None):
+        return self.post('search_tasks', dict(
+            task_id=task_id, task_type=task_type, status=status,
+            priority=priority, policy=policy, before=before, after=after,
+            limit=limit))
+
     def peek_ready_tasks(self, task_type, timestamp=None, num_tasks=None,
                          num_tasks_priority=None):
         return self.post('peek_ready_tasks', {

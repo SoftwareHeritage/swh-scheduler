@@ -85,6 +85,11 @@ def get_tasks():
     return encode_data(get_sched().get_tasks(**decode_request(request)))
 
 
+@app.route('/search_tasks', methods=['POST'])
+def search_tasks():
+    return encode_data(get_sched().search_tasks(**decode_request(request)))
+
+
 @app.route('/peek_ready_tasks', methods=['POST'])
 def peek_ready_tasks():
     return encode_data(get_sched().peek_ready_tasks(**decode_request(request)))
