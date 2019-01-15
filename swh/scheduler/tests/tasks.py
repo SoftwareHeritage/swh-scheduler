@@ -25,3 +25,17 @@ def multiping(self, n=10):
     self.log.debug('%s OK (spawned %s subtasks)' % (self.name, n))
     promise.save()
     return promise.id
+
+
+@app.task(name='swh.scheduler.tests.tasks.error',
+          bind=True)
+def not_implemented(self):
+    self.log.debug(self.name)
+    raise NotImplementedError('Nope')
+
+
+@app.task(name='swh.scheduler.tests.tasks.add',
+          bind=True)
+def add(self, x, y):
+    self.log.debug(self.name)
+    return x + y
