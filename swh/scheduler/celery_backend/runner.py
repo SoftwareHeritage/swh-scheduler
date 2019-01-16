@@ -99,7 +99,7 @@ def run_ready_tasks(backend, app):
         all_backend_tasks.extend(backend_tasks)
 
 
-if __name__ == '__main__':
+def main():
     for module in main_app.conf.CELERY_IMPORTS:
         __import__(module)
 
@@ -109,3 +109,7 @@ if __name__ == '__main__':
     except Exception:
         main_backend.rollback()
         raise
+
+
+if __name__ == '__main__':
+    main()

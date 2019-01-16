@@ -30,6 +30,7 @@ CONFIG_NAME_TEMPLATE = 'worker/%s'
 
 DEFAULT_CONFIG = {
     'task_broker': ('str', 'amqp://guest@localhost//'),
+    'result_backend': ('str', 'rpc://'),
     'task_modules': ('list[str]', []),
     'task_queues': ('list[str]', []),
     'task_soft_time_limit': ('int', 0),
@@ -44,9 +45,10 @@ def setup_log_handler(loglevel=None, logfile=None, format=None,
     We use the command-line loglevel for tasks only, as we never
     really care about the debug messages from celery.
     """
-
     if loglevel is None:
         loglevel = logging.DEBUG
+    if isinstance(loglevel, str):
+        loglevel = logging._nameToLevel[loglevel]
 
     formatter = logging.Formatter(format)
 
@@ -65,19 +67,19 @@ def setup_log_handler(loglevel=None, logfile=None, format=None,
     systemd_journal.setFormatter(formatter)
     root_logger.addHandler(systemd_journal)
 
-    celery_logger = logging.getLogger('celery')
-    celery_logger.setLevel(logging.INFO)
-
+    logging.getLogger('celery').setLevel(logging.INFO)
+    # Silence amqp heartbeat_tick messages
+    logger = logging.getLogger('amqp')
+    logger.addFilter(lambda record: not record.msg.startswith(
+        'heartbeat_tick'))
+    logger.setLevel(logging.DEBUG)
     # Silence useless "Starting new HTTP connection" messages
-    urllib3_logger = logging.getLogger('urllib3')
-    urllib3_logger.setLevel(logging.WARNING)
+    logging.getLogger('urllib3').setLevel(logging.WARNING)
 
-    swh_logger = logging.getLogger('swh')
-    swh_logger.setLevel(loglevel)
-
+    logging.getLogger('swh').setLevel(loglevel)
     # get_task_logger makes the swh tasks loggers children of celery.task
-    celery_task_logger = logging.getLogger('celery.task')
-    celery_task_logger.setLevel(loglevel)
+    logging.getLogger('celery.task').setLevel(loglevel)
+    return loglevel
 
 
 @celeryd_after_setup.connect
@@ -107,7 +109,7 @@ def setup_queues_and_tasks(sender, instance, **kwargs):
                     and obj != Task  # Don't register the abstract class itself
             ):
                 class_name = '%s.%s' % (module_name, name)
-                instance.app.register_task_class(class_name, obj)
+                register_task_class(instance.app, class_name, obj)
 
     for task_name in instance.app.tasks:
         if task_name.startswith('swh.'):
@@ -120,65 +122,65 @@ def monotonic(state):
     return {'monotonic': _monotonic()}
 
 
-class TaskRouter:
+def route_for_task(name, args, kwargs, options, task=None, **kw):
     """Route tasks according to the task_queue attribute in the task class"""
-    def route_for_task(self, task, *args, **kwargs):
-        if task.startswith('swh.'):
-            return {'queue': task}
+    if name is not None and name.startswith('swh.'):
+        return {'queue': name}
 
 
-class CustomCelery(Celery):
-    def get_queue_stats(self, queue_name):
-        """Get the statistics regarding a queue on the broker.
+def get_queue_stats(app, queue_name):
+    """Get the statistics regarding a queue on the broker.
 
-        Arguments:
-          queue_name: name of the queue to check
+    Arguments:
+      queue_name: name of the queue to check
 
-        Returns a dictionary raw from the RabbitMQ management API;
-        or `None` if the current configuration does not use RabbitMQ.
+    Returns a dictionary raw from the RabbitMQ management API;
+    or `None` if the current configuration does not use RabbitMQ.
 
-        Interesting keys:
-         - consumers (number of consumers for the queue)
-         - messages (number of messages in queue)
-         - messages_unacknowledged (number of messages currently being
-           processed)
+    Interesting keys:
+     - consumers (number of consumers for the queue)
+     - messages (number of messages in queue)
+     - messages_unacknowledged (number of messages currently being
+       processed)
 
-        Documentation: https://www.rabbitmq.com/management.html#http-api
-        """
+    Documentation: https://www.rabbitmq.com/management.html#http-api
+    """
 
-        conn_info = self.connection().info()
-        if conn_info['transport'] == 'memory':
-            # We're running in a test environment, without RabbitMQ.
-            return None
-        url = 'http://{hostname}:{port}/api/queues/{vhost}/{queue}'.format(
-            hostname=conn_info['hostname'],
-            port=conn_info['port'] + 10000,
-            vhost=urllib.parse.quote(conn_info['virtual_host'], safe=''),
-            queue=urllib.parse.quote(queue_name, safe=''),
-        )
-        credentials = (conn_info['userid'], conn_info['password'])
-        r = requests.get(url, auth=credentials)
-        if r.status_code == 404:
-            return {}
-        if r.status_code != 200:
-            raise ValueError('Got error %s when reading queue stats: %s' % (
-                r.status_code, r.json()))
-        return r.json()
+    conn_info = app.connection().info()
+    if conn_info['transport'] == 'memory':
+        # We're running in a test environment, without RabbitMQ.
+        return None
+    url = 'http://{hostname}:{port}/api/queues/{vhost}/{queue}'.format(
+        hostname=conn_info['hostname'],
+        port=conn_info['port'] + 10000,
+        vhost=urllib.parse.quote(conn_info['virtual_host'], safe=''),
+        queue=urllib.parse.quote(queue_name, safe=''),
+    )
+    credentials = (conn_info['userid'], conn_info['password'])
+    r = requests.get(url, auth=credentials)
+    if r.status_code == 404:
+        return {}
+    if r.status_code != 200:
+        raise ValueError('Got error %s when reading queue stats: %s' % (
+            r.status_code, r.json()))
+    return r.json()
 
-    def get_queue_length(self, queue_name):
-        """Shortcut to get a queue's length"""
-        stats = self.get_queue_stats(queue_name)
-        if stats:
-            return stats.get('messages')
 
-    def register_task_class(self, name, cls):
-        """Register a class-based task under the given name"""
-        if name in self.tasks:
-            return
+def get_queue_length(app, queue_name):
+    """Shortcut to get a queue's length"""
+    stats = get_queue_stats(app, queue_name)
+    if stats:
+        return stats.get('messages')
 
-        task_instance = cls()
-        task_instance.name = name
-        self.register_task(task_instance)
+
+def register_task_class(app, name, cls):
+    """Register a class-based task under the given name"""
+    if name in app.tasks:
+        return
+
+    task_instance = cls()
+    task_instance.name = name
+    app.register_task(task_instance)
 
 
 INSTANCE_NAME = os.environ.get(CONFIG_NAME_ENVVAR)
@@ -196,11 +198,7 @@ CELERY_QUEUES = [Queue('celery', Exchange('celery'), routing_key='celery')]
 for queue in CONFIG['task_queues']:
     CELERY_QUEUES.append(Queue(queue, Exchange(queue), routing_key=queue))
 
-# Instantiate the Celery app
-app = CustomCelery()
-app.conf.update(
-    # The broker
-    broker_url=CONFIG['task_broker'],
+CELERY_DEFAULT_CONFIG = dict(
     # Timezone configuration: all in UTC
     enable_utc=True,
     timezone='UTC',
@@ -243,7 +241,7 @@ app.conf.update(
     # comes.
     task_soft_time_limit=CONFIG['task_soft_time_limit'],
     # Task routing
-    task_routes=TaskRouter(),
+    task_routes=route_for_task,
     # Task queues this worker will consume from
     task_queues=CELERY_QUEUES,
     # Allow pool restarts from remote
@@ -254,4 +252,13 @@ app.conf.update(
     worker_send_task_events=True,
     # Do not send useless task_sent events
     task_send_sent_event=False,
-)
+    )
+
+# Instantiate the Celery app
+app = Celery(broker=CONFIG['task_broker'],
+             backend=CONFIG['result_backend'],
+             task_cls='swh.scheduler.task:SWHTask')
+app.add_defaults(CELERY_DEFAULT_CONFIG)
+
+# XXX for BW compat
+Celery.get_queue_length = get_queue_length

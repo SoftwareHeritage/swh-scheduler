@@ -10,5 +10,6 @@ swh.core>=0.0.48
 
 [testing]
 hypothesis
-pytest
+pytest<4
+pytest-postgresql
 celery>=4
