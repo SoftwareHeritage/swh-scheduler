@@ -28,9 +28,9 @@ class RemoteScheduler(SWHRemoteAPI):
     def close_connection(self):
         return self.post('close_connection', {})
 
-    def set_status_tasks(self, task_ids, status='disabled'):
-        return self.post('set_status_tasks', {'task_ids': task_ids,
-                                              'status': status})
+    def set_status_tasks(self, task_ids, status='disabled', next_run=None):
+        return self.post('set_status_tasks', dict(
+            task_ids=task_ids, status=status, next_run=next_run))
 
     def create_task_type(self, task_type):
         return self.post('create_task_type', {'task_type': task_type})
@@ -49,6 +49,14 @@ class RemoteScheduler(SWHRemoteAPI):
 
     def get_tasks(self, task_ids):
         return self.post('get_tasks', {'task_ids': task_ids})
+
+    def search_tasks(self, task_id=None, task_type=None, status=None,
+                     priority=None, policy=None, before=None, after=None,
+                     limit=None):
+        return self.post('search_tasks', dict(
+            task_id=task_id, task_type=task_type, status=status,
+            priority=priority, policy=policy, before=before, after=after,
+            limit=limit))
 
     def peek_ready_tasks(self, task_type, timestamp=None, num_tasks=None,
                          num_tasks_priority=None):
