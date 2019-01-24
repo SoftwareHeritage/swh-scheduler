@@ -498,9 +498,11 @@ def runner(ctx, period):
     logger.debug('Scheduler %s' % scheduler)
     try:
         while True:
-            logger.info('Run ready tasks')
+            logger.debug('Run ready tasks')
             try:
-                run_ready_tasks(scheduler, app)
+                ntasks = len(run_ready_tasks(scheduler, app))
+                if ntasks:
+                    logger.info('Scheduled %s tasks', ntasks)
             except Exception:
                 scheduler.rollback()
                 logger.exception('Unexpected error in run_ready_tasks()')
