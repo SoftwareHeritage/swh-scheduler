@@ -375,8 +375,7 @@ def respawn_tasks(ctx, task_ids, next_run):
 
     scheduler.set_status_tasks(
         task_ids, status='next_run_not_scheduled', next_run=next_run)
-    output.append('Respawn tasks %s\n' % (
-        task_ids))
+    output.append('Respawn tasks %s\n' % (task_ids,))
 
     click.echo('\n'.join(output))
 
