@@ -18,7 +18,7 @@ DEFAULT_CONFIG = {
     'scheduler': ('dict', {
         'cls': 'local',
         'args': {
-            'scheduling_db': 'dbname=softwareheritage-scheduler-dev',
+            'db': 'dbname=softwareheritage-scheduler-dev',
         },
     })
 }
