@@ -1,10 +1,7 @@
-from celery import group
-
-from swh.scheduler.celery_backend.config import app
+from celery import group, current_app as app
 
 
-@app.task(name='swh.scheduler.tests.tasks.ping',
-          bind=True)
+@app.task(name='swh.scheduler.tests.tasks.ping', bind=True)
 def ping(self, **kw):
     # check this is a SWHTask
     assert hasattr(self, 'log')
@@ -16,26 +13,19 @@ def ping(self, **kw):
     return 'OK'
 
 
-@app.task(name='swh.scheduler.tests.tasks.multiping',
-          bind=True)
+@app.task(name='swh.scheduler.tests.tasks.multiping', bind=True)
 def multiping(self, n=10):
-    self.log.debug(self.name)
-
     promise = group(ping.s(i=i) for i in range(n))()
     self.log.debug('%s OK (spawned %s subtasks)' % (self.name, n))
     promise.save()
     return promise.id
 
 
-@app.task(name='swh.scheduler.tests.tasks.error',
-          bind=True)
-def not_implemented(self):
-    self.log.debug(self.name)
+@app.task(name='swh.scheduler.tests.tasks.error')
+def not_implemented():
     raise NotImplementedError('Nope')
 
 
-@app.task(name='swh.scheduler.tests.tasks.add',
-          bind=True)
-def add(self, x, y):
-    self.log.debug(self.name)
+@app.task(name='swh.scheduler.tests.tasks.add')
+def add(x, y):
     return x + y
