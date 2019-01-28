@@ -30,6 +30,12 @@ class SWHTask(celery.app.task.Task):
             self._log = get_task_logger(self.name)
         return self._log
 
+    def run(self, *args, **kwargs):
+        self.log.debug('%s: args=%s, kwargs=%s', self.name, args, kwargs)
+        ret = super().run(*args, **kwargs)
+        self.log.debug('%s: OK => %s', self.name, ret)
+        return ret
+
 
 class Task(SWHTask):
     """a schedulable task (abstract class)
