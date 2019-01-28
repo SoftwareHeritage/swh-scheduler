@@ -8,6 +8,7 @@ import datetime
 from functools import wraps
 import json
 import tempfile
+import logging
 
 from arrow import Arrow, utcnow
 import psycopg2
@@ -15,6 +16,9 @@ import psycopg2.extras
 from psycopg2.extensions import AsIs
 
 from swh.core.config import SWHConfig
+
+
+logger = logging.getLogger(__name__)
 
 
 def adapt_arrow(arrow):
@@ -185,6 +189,7 @@ class SchedulerBackend(SWHConfig, DbBackend):
         self.db = None
         self.db_conn_dsn = self.config['scheduling_db']
         self.reconnect()
+        logger.debug('SchedulerBackend config=%s' % self.config)
 
     task_type_keys = [
         'type', 'description', 'backend_name', 'default_interval',
@@ -216,11 +221,11 @@ class SchedulerBackend(SWHConfig, DbBackend):
                   for this task type
 
         """
+        keys = [key for key in self.task_type_keys if key in task_type]
         query = self._format_query(
             """insert into task_type ({keys}) values ({placeholders})""",
-            self.task_type_keys,
-        )
-        cursor.execute(query, [task_type[key] for key in self.task_type_keys])
+            keys)
+        cursor.execute(query, [task_type[key] for key in keys])
 
     @autocommit
     def get_task_type(self, task_type_name, cursor=None):
@@ -286,18 +291,81 @@ class SchedulerBackend(SWHConfig, DbBackend):
         return cursor.fetchall()
 
     @autocommit
-    def set_status_tasks(self, task_ids, status='disabled', cursor=None):
-        """Set the tasks' status whose ids are listed."""
+    def set_status_tasks(self, task_ids,
+                         status='disabled', next_run=None, cursor=None):
+        """Set the tasks' status whose ids are listed.
+
+        If given, also set the next_run date.
+        """
         if not task_ids:
             return
-        query = "UPDATE task SET status = %s WHERE id IN %s"
-        cursor.execute(query, (status, tuple(task_ids),))
-        return None
+        query = ["UPDATE task SET status = %s"]
+        args = [status]
+        if next_run:
+            query.append(', next_run = %s')
+            args.append(next_run)
+        query.append(" WHERE id IN %s")
+        args.append(tuple(task_ids))
+
+        cursor.execute(''.join(query), args)
 
     @autocommit
     def disable_tasks(self, task_ids, cursor=None):
         """Disable the tasks whose ids are listed."""
         return self.set_status_tasks(task_ids)
+
+    @autocommit
+    def search_tasks(self, task_id=None, task_type=None, status=None,
+                     priority=None, policy=None, before=None, after=None,
+                     limit=None, cursor=None):
+        """Search tasks from selected criterions"""
+        where = []
+        args = []
+
+        if task_id:
+            if isinstance(task_id, (str, int)):
+                where.append('id = %s')
+            else:
+                where.append('id in %s')
+                task_id = tuple(task_id)
+            args.append(task_id)
+        if task_type:
+            if isinstance(task_type, str):
+                where.append('type = %s')
+            else:
+                where.append('type in %s')
+                task_type = tuple(task_type)
+            args.append(task_type)
+        if status:
+            if isinstance(status, str):
+                where.append('status = %s')
+            else:
+                where.append('status in %s')
+                status = tuple(status)
+            args.append(status)
+        if priority:
+            if isinstance(priority, str):
+                where.append('priority = %s')
+            else:
+                priority = tuple(priority)
+                where.append('priority in %s')
+            args.append(priority)
+        if policy:
+            where.append('policy = %s')
+            args.append(policy)
+        if before:
+            where.append('next_run <= %s')
+            args.append(before)
+        if after:
+            where.append('next_run >= %s')
+            args.append(after)
+
+        query = 'select * from task where ' + ' and '.join(where)
+        if limit:
+            query += ' limit %s :: bigint'
+            args.append(limit)
+        cursor.execute(query, args)
+        return cursor.fetchall()
 
     @autocommit
     def get_tasks(self, task_ids, cursor=None):
@@ -333,7 +401,7 @@ class SchedulerBackend(SWHConfig, DbBackend):
                 %s, %s, %s :: bigint, %s :: bigint)''',
             (task_type, timestamp, num_tasks, num_tasks_priority)
         )
-
+        logger.debug('PEEK %s => %s' % (task_type, cursor.rowcount))
         return cursor.fetchall()
 
     @autocommit
@@ -355,13 +423,12 @@ class SchedulerBackend(SWHConfig, DbBackend):
         """
         if timestamp is None:
             timestamp = utcnow()
-
         cursor.execute(
             '''select * from swh_scheduler_grab_ready_tasks(
                  %s, %s, %s :: bigint, %s :: bigint)''',
             (task_type, timestamp, num_tasks, num_tasks_priority)
         )
-
+        logger.debug('GRAB %s => %s' % (task_type, cursor.rowcount))
         return cursor.fetchall()
 
     task_run_create_keys = ['task', 'backend_id', 'scheduled', 'metadata']

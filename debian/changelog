@@ -1,8 +1,21 @@
-swh-scheduler (0.0.38-1~swh1~bpo9+1) stretch-swh; urgency=medium
+swh-scheduler (0.0.40-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for stretch-swh
+  * New upstream release 0.0.40     - (tagged by Antoine R. Dumont
+    (@ardumont) <antoine.romain.dumont@gmail.com> on 2019-01-28 16:24:04
+    +0100)
+  * Upstream changes:     - v0.0.40     - swh.scheduler.tests: Mark db
+    tests as such     - Force tox environment to C.UTF-8 locale     -
+    Add debug logging in the SWHTask class
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 09 Jan 2019 18:34:10 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 28 Jan 2019 15:30:41 +0000
+
+swh-scheduler (0.0.39-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.39     - (tagged by David Douard
+    <david.douard@sdfa3.org> on 2019-01-16 13:37:58 +0100)
+  * Upstream changes:     - v0.0.39
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 16 Jan 2019 12:42:37 +0000
 
 swh-scheduler (0.0.38-1~swh1) unstable-swh; urgency=medium
 
