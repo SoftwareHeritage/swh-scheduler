@@ -41,6 +41,7 @@ def test_multiping(swh_app, celery_session_worker):
         assert ("OK (kw={'i': %s})" % i) in results
 
 
+@pytest.mark.db
 def test_scheduler_fixture(swh_app, celery_session_worker, swh_scheduler):
     "Test that the scheduler fixture works properly"
     task_type = swh_scheduler.get_task_type('swh-test-ping')
@@ -58,6 +59,7 @@ def test_scheduler_fixture(swh_app, celery_session_worker, swh_scheduler):
         AsyncResult(id=task['backend_id']).get()
 
 
+@pytest.mark.db
 def test_task_return_value(swh_app, celery_session_worker, swh_scheduler):
     task_type = swh_scheduler.get_task_type('swh-test-add')
     assert task_type
@@ -73,6 +75,7 @@ def test_task_return_value(swh_app, celery_session_worker, swh_scheduler):
     assert value == 42
 
 
+@pytest.mark.db
 def test_task_exception(swh_app, celery_session_worker, swh_scheduler):
     task_type = swh_scheduler.get_task_type('swh-test-error')
     assert task_type
