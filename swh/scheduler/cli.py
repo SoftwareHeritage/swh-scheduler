@@ -15,7 +15,7 @@ import time
 from swh.core import utils, config
 from . import compute_nb_tasks_from
 from .backend_es import SWHElasticSearchClient
-from . import get_scheduler
+from . import get_scheduler, DEFAULT_CONFIG
 
 
 locale.setlocale(locale.LC_ALL, '')
@@ -83,18 +83,18 @@ def pretty_print_task(task, full=False):
 
 
 @click.group(context_settings=CONTEXT_SETTINGS)
-@click.option('--cls', '-c', default='local',
-              type=click.Choice(['local', 'remote']),
-              help="Scheduler's class, default to 'local'")
-@click.option('--database', '-d',
-              help="Scheduling database DSN (if cls is 'local')")
-@click.option('--url', '-u',
-              help="Scheduler's url access (if cls is 'remote')")
+@click.option('--config-file', '-C', default=None,
+              type=click.Path(exists=True, dir_okay=False,),
+              help="Configuration file.")
+@click.option('--database', '-d', default=None,
+              help="Scheduling database DSN (imply cls is 'local')")
+@click.option('--url', '-u', default=None,
+              help="Scheduler's url access (imply cls is 'remote')")
 @click.option('--log-level', '-l', default='INFO',
               type=click.Choice(logging._nameToLevel.keys()),
               help="Log level (default to INFO)")
 @click.pass_context
-def cli(ctx, cls, database, url, log_level):
+def cli(ctx, config_file, cls, database, url, log_level):
     """Software Heritage Scheduler CLI interface
 
     Default to use the the local scheduler instance (plugged to the
@@ -110,22 +110,28 @@ def cli(ctx, cls, database, url, log_level):
 
     logger = logging.getLogger(__name__)
     scheduler = None
-    override_config = {}
+    conf = config.read(config_file, DEFAULT_CONFIG)
+    if 'scheduler' not in conf:
+        raise ValueError("missing 'scheduler' configuration")
+
+    if database:
+        conf['scheduler']['cls'] = 'local'
+        conf['scheduler']['args']['db'] = database
+    elif url:
+        conf['scheduler']['cls'] = 'local'
+        conf['scheduler']['args']['url'] = url
+    sched_conf = conf['scheduler']
     try:
-        if cls == 'local' and database:
-            override_config = {'scheduling_db': database}
-        elif cls == 'remote' and url:
-            override_config = {'url': url}
-        logger.debug('Instanciating scheduler %s with %s' % (
-            cls, override_config))
-        scheduler = get_scheduler(cls, args=override_config)
+        logger.debug('Instanciating scheduler with %s' % (
+            sched_conf))
+        scheduler = get_scheduler(**sched_conf)
     except Exception:
         # it's the subcommand to decide whether not having a proper
         # scheduler instance is a problem.
         pass
 
     ctx.obj['scheduler'] = scheduler
-    ctx.obj['config'] = {'cls': cls, 'args': override_config}
+    ctx.obj['config'] = conf
     ctx.obj['loglevel'] = log_level
 
 
@@ -530,7 +536,6 @@ def listener(ctx):
 
 
 @cli.command('api-server')
-@click.argument('config-path', required=1)
 @click.option('--host', default='0.0.0.0',
               help="Host to run the scheduler server api")
 @click.option('--port', default=5008, type=click.INT,
@@ -540,23 +545,20 @@ def listener(ctx):
                     "Defaults to True if log-level is DEBUG, False otherwise.")
               )
 @click.pass_context
-def api_server(ctx, config_path, host, port, debug):
+def api_server(ctx, host, port, debug):
     """Starts a swh-scheduler API HTTP server.
     """
-    if ctx.obj['config']['cls'] == 'remote':
+    if ctx.obj['config']['scheduler']['cls'] == 'remote':
         click.echo("The API server can only be started with a 'local' "
                    "configuration", err=True)
         ctx.exit(1)
 
-    from swh.scheduler.api.server import app, DEFAULT_CONFIG
-    conf = config.read(config_path, DEFAULT_CONFIG)
-    if ctx.obj['config']['args']:
-        conf['scheduler']['args'].update(ctx.obj['config']['args'])
-    app.config.update(conf)
+    from swh.scheduler.api import server
+    server.app.scheduler = ctx.obj['scheduler']
+    server.app.config.update(ctx.obj['config'])
     if debug is None:
         debug = ctx.obj['loglevel'] <= logging.DEBUG
-
-    app.run(host, port=port, debug=bool(debug))
+    server.app.run(host, port=port, debug=bool(debug))
 
 
 @cli.group('task-type')
