@@ -7,44 +7,42 @@
 """Elastic Search backend
 
 """
-
+from copy import deepcopy
 
 from swh.core import utils
-from swh.core.config import SWHConfig
 from elasticsearch import Elasticsearch
 from elasticsearch import helpers
 
 
-class SWHElasticSearchClient(SWHConfig):
-    CONFIG_BASE_FILENAME = 'backend/elastic'
-
-    DEFAULT_CONFIG = {
-        'storage_nodes': ('[dict]', [{'host': 'localhost', 'port': 9200}]),
-        'index_name_prefix': ('str', 'swh-tasks'),
-        'client_options': ('dict', {
+DEFAULT_CONFIG = {
+    'elastic_search': {
+        'storage_nodes': {'host': 'localhost', 'port': 9200},
+        'index_name_prefix': 'swh-tasks',
+        'client_options': {
             'sniff_on_start': False,
             'sniff_on_connection_fail': True,
             'http_compress': False,
-        })
-    }
+        },
+    },
+}
 
+
+class SWHElasticSearchClient:
     def __init__(self, **config):
-        if config:
-            self.config = config
-        else:
-            self.config = self.parse_config_file()
-
-        options = self.config['client_options']
+        self.config = deepcopy(DEFAULT_CONFIG)
+        self.config.update(config)
+        es_conf = self.config['elastic_search']
+        options = es_conf.get('client_options', {})
         self.storage = Elasticsearch(
             # nodes to use by default
-            self.config['storage_nodes'],
+            es_conf['storage_nodes'],
             # auto detect cluster's status
             sniff_on_start=options['sniff_on_start'],
             sniff_on_connection_fail=options['sniff_on_connection_fail'],
             sniffer_timeout=60,
             # compression or not
             http_compress=options['http_compress'])
-        self.index_name_prefix = self.config['index_name_prefix']
+        self.index_name_prefix = es_conf['index_name_prefix']
         # document's index type (cf. ../../data/elastic-template.json)
         self.doc_type = 'task'
 
