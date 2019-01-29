@@ -15,8 +15,7 @@ from arrow import utcnow
 from kombu import Queue
 from celery.events import EventReceiver
 
-from swh.scheduler import get_scheduler
-from .config import setup_log_handler, app as main_app
+from .config import app as main_app
 
 
 class ReliableEventReceiver(EventReceiver):
@@ -197,35 +196,11 @@ def event_monitor(app, backend):
 
 
 @click.command()
-@click.option('--cls', '-c', default='local',
-              help="Scheduler's class, default to 'local'")
-@click.option(
-    '--database', '-d', help='Scheduling database DSN')
-@click.option('--url', '-u',
-              help="(Optional) Scheduler's url access")
-@click.option('--log-level', '-l', default='INFO',
-              type=click.Choice(logging._nameToLevel.keys()),
-              help='Log level (default to INFO)')
-def main(cls, database, url, log_level):
-    setup_log_handler(loglevel=log_level, colorize=False,
-                      format='[%(levelname)s] %(name)s -- %(message)s')
-    # logging.basicConfig(level=level)
-
-    scheduler = None
-    override_config = {}
-    if cls == 'local':
-        if database:
-            override_config = {'scheduling_db': database}
-        scheduler = get_scheduler(cls, args=override_config)
-    elif cls == 'remote':
-        if url:
-            override_config = {'url': url}
-        scheduler = get_scheduler(cls, args=override_config)
-
-    if not scheduler:
-        raise ValueError('Scheduler class (local/remote) must be instantiated')
-
-    event_monitor(main_app, backend=scheduler)
+@click.pass_context
+def main(ctx):
+    click.echo("Deprecated! Use 'swh-scheduler listener' instead.",
+               err=True)
+    ctx.exit(1)
 
 
 if __name__ == '__main__':
