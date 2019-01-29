@@ -9,14 +9,13 @@ import time
 
 from arrow import utcnow
 
-from swh.core.config import SWHConfig
 from swh.core import utils
 from swh.scheduler import get_scheduler
 from swh.scheduler.utils import create_oneshot_task_dict
 from swh.scheduler.updater.backend import SchedulerUpdaterBackend
 
 
-class UpdaterWriter(SWHConfig):
+class UpdaterWriter:
     """Updater writer in charge of updating the scheduler db with latest
        prioritized oneshot tasks
 
@@ -26,41 +25,18 @@ class UpdaterWriter(SWHConfig):
        - dumps them into the scheduler db
 
     """
-    CONFIG_BASE_FILENAME = 'backend/scheduler-updater-writer'
-    DEFAULT_CONFIG = {
-        # access to the scheduler backend
-        'scheduler': ('dict', {
-            'cls': 'local',
-            'args': {
-                'scheduling_db': 'dbname=softwareheritage-scheduler-dev',
-            },
-        }),
-        # access to the scheduler updater cache
-        'scheduler_updater': ('dict', {
-            'scheduling_updater_db':
-            'dbname=softwareheritage-scheduler-updater-dev',
-            'cache_read_limit': 1000,
-        }),
-        # waiting time between db reads
-        'pause': ('int', 10),
-        # verbose or not
-        'verbose': ('bool', False),
-    }
 
     def __init__(self, **config):
-        if config:
-            self.config = config
-        else:
-            self.config = self.parse_config_file()
-
+        self.config = config
+        if self.config['scheduler_updater']['cls'] != 'local':
+            raise ValueError(
+                'The scheduler_updater can only be a cls=local for now')
         self.scheduler_updater_backend = SchedulerUpdaterBackend(
-            **self.config['scheduler_updater'])
+            **self.config['scheduler_updater']['args'])
         self.scheduler_backend = get_scheduler(**self.config['scheduler'])
-        self.pause = self.config['pause']
+        self.pause = self.config.get('updater_writer', {}).get('pause', 10)
         self.log = logging.getLogger(
             'swh.scheduler.updater.writer.UpdaterWriter')
-        self.log.setLevel(
-            logging.DEBUG if self.config['verbose'] else logging.INFO)
 
     def convert_to_oneshot_task(self, event):
         """Given an event, convert it into oneshot task with priority
@@ -109,13 +85,11 @@ class UpdaterWriter(SWHConfig):
 @click.command()
 @click.option('--verbose/--no-verbose', '-v', default=False,
               help='Verbose mode')
-def main(verbose):
-    log = logging.getLogger('swh.scheduler.updater.writer')
-    log.addHandler(logging.StreamHandler())
-    _loglevel = logging.DEBUG if verbose else logging.INFO
-    log.setLevel(_loglevel)
-
-    UpdaterWriter().run()
+@click.pass_context
+def main(ctx, verbose):
+    click.echo("Deprecated! Use 'swh-scheduler updater' instead.",
+               err=True)
+    ctx.exit(1)
 
 
 if __name__ == '__main__':

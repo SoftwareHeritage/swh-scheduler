@@ -27,7 +27,7 @@ class SchedulerUpdaterBackendTest(SingleDbTestFixture, unittest.TestCase):
     def setUp(self):
         super().setUp()
         config = {
-            'scheduling_updater_db': 'dbname=' + self.TEST_DB_NAME,
+            'db': 'dbname=' + self.TEST_DB_NAME,
             'cache_read_limit': 1000,
         }
         self.backend = SchedulerUpdaterBackend(**config)
@@ -42,7 +42,6 @@ class SchedulerUpdaterBackendTest(SingleDbTestFixture, unittest.TestCase):
         self.conn.commit()
 
     def tearDown(self):
-        self.backend.close_connection()
         self._empty_tables()
         super().tearDown()
 
@@ -58,8 +57,6 @@ class SchedulerUpdaterBackendTest(SingleDbTestFixture, unittest.TestCase):
                     'type': 'create',
                     'origin_type': 'git',
                 })
-
         self.backend.cache_put(gen_events(urls))
         r = self.backend.cache_read(timestamp=utcnow())
-
         self.assertNotEqual(r, [])

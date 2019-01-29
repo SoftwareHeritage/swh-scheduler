@@ -633,5 +633,34 @@ def add_task_type(ctx, type, task_name, description,
     click.echo('OK')
 
 
+@cli.command('updater')
+@click.option('--verbose/--no-verbose', '-v', default=False,
+              help='Verbose mode')
+@click.pass_context
+def updater(ctx, verbose):
+    """Insert tasks in the scheduler from the scheduler-updater's events
+
+    """
+    from swh.scheduler.updater.writer import UpdaterWriter
+    UpdaterWriter(**ctx.obj['config']).run()
+
+
+@cli.command('ghtorrent')
+@click.option('--verbose/--no-verbose', '-v', default=False,
+              help='Verbose mode')
+@click.pass_context
+def ghtorrent(ctx, verbose):
+    """Consume events from ghtorrent and write them to cache.
+
+    """
+    from swh.scheduler.updater.ghtorrent import GHTorrentConsumer
+    from swh.scheduler.updater.backend import SchedulerUpdaterBackend
+
+    ght_config = ctx.obj['config'].get('ghtorrent', {})
+    back_config = ctx.obj['config'].get('scheduler_updater', {})
+    backend = SchedulerUpdaterBackend(**back_config)
+    GHTorrentConsumer(backend, **ght_config).run()
+
+
 if __name__ == '__main__':
     cli()
