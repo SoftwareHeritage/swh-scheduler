@@ -7,6 +7,16 @@
 # Percentage of tasks with priority to schedule
 PRIORITY_SLOT = 0.6
 
+DEFAULT_CONFIG_PATH = 'backend/scheduler'
+DEFAULT_CONFIG = {
+    'scheduler': ('dict', {
+        'cls': 'local',
+        'args': {
+            'db': 'dbname=softwareheritage-scheduler-dev',
+        },
+    })
+}
+
 
 def compute_nb_tasks_from(num_tasks):
     """Compute and returns the tuple, number of tasks without priority,

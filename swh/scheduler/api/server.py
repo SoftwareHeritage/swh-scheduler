@@ -14,17 +14,7 @@ from swh.core.api import (decode_request,
 
 from swh.core.api import negotiate, JSONFormatter, MsgpackFormatter
 from swh.scheduler import get_scheduler as get_scheduler_from
-
-
-DEFAULT_CONFIG_PATH = 'backend/scheduler'
-DEFAULT_CONFIG = {
-    'scheduler': ('dict', {
-        'cls': 'local',
-        'args': {
-            'db': 'dbname=softwareheritage-scheduler-dev',
-        },
-    })
-}
+from swh.scheduler import DEFAULT_CONFIG, DEFAULT_CONFIG_PATH
 
 
 app = Flask(__name__)
