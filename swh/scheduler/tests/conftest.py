@@ -3,6 +3,12 @@ import pytest
 import glob
 from datetime import timedelta
 
+import swh.scheduler.celery_backend.config
+# this import is needed here to enforce creation of the celery current app
+# BEFORE the swh_app fixture is called, otherwise the Celery app instance from
+# celery_backend.config becomes the celery.current_app
+
+
 from swh.core.utils import numfile_sortkey as sortkey
 from swh.scheduler import get_scheduler
 from swh.scheduler.tests import SQL_DIR
@@ -47,7 +53,6 @@ def celery_config():
 # with the test application.
 @pytest.fixture(scope='session')
 def swh_app(celery_session_app):
-    import swh.scheduler.celery_backend.config
     swh.scheduler.celery_backend.config.app = celery_session_app
     yield celery_session_app
 
@@ -55,7 +60,7 @@ def swh_app(celery_session_app):
 @pytest.fixture
 def swh_scheduler(request, postgresql_proc, postgresql):
     scheduler_config = {
-        'scheduling_db': 'postgresql://{user}@{host}:{port}/{dbname}'.format(
+        'db': 'postgresql://{user}@{host}:{port}/{dbname}'.format(
             host=postgresql_proc.host,
             port=postgresql_proc.port,
             user='postgres',

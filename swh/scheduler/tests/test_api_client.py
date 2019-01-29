@@ -25,7 +25,7 @@ class RemoteSchedulerTest(CommonSchedulerTest, ServerTestFixture,
             'scheduler': {
                 'cls': 'local',
                 'args': {
-                    'scheduling_db': 'dbname=%s' % self.TEST_DB_NAME,
+                    'db': 'dbname=%s' % self.TEST_DB_NAME,
                 }
             }
         }
