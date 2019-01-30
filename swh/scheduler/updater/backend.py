@@ -47,16 +47,6 @@ class SchedulerUpdaterBackend:
         """Write new events in the backend.
 
         """
-        if timestamp is None:
-            timestamp = utcnow()
-
-        def prepare_events(events):
-            for e in events:
-                event = e.get()
-                seen = event['last_seen']
-                if seen is None:
-                    event['last_seen'] = timestamp
-                yield event
         cur.execute('select swh_mktemp_cache()')
         db.copy_to(prepare_events(events, timestamp),
                    'tmp_cache', self.cache_put_keys, cur=cur)
@@ -68,6 +58,9 @@ class SchedulerUpdaterBackend:
     @db_transaction_generator()
     def cache_read(self, timestamp=None, limit=None, db=None, cur=None):
         """Read events from the cache prior to timestamp.
+
+        Note that limit=None does not mean 'no limit' but use the default
+        limit (see cache_read_limit constructor argument).
 
         """
         if not timestamp:
@@ -91,3 +84,28 @@ class SchedulerUpdaterBackend:
         q = 'delete from cache where url in (%s)' % (
             ', '.join(("'%s'" % e for e in entries)), )
         cur.execute(q)
+
+
+def prepare_events(events, timestamp=None):
+    if timestamp is None:
+        timestamp = utcnow()
+    outevents = []
+    urls = []
+    for e in events:
+        event = e.get()
+        url = event['url'].strip()
+        if event['last_seen'] is None:
+            event['last_seen'] = timestamp
+        event['url'] = url
+
+        if url in urls:
+            idx = urls.index(url)
+            urls.append(urls.pop(idx))
+            pevent = outevents.pop(idx)
+            event['cnt'] += pevent['cnt']
+            event['last_seen'] = max(
+                event['last_seen'], pevent['last_seen'])
+        else:
+            urls.append(url)
+        outevents.append(event)
+    return outevents
