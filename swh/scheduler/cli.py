@@ -94,7 +94,7 @@ def pretty_print_task(task, full=False):
               type=click.Choice(logging._nameToLevel.keys()),
               help="Log level (default to INFO)")
 @click.pass_context
-def cli(ctx, config_file, cls, database, url, log_level):
+def cli(ctx, config_file, database, url, log_level):
     """Software Heritage Scheduler CLI interface
 
     Default to use the the local scheduler instance (plugged to the
