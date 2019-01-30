@@ -125,7 +125,7 @@ def cli(ctx, config_file, cls, database, url, log_level):
         logger.debug('Instanciating scheduler with %s' % (
             sched_conf))
         scheduler = get_scheduler(**sched_conf)
-    except Exception:
+    except ValueError:
         # it's the subcommand to decide whether not having a proper
         # scheduler instance is a problem.
         pass
