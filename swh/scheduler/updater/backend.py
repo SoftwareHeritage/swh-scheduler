@@ -7,8 +7,10 @@
 from arrow import utcnow
 import psycopg2.pool
 import psycopg2.extras
-from swh.scheduler.backend import DbBackend
+
+from swh.core.db import BaseDb
 from swh.core.db.common import db_transaction, db_transaction_generator
+from swh.scheduler.backend import format_query
 
 
 class SchedulerUpdaterBackend:
@@ -24,7 +26,7 @@ class SchedulerUpdaterBackend:
         """
         if isinstance(db, psycopg2.extensions.connection):
             self._pool = None
-            self._db = DbBackend(db)
+            self._db = BaseDb(db)
         else:
             self._pool = psycopg2.pool.ThreadedConnectionPool(
                 min_pool_conns, max_pool_conns, db,
@@ -36,7 +38,7 @@ class SchedulerUpdaterBackend:
     def get_db(self):
         if self._db:
             return self._db
-        return DbBackend.from_pool(self._pool)
+        return BaseDb.from_pool(self._pool)
 
     cache_put_keys = ['url', 'cnt', 'last_seen', 'origin_type']
 
@@ -56,8 +58,8 @@ class SchedulerUpdaterBackend:
                     event['last_seen'] = timestamp
                 yield event
         cur.execute('select swh_mktemp_cache()')
-        db.copy_to(prepare_events(events),
-                   'tmp_cache', self.cache_put_keys, cursor=cur)
+        db.copy_to(prepare_events(events, timestamp),
+                   'tmp_cache', self.cache_put_keys, cur=cur)
         cur.execute('select swh_cache_put()')
 
     cache_read_keys = ['id', 'url', 'origin_type', 'cnt', 'first_seen',
@@ -74,8 +76,8 @@ class SchedulerUpdaterBackend:
         if not limit:
             limit = self.limit
 
-        q = db._format_query('select {keys} from swh_cache_read(%s, %s)',
-                             self.cache_read_keys)
+        q = format_query('select {keys} from swh_cache_read(%s, %s)',
+                         self.cache_read_keys)
         cur.execute(q, (timestamp, limit))
         for r in cur.fetchall():
             r['id'] = r['id'].tobytes()
