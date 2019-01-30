@@ -145,7 +145,7 @@ class SchedulerBackend:
         """
         cur.execute('select swh_scheduler_mktemp_task()')
         db.copy_to(tasks, 'tmp_task', self.task_create_keys,
-                   default_columns={
+                   default_values={
                        'policy': policy,
                        'status': 'next_run_not_scheduled'
                    },
