@@ -33,6 +33,10 @@ def get_sched():
     return scheduler
 
 
+def has_no_empty_params(rule):
+    return len(rule.defaults or ()) >= len(rule.arguments or ())
+
+
 @app.route('/')
 @negotiate(MsgpackFormatter)
 @negotiate(JSONFormatter)
@@ -157,6 +161,21 @@ def filter_task_to_archive():
 @negotiate(JSONFormatter)
 def delete_archived_tasks():
     return get_sched().delete_archived_tasks(**decode_request(request))
+
+
+@app.route("/site-map")
+@negotiate(MsgpackFormatter)
+@negotiate(JSONFormatter)
+def site_map():
+    links = []
+    sched = get_sched()
+    for rule in app.url_map.iter_rules():
+        if has_no_empty_params(rule) and hasattr(sched, rule.endpoint):
+            links.append(dict(
+                rule=rule.rule,
+                description=getattr(sched, rule.endpoint).__doc__))
+    # links is now a list of url, endpoint tuples
+    return links
 
 
 def run_from_webserver(environ, start_response,
