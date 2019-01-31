@@ -118,8 +118,8 @@ def cli(ctx, config_file, database, url, log_level):
         conf['scheduler']['cls'] = 'local'
         conf['scheduler']['args']['db'] = database
     elif url:
-        conf['scheduler']['cls'] = 'local'
-        conf['scheduler']['args']['url'] = url
+        conf['scheduler']['cls'] = 'remote'
+        conf['scheduler']['args'] = {'url': url}
     sched_conf = conf['scheduler']
     try:
         logger.debug('Instanciating scheduler with %s' % (
