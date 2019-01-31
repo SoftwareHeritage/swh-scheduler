@@ -81,16 +81,17 @@ def event_monitor(app, backend):
         }
 
         messages = []
-        cursor = backend.cursor()
+        db = backend.get_db()
+        cursor = db.cursor(None)
         for action in actions['queue']:
             messages.append(action['message'])
             function = action_map[action['action']]
             args = action.get('args', ())
             kwargs = action.get('kwargs', {})
-            kwargs['cursor'] = cursor
+            kwargs['cur'] = cursor
             function(*args, **kwargs)
 
-        backend.commit()
+        db.commit()
         for message in messages:
             if not message.acknowledged:
                 message.ack()
