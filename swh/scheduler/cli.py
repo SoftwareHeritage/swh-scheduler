@@ -93,8 +93,10 @@ def pretty_print_task(task, full=False):
 @click.option('--log-level', '-l', default='INFO',
               type=click.Choice(logging._nameToLevel.keys()),
               help="Log level (default to INFO)")
+@click.option('--no-stdout', is_flag=True, default=False,
+              help="Do NOT output logs on the console")
 @click.pass_context
-def cli(ctx, config_file, database, url, log_level):
+def cli(ctx, config_file, database, url, log_level, no_stdout):
     """Software Heritage Scheduler CLI interface
 
     Default to use the the local scheduler instance (plugged to the
@@ -104,7 +106,8 @@ def cli(ctx, config_file, database, url, log_level):
     from swh.scheduler.celery_backend.config import setup_log_handler
     log_level = setup_log_handler(
         loglevel=log_level, colorize=False,
-        format='[%(levelname)s] %(name)s -- %(message)s')
+        format='[%(levelname)s] %(name)s -- %(message)s',
+        log_console=not no_stdout)
 
     ctx.ensure_object(dict)
 

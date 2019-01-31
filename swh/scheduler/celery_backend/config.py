@@ -36,10 +36,12 @@ DEFAULT_CONFIG = {
     'task_soft_time_limit': ('int', 0),
 }
 
+logger = logging.getLogger(__name__)
+
 
 @setup_logging.connect
 def setup_log_handler(loglevel=None, logfile=None, format=None,
-                      colorize=None, **kwargs):
+                      colorize=None, log_console=True, **kwargs):
     """Setup logging according to Software Heritage preferences.
 
     We use the command-line loglevel for tasks only, as we never
@@ -55,7 +57,9 @@ def setup_log_handler(loglevel=None, logfile=None, format=None,
     root_logger = logging.getLogger('')
     root_logger.setLevel(logging.INFO)
 
-    if loglevel == logging.DEBUG:
+    if loglevel <= logging.DEBUG:
+        log_console = True
+    if log_console:
         color_formatter = ColorFormatter(format) if colorize else formatter
         console = logging.StreamHandler()
         console.setLevel(logging.DEBUG)
@@ -93,6 +97,8 @@ def setup_queues_and_tasks(sender, instance, **kwargs):
     for these task classes.
 
     """
+
+    logger.info('Setup Queues & Tasks for %s', sender)
 
     for module_name in itertools.chain(
             # celery worker -I flag
@@ -259,8 +265,8 @@ def build_app(config=None):
     config = merge_configs(
         {k: v for (k, (_, v)) in DEFAULT_CONFIG.items()},
         config or {})
-    logging.getLogger(__name__).info(
-        'Creating a Celery app with %s', config)
+
+    logger.debug('Creating a Celery app with %s', config)
 
     # Instantiate the Celery app
     app = Celery(broker=config['task_broker'],
