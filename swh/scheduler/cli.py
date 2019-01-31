@@ -497,7 +497,10 @@ def runner(ctx, period):
     This process is responsible for checking for ready-to-run tasks and
     schedule them."""
     from swh.scheduler.celery_backend.runner import run_ready_tasks
-    from swh.scheduler.celery_backend.config import app
+    from swh.scheduler.celery_backend.config import build_app
+
+    app = build_app(ctx.obj['config'].get('celery'))
+    app.set_current()
 
     logger = logging.getLogger(__name__ + '.runner')
     scheduler = ctx.obj['scheduler']
@@ -529,9 +532,12 @@ def listener(ctx):
     if not scheduler:
         raise ValueError('Scheduler class (local/remote) must be instantiated')
 
-    from swh.scheduler.celery_backend.listener import (
-        event_monitor, main_app)
-    event_monitor(main_app, backend=scheduler)
+    from swh.scheduler.celery_backend.config import build_app
+    app = build_app(ctx.obj['config'].get('celery'))
+    app.set_current()
+
+    from swh.scheduler.celery_backend.listener import event_monitor
+    event_monitor(app, backend=scheduler)
 
 
 @cli.command('api-server')

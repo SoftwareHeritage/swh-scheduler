@@ -13,9 +13,9 @@ import click
 
 from arrow import utcnow
 from kombu import Queue
-from celery.events import EventReceiver
 
-from .config import app as main_app
+import celery
+from celery.events import EventReceiver
 
 
 class ReliableEventReceiver(EventReceiver):
@@ -166,8 +166,8 @@ def event_monitor(app, backend):
         })
 
     recv = ReliableEventReceiver(
-        main_app.connection(),
-        app=main_app,
+        celery.current_app.connection(),
+        app=celery.current_app,
         handlers={
             'task-started': task_started,
             'task-result': task_succeeded,
