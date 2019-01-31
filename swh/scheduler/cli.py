@@ -510,7 +510,6 @@ def runner(ctx, period):
                 if ntasks:
                     logger.info('Scheduled %s tasks', ntasks)
             except Exception:
-                scheduler.rollback()
                 logger.exception('Unexpected error in run_ready_tasks()')
             if not period:
                 break
