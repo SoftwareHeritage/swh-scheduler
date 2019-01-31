@@ -21,7 +21,7 @@ import requests
 
 from swh.scheduler.task import Task
 
-from swh.core.config import load_named_config
+from swh.core.config import load_named_config, merge_configs
 from swh.core.logger import JournalHandler
 
 DEFAULT_CONFIG_NAME = 'worker'
@@ -254,11 +254,24 @@ CELERY_DEFAULT_CONFIG = dict(
     task_send_sent_event=False,
     )
 
-# Instantiate the Celery app
-app = Celery(broker=CONFIG['task_broker'],
-             backend=CONFIG['result_backend'],
-             task_cls='swh.scheduler.task:SWHTask')
-app.add_defaults(CELERY_DEFAULT_CONFIG)
+
+def build_app(config=None):
+    config = merge_configs(
+        {k: v for (k, (_, v)) in DEFAULT_CONFIG.items()},
+        config or {})
+    logging.getLogger(__name__).info(
+        'Creating a Celery app with %s', config)
+
+    # Instantiate the Celery app
+    app = Celery(broker=config['task_broker'],
+                 backend=config['result_backend'],
+                 task_cls='swh.scheduler.task:SWHTask')
+    app.add_defaults(CELERY_DEFAULT_CONFIG)
+    app.add_defaults(config)
+    return app
+
+
+app = build_app(CONFIG)
 
 # XXX for BW compat
 Celery.get_queue_length = get_queue_length
