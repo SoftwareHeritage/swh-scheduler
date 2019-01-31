@@ -661,5 +661,9 @@ def ghtorrent(ctx, verbose):
     GHTorrentConsumer(backend, **ght_config).run()
 
 
+def main():
+    return cli(auto_envvar_prefix='SWH_SCHEDULER')
+
+
 if __name__ == '__main__':
-    cli()
+    main()
