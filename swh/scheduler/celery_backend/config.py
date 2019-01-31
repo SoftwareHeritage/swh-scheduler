@@ -201,9 +201,6 @@ CONFIG = load_named_config(CONFIG_NAME, DEFAULT_CONFIG)
 # Celery Queues
 CELERY_QUEUES = [Queue('celery', Exchange('celery'), routing_key='celery')]
 
-for queue in CONFIG['task_queues']:
-    CELERY_QUEUES.append(Queue(queue, Exchange(queue), routing_key=queue))
-
 CELERY_DEFAULT_CONFIG = dict(
     # Timezone configuration: all in UTC
     enable_utc=True,
@@ -266,6 +263,8 @@ def build_app(config=None):
         {k: v for (k, (_, v)) in DEFAULT_CONFIG.items()},
         config or {})
 
+    config['task_queues'] = [Queue(queue, Exchange(queue), routing_key=queue)
+                             for queue in config.get('task_queues', ())]
     logger.debug('Creating a Celery app with %s', config)
 
     # Instantiate the Celery app
