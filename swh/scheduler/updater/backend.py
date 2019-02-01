@@ -72,9 +72,7 @@ class SchedulerUpdaterBackend:
         q = format_query('select {keys} from swh_cache_read(%s, %s)',
                          self.cache_read_keys)
         cur.execute(q, (timestamp, limit))
-        for r in cur.fetchall():
-            r['id'] = r['id'].tobytes()
-            yield r
+        yield from cur.fetchall()
 
     @db_transaction()
     def cache_remove(self, entries, db=None, cur=None):
