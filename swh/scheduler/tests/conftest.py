@@ -3,15 +3,19 @@ import pytest
 import glob
 from datetime import timedelta
 
-import swh.scheduler.celery_backend.config
+from swh.core.utils import numfile_sortkey as sortkey
+from swh.scheduler import get_scheduler
+from swh.scheduler.tests import SQL_DIR
+
+# make sure we are not fooled by CELERY_ config environment vars
+for var in [x for x in os.environ.keys() if x.startswith('CELERY')]:
+    os.environ.pop(var)
+
+import swh.scheduler.celery_backend.config  # noqa
 # this import is needed here to enforce creation of the celery current app
 # BEFORE the swh_app fixture is called, otherwise the Celery app instance from
 # celery_backend.config becomes the celery.current_app
 
-
-from swh.core.utils import numfile_sortkey as sortkey
-from swh.scheduler import get_scheduler
-from swh.scheduler.tests import SQL_DIR
 
 DUMP_FILES = os.path.join(SQL_DIR, '*.sql')
 
