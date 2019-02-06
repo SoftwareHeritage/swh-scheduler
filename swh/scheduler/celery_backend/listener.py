@@ -91,7 +91,7 @@ def event_monitor(app, backend):
             kwargs['cur'] = cursor
             function(*args, **kwargs)
 
-        db.commit()
+        db.conn.commit()
         for message in messages:
             if not message.acknowledged:
                 message.ack()
