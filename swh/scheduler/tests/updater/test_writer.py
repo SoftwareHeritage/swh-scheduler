@@ -52,25 +52,25 @@ class UpdaterWriterTest(UpdaterTestUtil, CommonSchedulerTest,
             'scheduler': {
                 'cls': 'local',
                 'args': {
-                    'scheduling_db': 'dbname=softwareheritage-scheduler-test',
+                    'db': 'dbname=softwareheritage-scheduler-test',
                 },
             },
             'scheduler_updater': {
-                'scheduling_updater_db':
-                'dbname=softwareheritage-scheduler-updater-test',
-                'cache_read_limit': 5,
+                'cls': 'local',
+                'args': {
+                    'db':
+                    'dbname=softwareheritage-scheduler-updater-test',
+                    'cache_read_limit': 5,
+                },
             },
-            'pause': 0.1,
-            'verbose': False,
+            'updater_writer': {
+                'pause': 0.1,
+                'verbose': False,
+            },
         }
         self.writer = UpdaterWriter(**config)
         self.scheduler_backend = self.writer.scheduler_backend
         self.scheduler_updater_backend = self.writer.scheduler_updater_backend
-
-    def tearDown(self):
-        self.scheduler_backend.close_connection()
-        self.scheduler_updater_backend.close_connection()
-        super().tearDown()
 
     def test_run_ko(self):
         """Only git tasks are supported for now, other types are dismissed.

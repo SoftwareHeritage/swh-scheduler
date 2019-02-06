@@ -283,4 +283,4 @@ values (
        'Origin Metadata indexer task',
        'swh.indexer.tasks.OriginMetadata',
        '1 day', '12:00:00', '1 days', 2,
-       5000);
+       20000);

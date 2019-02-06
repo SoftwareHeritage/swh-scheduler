@@ -15,7 +15,7 @@ import time
 from swh.core import utils, config
 from . import compute_nb_tasks_from
 from .backend_es import SWHElasticSearchClient
-from . import get_scheduler
+from . import get_scheduler, DEFAULT_CONFIG
 
 
 locale.setlocale(locale.LC_ALL, '')
@@ -83,18 +83,20 @@ def pretty_print_task(task, full=False):
 
 
 @click.group(context_settings=CONTEXT_SETTINGS)
-@click.option('--cls', '-c', default='local',
-              type=click.Choice(['local', 'remote']),
-              help="Scheduler's class, default to 'local'")
-@click.option('--database', '-d',
-              help="Scheduling database DSN (if cls is 'local')")
-@click.option('--url', '-u',
-              help="Scheduler's url access (if cls is 'remote')")
+@click.option('--config-file', '-C', default=None,
+              type=click.Path(exists=True, dir_okay=False,),
+              help="Configuration file.")
+@click.option('--database', '-d', default=None,
+              help="Scheduling database DSN (imply cls is 'local')")
+@click.option('--url', '-u', default=None,
+              help="Scheduler's url access (imply cls is 'remote')")
 @click.option('--log-level', '-l', default='INFO',
               type=click.Choice(logging._nameToLevel.keys()),
               help="Log level (default to INFO)")
+@click.option('--no-stdout', is_flag=True, default=False,
+              help="Do NOT output logs on the console")
 @click.pass_context
-def cli(ctx, cls, database, url, log_level):
+def cli(ctx, config_file, database, url, log_level, no_stdout):
     """Software Heritage Scheduler CLI interface
 
     Default to use the the local scheduler instance (plugged to the
@@ -104,28 +106,35 @@ def cli(ctx, cls, database, url, log_level):
     from swh.scheduler.celery_backend.config import setup_log_handler
     log_level = setup_log_handler(
         loglevel=log_level, colorize=False,
-        format='[%(levelname)s] %(name)s -- %(message)s')
+        format='[%(levelname)s] %(name)s -- %(message)s',
+        log_console=not no_stdout)
 
     ctx.ensure_object(dict)
 
     logger = logging.getLogger(__name__)
     scheduler = None
-    override_config = {}
+    conf = config.read(config_file, DEFAULT_CONFIG)
+    if 'scheduler' not in conf:
+        raise ValueError("missing 'scheduler' configuration")
+
+    if database:
+        conf['scheduler']['cls'] = 'local'
+        conf['scheduler']['args']['db'] = database
+    elif url:
+        conf['scheduler']['cls'] = 'remote'
+        conf['scheduler']['args'] = {'url': url}
+    sched_conf = conf['scheduler']
     try:
-        if cls == 'local' and database:
-            override_config = {'scheduling_db': database}
-        elif cls == 'remote' and url:
-            override_config = {'url': url}
-        logger.debug('Instanciating scheduler %s with %s' % (
-            cls, override_config))
-        scheduler = get_scheduler(cls, args=override_config)
-    except Exception:
+        logger.debug('Instanciating scheduler with %s' % (
+            sched_conf))
+        scheduler = get_scheduler(**sched_conf)
+    except ValueError:
         # it's the subcommand to decide whether not having a proper
         # scheduler instance is a problem.
         pass
 
     ctx.obj['scheduler'] = scheduler
-    ctx.obj['config'] = {'cls': cls, 'args': override_config}
+    ctx.obj['config'] = conf
     ctx.obj['loglevel'] = log_level
 
 
@@ -375,8 +384,7 @@ def respawn_tasks(ctx, task_ids, next_run):
 
     scheduler.set_status_tasks(
         task_ids, status='next_run_not_scheduled', next_run=next_run)
-    output.append('Respawn tasks %s\n' % (
-        task_ids))
+    output.append('Respawn tasks %s\n' % (task_ids,))
 
     click.echo('\n'.join(output))
 
@@ -492,18 +500,22 @@ def runner(ctx, period):
     This process is responsible for checking for ready-to-run tasks and
     schedule them."""
     from swh.scheduler.celery_backend.runner import run_ready_tasks
-    from swh.scheduler.celery_backend.config import app
+    from swh.scheduler.celery_backend.config import build_app
+
+    app = build_app(ctx.obj['config'].get('celery'))
+    app.set_current()
 
     logger = logging.getLogger(__name__ + '.runner')
     scheduler = ctx.obj['scheduler']
     logger.debug('Scheduler %s' % scheduler)
     try:
         while True:
-            logger.info('Run ready tasks')
+            logger.debug('Run ready tasks')
             try:
-                run_ready_tasks(scheduler, app)
+                ntasks = len(run_ready_tasks(scheduler, app))
+                if ntasks:
+                    logger.info('Scheduled %s tasks', ntasks)
             except Exception:
-                scheduler.rollback()
                 logger.exception('Unexpected error in run_ready_tasks()')
             if not period:
                 break
@@ -523,13 +535,15 @@ def listener(ctx):
     if not scheduler:
         raise ValueError('Scheduler class (local/remote) must be instantiated')
 
-    from swh.scheduler.celery_backend.listener import (
-        event_monitor, main_app)
-    event_monitor(main_app, backend=scheduler)
+    from swh.scheduler.celery_backend.config import build_app
+    app = build_app(ctx.obj['config'].get('celery'))
+    app.set_current()
+
+    from swh.scheduler.celery_backend.listener import event_monitor
+    event_monitor(app, backend=scheduler)
 
 
 @cli.command('api-server')
-@click.argument('config-path', required=1)
 @click.option('--host', default='0.0.0.0',
               help="Host to run the scheduler server api")
 @click.option('--port', default=5008, type=click.INT,
@@ -539,23 +553,20 @@ def listener(ctx):
                     "Defaults to True if log-level is DEBUG, False otherwise.")
               )
 @click.pass_context
-def api_server(ctx, config_path, host, port, debug):
+def api_server(ctx, host, port, debug):
     """Starts a swh-scheduler API HTTP server.
     """
-    if ctx.obj['config']['cls'] == 'remote':
+    if ctx.obj['config']['scheduler']['cls'] == 'remote':
         click.echo("The API server can only be started with a 'local' "
                    "configuration", err=True)
         ctx.exit(1)
 
-    from swh.scheduler.api.server import app, DEFAULT_CONFIG
-    conf = config.read(config_path, DEFAULT_CONFIG)
-    if ctx.obj['config']['args']:
-        conf['scheduler']['args'].update(ctx.obj['config']['args'])
-    app.config.update(conf)
+    from swh.scheduler.api import server
+    server.app.scheduler = ctx.obj['scheduler']
+    server.app.config.update(ctx.obj['config'])
     if debug is None:
         debug = ctx.obj['loglevel'] <= logging.DEBUG
-
-    app.run(host, port=port, debug=bool(debug))
+    server.app.run(host, port=port, debug=bool(debug))
 
 
 @cli.group('task-type')
@@ -585,7 +596,8 @@ def list_task_types(ctx, verbose, task_type, task_name):
 '''
     else:
         tmpl = '{type}:\n  {description}'
-    for tasktype in ctx.obj['scheduler'].get_task_types():
+    for tasktype in sorted(ctx.obj['scheduler'].get_task_types(),
+                           key=lambda x: x['type']):
         if task_type and tasktype['type'] not in task_type:
             continue
         if task_name and tasktype['backend_name'] not in task_name:
@@ -630,5 +642,38 @@ def add_task_type(ctx, type, task_name, description,
     click.echo('OK')
 
 
+@cli.command('updater')
+@click.option('--verbose/--no-verbose', '-v', default=False,
+              help='Verbose mode')
+@click.pass_context
+def updater(ctx, verbose):
+    """Insert tasks in the scheduler from the scheduler-updater's events
+
+    """
+    from swh.scheduler.updater.writer import UpdaterWriter
+    UpdaterWriter(**ctx.obj['config']).run()
+
+
+@cli.command('ghtorrent')
+@click.option('--verbose/--no-verbose', '-v', default=False,
+              help='Verbose mode')
+@click.pass_context
+def ghtorrent(ctx, verbose):
+    """Consume events from ghtorrent and write them to cache.
+
+    """
+    from swh.scheduler.updater.ghtorrent import GHTorrentConsumer
+    from swh.scheduler.updater.backend import SchedulerUpdaterBackend
+
+    ght_config = ctx.obj['config'].get('ghtorrent', {})
+    back_config = ctx.obj['config'].get('scheduler_updater', {})
+    backend = SchedulerUpdaterBackend(**back_config)
+    GHTorrentConsumer(backend, **ght_config).run()
+
+
+def main():
+    return cli(auto_envvar_prefix='SWH_SCHEDULER')
+
+
 if __name__ == '__main__':
-    cli()
+    main()

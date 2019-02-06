@@ -7,21 +7,19 @@ import logging
 
 from abc import ABCMeta, abstractmethod
 
-from swh.scheduler.updater.backend import SchedulerUpdaterBackend
-
 
 class UpdaterConsumer(metaclass=ABCMeta):
     """Event consumer
 
     """
-    def __init__(self, batch=1000, backend_class=SchedulerUpdaterBackend,
-                 log_class='swh.scheduler.updater.consumer.UpdaterConsumer'):
+    def __init__(self, backend, batch_cache_write=1000):
         super().__init__()
         self._reset_cache()
-        self.backend = backend_class()
-        self.batch = batch
+        self.backend = backend
+        self.batch = int(batch_cache_write)
         logging.basicConfig(level=logging.DEBUG)
-        self.log = logging.getLogger(log_class)
+        self.log = logging.getLogger('%s.%s' % (
+            self.__class__.__module__, self.__class__.__name__))
 
     def _reset_cache(self):
         """Reset internal cache.

@@ -4,24 +4,19 @@
 # See top-level LICENSE file for more information
 
 import click
-import logging
-
-from swh.scheduler.updater.ghtorrent import GHTorrentConsumer
 
 
 @click.command()
 @click.option('--verbose/--no-verbose', '-v', default=False,
               help='Verbose mode')
-def main(verbose):
+@click.pass_context
+def main(ctx, verbose):
     """Consume events from ghtorrent and write them to cache.
 
     """
-    log = logging.getLogger('swh.scheduler.updater.ghtorrent.cli')
-    log.addHandler(logging.StreamHandler())
-    _loglevel = logging.DEBUG if verbose else logging.INFO
-    log.setLevel(_loglevel)
-
-    GHTorrentConsumer().run()
+    click.echo("Deprecated! Use 'swh-scheduler updater' instead.",
+               err=True)
+    ctx.exit(1)
 
 
 if __name__ == '__main__':

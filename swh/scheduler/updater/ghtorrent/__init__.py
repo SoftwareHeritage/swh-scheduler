@@ -8,9 +8,11 @@ import json
 from kombu import Connection, Exchange, Queue
 from kombu.common import collect_replies
 
-from swh.core.config import SWHConfig
+from swh.core.config import merge_configs
+
 from swh.scheduler.updater.events import SWHEvent
 from swh.scheduler.updater.consumer import UpdaterConsumer
+from swh.scheduler.updater.backend import SchedulerUpdaterBackend
 
 
 events = {
@@ -32,65 +34,60 @@ events = {
     ]
 }
 
-
-class RabbitMQConn(SWHConfig):
-    """RabbitMQ Connection class
-
-    """
-    CONFIG_BASE_FILENAME = 'backend/ghtorrent'
-
-    DEFAULT_CONFIG = {
-        'conn': ('dict', {
-            'url': 'amqp://guest:guest@localhost:5672',
-            'exchange_name': 'ght-streams',
-            'routing_key': 'something',
-            'queue_name': 'fake-events'
-        })
-    }
-
-    ADDITIONAL_CONFIG = {}
-
-    def __init__(self, **config):
-        super().__init__()
-        if config and set(config.keys()) - {'log_class'} != set():
-            self.config = config
-        else:
-            self.config = self.parse_config_file(
-                additional_configs=[self.ADDITIONAL_CONFIG])
-
-        self.conn_string = self.config['conn']['url']
-        self.exchange = Exchange(self.config['conn']['exchange_name'],
-                                 'topic', durable=True)
-        self.routing_key = self.config['conn']['routing_key']
-        self.queue = Queue(self.config['conn']['queue_name'],
-                           exchange=self.exchange,
-                           routing_key=self.routing_key,
-                           auto_delete=True)
-
-
 INTERESTING_EVENT_KEYS = ['type', 'repo', 'created_at']
 
+DEFAULT_CONFIG = {
+    'ghtorrent': {
+        'batch_cache_write': 1000,
+        'rabbitmq': {
+            'prefetch_read': 100,
+            'conn': {
+                'url': 'amqp://guest:guest@localhost:5672',
+                'exchange_name': 'ght-streams',
+                'routing_key': 'something',
+                'queue_name': 'fake-events',
+            },
+        },
+    },
+    'scheduler_updater': {
+        'cls': 'local',
+        'args': {
+            'db': 'dbname=softwareheritage-scheduler-updater-dev',
+            'cache_read_limit': 1000,
+        },
+    },
+}
 
-class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
+
+class GHTorrentConsumer(UpdaterConsumer):
     """GHTorrent events consumer
 
     """
-    ADDITIONAL_CONFIG = {
-        'debug': ('bool', False),
-        'batch_cache_write': ('int', 1000),
-        'rabbitmq_prefetch_read': ('int', 100),
-    }
+    connection_class = Connection
 
-    def __init__(self, config=None, _connection_class=Connection):
-        if config is None:
-            super().__init__(
-                log_class='swh.scheduler.updater.ghtorrent.GHTorrentConsumer')
-        else:
-            self.config = config
-        self._connection_class = _connection_class
-        self.debug = self.config['debug']
-        self.batch = self.config['batch_cache_write']
-        self.prefetch_read = self.config['rabbitmq_prefetch_read']
+    def __init__(self, **config):
+        self.config = merge_configs(DEFAULT_CONFIG, config)
+
+        ght_config = self.config['ghtorrent']
+        rmq_config = ght_config['rabbitmq']
+        self.prefetch_read = int(rmq_config.get('prefetch_read', 100))
+
+        exchange = Exchange(
+            rmq_config['conn']['exchange_name'],
+            'topic', durable=True)
+        routing_key = rmq_config['conn']['routing_key']
+        self.queue = Queue(rmq_config['conn']['queue_name'],
+                           exchange=exchange,
+                           routing_key=routing_key,
+                           auto_delete=True)
+
+        if self.config['scheduler_updater']['cls'] != 'local':
+            raise ValueError(
+                'The scheduler_updater can only be a cls=local for now')
+        backend = SchedulerUpdaterBackend(
+            **self.config['scheduler_updater']['args'])
+
+        super().__init__(backend, ght_config.get('batch_cache_write', 1000))
 
     def has_events(self):
         """Always has events
@@ -104,11 +101,10 @@ class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
         """
         if isinstance(event, str):
             event = json.loads(event)
-
         for k in INTERESTING_EVENT_KEYS:
             if k not in event:
                 if hasattr(self, 'log'):
-                    self.log.warn(
+                    self.log.warning(
                         'Event should have the \'%s\' entry defined' % k)
                 return None
 
@@ -126,7 +122,8 @@ class GHTorrentConsumer(RabbitMQConn, UpdaterConsumer):
         """Open rabbitmq connection
 
         """
-        self.conn = self._connection_class(self.config['conn']['url'])
+        self.conn = self.connection_class(
+            self.config['ghtorrent']['rabbitmq']['conn']['url'])
         self.conn.connect()
         self.channel = self.conn.channel()
 

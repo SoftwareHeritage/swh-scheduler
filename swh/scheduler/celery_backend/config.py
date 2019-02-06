@@ -21,7 +21,7 @@ import requests
 
 from swh.scheduler.task import Task
 
-from swh.core.config import load_named_config
+from swh.core.config import load_named_config, merge_configs
 from swh.core.logger import JournalHandler
 
 DEFAULT_CONFIG_NAME = 'worker'
@@ -36,10 +36,12 @@ DEFAULT_CONFIG = {
     'task_soft_time_limit': ('int', 0),
 }
 
+logger = logging.getLogger(__name__)
+
 
 @setup_logging.connect
 def setup_log_handler(loglevel=None, logfile=None, format=None,
-                      colorize=None, **kwargs):
+                      colorize=None, log_console=True, **kwargs):
     """Setup logging according to Software Heritage preferences.
 
     We use the command-line loglevel for tasks only, as we never
@@ -55,7 +57,9 @@ def setup_log_handler(loglevel=None, logfile=None, format=None,
     root_logger = logging.getLogger('')
     root_logger.setLevel(logging.INFO)
 
-    if loglevel == logging.DEBUG:
+    if loglevel <= logging.DEBUG:
+        log_console = True
+    if log_console:
         color_formatter = ColorFormatter(format) if colorize else formatter
         console = logging.StreamHandler()
         console.setLevel(logging.DEBUG)
@@ -93,6 +97,10 @@ def setup_queues_and_tasks(sender, instance, **kwargs):
     for these task classes.
 
     """
+
+    logger.info('Setup Queues & Tasks for %s', sender)
+
+    instance.app.conf['worker_name'] = sender
 
     for module_name in itertools.chain(
             # celery worker -I flag
@@ -184,26 +192,34 @@ def register_task_class(app, name, cls):
 
 
 INSTANCE_NAME = os.environ.get(CONFIG_NAME_ENVVAR)
-if INSTANCE_NAME:
-    CONFIG_NAME = CONFIG_NAME_TEMPLATE % INSTANCE_NAME
-else:
-    CONFIG_NAME = DEFAULT_CONFIG_NAME
+CONFIG_NAME = os.environ.get('SWH_CONFIG_FILENAME')
+CONFIG = {}
+if CONFIG_NAME:
+    # load the celery config from the main config file given as
+    # SWH_CONFIG_FILENAME environment variable.
+    # This is expected to have a [celery] section in which we have the
+    # celery specific configuration.
+    CONFIG = load_named_config(CONFIG_NAME).get('celery')
 
-# Load the Celery config
-CONFIG = load_named_config(CONFIG_NAME, DEFAULT_CONFIG)
+if not CONFIG:
+    # otherwise, back to compat config loading mechanism
+    if INSTANCE_NAME:
+        CONFIG_NAME = CONFIG_NAME_TEMPLATE % INSTANCE_NAME
+    else:
+        CONFIG_NAME = DEFAULT_CONFIG_NAME
+
+    # Load the Celery config
+    CONFIG = load_named_config(CONFIG_NAME, DEFAULT_CONFIG)
 
 # Celery Queues
 CELERY_QUEUES = [Queue('celery', Exchange('celery'), routing_key='celery')]
-
-for queue in CONFIG['task_queues']:
-    CELERY_QUEUES.append(Queue(queue, Exchange(queue), routing_key=queue))
 
 CELERY_DEFAULT_CONFIG = dict(
     # Timezone configuration: all in UTC
     enable_utc=True,
     timezone='UTC',
     # Imported modules
-    imports=CONFIG['task_modules'],
+    imports=CONFIG.get('task_modules', []),
     # Time (in seconds, or a timedelta object) for when after stored task
     # tombstones will be deleted. None means to never expire results.
     result_expires=None,
@@ -232,14 +248,6 @@ CELERY_DEFAULT_CONFIG = dict(
     # (Disabling rate limits altogether is recommended if you don’t have any
     # tasks using them.)
     worker_disable_rate_limits=True,
-    # Task hard time limit in seconds. The worker processing the task will be
-    # killed and replaced with a new one when this is exceeded.
-    # task_time_limit=3600,
-    # Task soft time limit in seconds.
-    # The SoftTimeLimitExceeded exception will be raised when this is exceeded.
-    # The task can catch this to e.g. clean up before the hard time limit
-    # comes.
-    task_soft_time_limit=CONFIG['task_soft_time_limit'],
     # Task routing
     task_routes=route_for_task,
     # Task queues this worker will consume from
@@ -254,11 +262,26 @@ CELERY_DEFAULT_CONFIG = dict(
     task_send_sent_event=False,
     )
 
-# Instantiate the Celery app
-app = Celery(broker=CONFIG['task_broker'],
-             backend=CONFIG['result_backend'],
-             task_cls='swh.scheduler.task:SWHTask')
-app.add_defaults(CELERY_DEFAULT_CONFIG)
+
+def build_app(config=None):
+    config = merge_configs(
+        {k: v for (k, (_, v)) in DEFAULT_CONFIG.items()},
+        config or {})
+
+    config['task_queues'] = [Queue(queue, Exchange(queue), routing_key=queue)
+                             for queue in config.get('task_queues', ())]
+    logger.debug('Creating a Celery app with %s', config)
+
+    # Instantiate the Celery app
+    app = Celery(broker=config['task_broker'],
+                 backend=config['result_backend'],
+                 task_cls='swh.scheduler.task:SWHTask')
+    app.add_defaults(CELERY_DEFAULT_CONFIG)
+    app.add_defaults(config)
+    return app
+
+
+app = build_app(CONFIG)
 
 # XXX for BW compat
 Celery.get_queue_length = get_queue_length
