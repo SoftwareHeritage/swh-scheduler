@@ -24,8 +24,8 @@ class FakeSchedulerUpdaterBackend:
 
 
 class FakeUpdaterConsumerBase(UpdaterConsumer):
-    def __init__(self, backend_class=FakeSchedulerUpdaterBackend):
-        super().__init__(backend_class=backend_class)
+    def __init__(self, backend):
+        super().__init__(backend)
         self.connection_opened = False
         self.connection_closed = False
         self.consume_called = False
@@ -53,7 +53,8 @@ class FakeUpdaterConsumerRaise(FakeUpdaterConsumerBase):
 
 class UpdaterConsumerRaisingTest(unittest.TestCase):
     def setUp(self):
-        self.updater = FakeUpdaterConsumerRaise()
+        self.updater = FakeUpdaterConsumerRaise(
+            FakeSchedulerUpdaterBackend())
 
     def test_running_raise(self):
         """Raising during run should finish fine.
@@ -89,7 +90,8 @@ class FakeUpdaterConsumerNoEvent(FakeUpdaterConsumerBase):
 
 class UpdaterConsumerNoEventTest(unittest.TestCase):
     def setUp(self):
-        self.updater = FakeUpdaterConsumerNoEvent()
+        self.updater = FakeUpdaterConsumerNoEvent(
+            FakeSchedulerUpdaterBackend())
 
     def test_running_does_not_consume(self):
         """Run with no events should do just fine"""
@@ -115,8 +117,8 @@ EVENT_KEYS = ['type', 'repo', 'created_at', 'origin_type']
 
 
 class FakeUpdaterConsumer(FakeUpdaterConsumerBase):
-    def __init__(self, messages):
-        super().__init__()
+    def __init__(self, backend, messages):
+        super().__init__(backend)
         self.messages = messages
         self.debug = False
 
@@ -170,9 +172,11 @@ class UpdaterConsumerWithEventTest(UpdaterTestUtil, unittest.TestCase):
         ready_incomplete_events = self._make_incomplete_events(
             incomplete_events)
 
-        updater = FakeUpdaterConsumer(list(chain(
-            ready_events, ready_incomplete_events,
-            ready_uninteresting_events)))
+        updater = FakeUpdaterConsumer(
+            FakeSchedulerUpdaterBackend(),
+            list(chain(
+                ready_events, ready_incomplete_events,
+                ready_uninteresting_events)))
 
         self.assertEqual(updater.count, 0)
         self.assertEqual(updater.seen_events, set())

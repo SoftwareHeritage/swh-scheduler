@@ -12,6 +12,7 @@ from hypothesis.strategies import sampled_from
 from swh.scheduler.updater.events import SWHEvent
 from swh.scheduler.updater.ghtorrent import (INTERESTING_EVENT_KEYS,
                                              GHTorrentConsumer, events)
+from swh.scheduler.updater.backend import SchedulerUpdaterBackend
 
 from . import UpdaterTestUtil, from_regex
 
@@ -60,28 +61,35 @@ class FakeConnection:
 
 class GHTorrentConsumerTest(UpdaterTestUtil, unittest.TestCase):
     def setUp(self):
-        self.fake_config = {
-            'conn': {
-                'url': 'amqp://u:p@https://somewhere:9807',
+        config = {
+            'ghtorrent': {
+                'rabbitmq': {
+                    'conn': {
+                        'url': 'amqp://u:p@https://somewhere:9807',
+                    },
+                    'prefetch_read': 17,
+                },
+                'batch_cache_write': 42,
             },
-            'debug': True,
-            'batch_cache_write': 10,
-            'rabbitmq_prefetch_read': 100,
+            'scheduler_updater': {
+                'cls': 'local',
+                'args': {
+                    'db': 'dbname=softwareheritage-scheduler-updater-dev',
+                },
+            },
         }
 
-        self.consumer = GHTorrentConsumer(self.fake_config,
-                                          _connection_class=FakeConnection)
+        GHTorrentConsumer.connection_class = FakeConnection
+        with patch.object(
+                SchedulerUpdaterBackend, '__init__', return_value=None):
+            self.consumer = GHTorrentConsumer(**config)
 
-    def test_init(self):
+    @patch('swh.scheduler.updater.backend.SchedulerUpdaterBackend')
+    def test_init(self, mock_backend):
         # given
         # check init is ok
-        self.assertEqual(self.consumer.debug,
-                         self.fake_config['debug'])
-        self.assertEqual(self.consumer.batch,
-                         self.fake_config['batch_cache_write'])
-        self.assertEqual(self.consumer.prefetch_read,
-                         self.fake_config['rabbitmq_prefetch_read'])
-        self.assertEqual(self.consumer.config, self.fake_config)
+        self.assertEqual(self.consumer.batch, 42)
+        self.assertEqual(self.consumer.prefetch_read, 17)
 
     def test_has_events(self):
         self.assertTrue(self.consumer.has_events())
@@ -92,7 +100,7 @@ class GHTorrentConsumerTest(UpdaterTestUtil, unittest.TestCase):
 
         # then
         self.assertEqual(self.consumer.conn._conn_string,
-                         self.fake_config['conn']['url'])
+                         'amqp://u:p@https://somewhere:9807')
         self.assertTrue(self.consumer.conn._connect)
         self.assertFalse(self.consumer.conn._release)
 
@@ -130,8 +138,10 @@ class GHTorrentConsumerTest(UpdaterTestUtil, unittest.TestCase):
         input_event = self._make_incomplete_event(
             event_type, name, 'git', missing_data_key)
 
+        logger = self.consumer.log
+        del self.consumer.log  # prevent gazillions of warnings
         actual_converted_event = self.consumer.convert_event(input_event)
-
+        self.consumer.log = logger
         self.assertIsNone(actual_converted_event)
 
     @patch('swh.scheduler.updater.ghtorrent.collect_replies')
@@ -160,5 +170,5 @@ class GHTorrentConsumerTest(UpdaterTestUtil, unittest.TestCase):
             self.consumer.channel,
             'fake-queue',
             no_ack=False,
-            limit=self.fake_config['rabbitmq_prefetch_read']
+            limit=17
         )

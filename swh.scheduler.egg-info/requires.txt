@@ -6,7 +6,7 @@ flask
 kombu
 psycopg2
 vcversioner
-swh.core>=0.0.48
+swh.core>=0.0.51
 
 [testing]
 hypothesis

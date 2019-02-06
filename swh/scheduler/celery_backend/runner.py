@@ -4,11 +4,12 @@
 # See top-level LICENSE file for more information
 
 import arrow
+import logging
 
 from swh.scheduler import get_scheduler, compute_nb_tasks_from
-from .config import app as main_app
 
 
+logger = logging.getLogger(__name__)
 # Max batch size for tasks
 MAX_NUM_TASKS = 10000
 
@@ -38,10 +39,9 @@ def run_ready_tasks(backend, app):
     """
     all_backend_tasks = []
     while True:
-        cursor = backend.cursor()
         task_types = {}
         pending_tasks = []
-        for task_type in backend.get_task_types(cursor=cursor):
+        for task_type in backend.get_task_types():
             task_type_name = task_type['type']
             task_types[task_type_name] = task_type
             max_queue_length = task_type['max_queue_length']
@@ -64,12 +64,14 @@ def run_ready_tasks(backend, app):
                 num_tasks, num_tasks_priority = compute_nb_tasks_from(
                     num_tasks)
 
-                pending_tasks.extend(
-                    backend.grab_ready_tasks(
+                grabbed_tasks = backend.grab_ready_tasks(
                         task_type_name,
                         num_tasks=num_tasks,
-                        num_tasks_priority=num_tasks_priority,
-                        cursor=cursor))
+                        num_tasks_priority=num_tasks_priority)
+                if grabbed_tasks:
+                    pending_tasks.extend(grabbed_tasks)
+                    logger.info('Grabbed %s tasks %s',
+                                len(grabbed_tasks), task_type_name)
 
         if not pending_tasks:
             return all_backend_tasks
@@ -83,7 +85,6 @@ def run_ready_tasks(backend, app):
             celery_result = app.send_task(
                 backend_name, args=args, kwargs=kwargs,
             )
-
             data = {
                 'task': task['id'],
                 'backend_id': celery_result.id,
@@ -91,15 +92,14 @@ def run_ready_tasks(backend, app):
             }
 
             backend_tasks.append(data)
+        logger.debug('Sent %s celery tasks', len(backend_tasks))
 
-        backend.mass_schedule_task_runs(backend_tasks, cursor=cursor)
-
-        backend.commit()
-
+        backend.mass_schedule_task_runs(backend_tasks)
         all_backend_tasks.extend(backend_tasks)
 
 
 def main():
+    from .config import app as main_app
     for module in main_app.conf.CELERY_IMPORTS:
         __import__(module)
 

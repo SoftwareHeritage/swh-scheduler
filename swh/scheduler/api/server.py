@@ -5,26 +5,19 @@
 
 import logging
 
-from flask import request
+from flask import request, Flask
 
 from swh.core import config
-from swh.scheduler import get_scheduler as get_scheduler_from
-from swh.core.api import (SWHServerAPIApp, decode_request,
+from swh.core.api import (decode_request,
                           error_handler,
                           encode_data_server as encode_data)
 
-DEFAULT_CONFIG_PATH = 'backend/scheduler'
-DEFAULT_CONFIG = {
-    'scheduler': ('dict', {
-        'cls': 'local',
-        'args': {
-            'scheduling_db': 'dbname=softwareheritage-scheduler-dev',
-        },
-    })
-}
+from swh.core.api import negotiate, JSONFormatter, MsgpackFormatter
+from swh.scheduler import get_scheduler as get_scheduler_from
+from swh.scheduler import DEFAULT_CONFIG, DEFAULT_CONFIG_PATH
 
 
-app = SWHServerAPIApp(__name__)
+app = Flask(__name__)
 scheduler = None
 
 
@@ -40,98 +33,149 @@ def get_sched():
     return scheduler
 
 
+def has_no_empty_params(rule):
+    return len(rule.defaults or ()) >= len(rule.arguments or ())
+
+
 @app.route('/')
+@negotiate(MsgpackFormatter)
+@negotiate(JSONFormatter)
 def index():
     return 'SWH Scheduler API server'
 
 
-@app.route('/close_connection', methods=['POST'])
+@app.route('/close_connection', methods=['GET', 'POST'])
+@negotiate(MsgpackFormatter)
+@negotiate(JSONFormatter)
 def close_connection():
-    return encode_data(get_sched().close_connection())
+    return get_sched().close_connection()
 
 
 @app.route('/set_status_tasks', methods=['POST'])
+@negotiate(MsgpackFormatter)
+@negotiate(JSONFormatter)
 def set_status_tasks():
-    return encode_data(get_sched().set_status_tasks(**decode_request(request)))
+    return get_sched().set_status_tasks(**decode_request(request))
 
 
 @app.route('/create_task_type', methods=['POST'])
+@negotiate(MsgpackFormatter)
+@negotiate(JSONFormatter)
 def create_task_type():
-    return encode_data(get_sched().create_task_type(**decode_request(request)))
+    return get_sched().create_task_type(**decode_request(request))
 
 
 @app.route('/get_task_type', methods=['POST'])
+@negotiate(MsgpackFormatter)
+@negotiate(JSONFormatter)
 def get_task_type():
-    return encode_data(get_sched().get_task_type(**decode_request(request)))
+    return get_sched().get_task_type(**decode_request(request))
 
 
-@app.route('/get_task_types', methods=['POST'])
+@app.route('/get_task_types', methods=['GET', 'POST'])
+@negotiate(MsgpackFormatter)
+@negotiate(JSONFormatter)
 def get_task_types():
-    return encode_data(get_sched().get_task_types(**decode_request(request)))
+    return get_sched().get_task_types(**decode_request(request))
 
 
 @app.route('/create_tasks', methods=['POST'])
+@negotiate(MsgpackFormatter)
+@negotiate(JSONFormatter)
 def create_tasks():
-    return encode_data(get_sched().create_tasks(**decode_request(request)))
+    return get_sched().create_tasks(**decode_request(request))
 
 
 @app.route('/disable_tasks', methods=['POST'])
+@negotiate(MsgpackFormatter)
+@negotiate(JSONFormatter)
 def disable_tasks():
-    return encode_data(get_sched().disable_tasks(**decode_request(request)))
+    return get_sched().disable_tasks(**decode_request(request))
 
 
 @app.route('/get_tasks', methods=['POST'])
+@negotiate(MsgpackFormatter)
+@negotiate(JSONFormatter)
 def get_tasks():
-    return encode_data(get_sched().get_tasks(**decode_request(request)))
+    return get_sched().get_tasks(**decode_request(request))
 
 
 @app.route('/search_tasks', methods=['POST'])
+@negotiate(MsgpackFormatter)
+@negotiate(JSONFormatter)
 def search_tasks():
-    return encode_data(get_sched().search_tasks(**decode_request(request)))
+    return get_sched().search_tasks(**decode_request(request))
 
 
 @app.route('/peek_ready_tasks', methods=['POST'])
+@negotiate(MsgpackFormatter)
+@negotiate(JSONFormatter)
 def peek_ready_tasks():
-    return encode_data(get_sched().peek_ready_tasks(**decode_request(request)))
+    return get_sched().peek_ready_tasks(**decode_request(request))
 
 
 @app.route('/grab_ready_tasks', methods=['POST'])
+@negotiate(MsgpackFormatter)
+@negotiate(JSONFormatter)
 def grab_ready_tasks():
-    return encode_data(get_sched().grab_ready_tasks(**decode_request(request)))
+    return get_sched().grab_ready_tasks(**decode_request(request))
 
 
 @app.route('/schedule_task_run', methods=['POST'])
+@negotiate(MsgpackFormatter)
+@negotiate(JSONFormatter)
 def schedule_task_run():
-    return encode_data(get_sched().schedule_task_run(
-        **decode_request(request)))
+    return get_sched().schedule_task_run(**decode_request(request))
 
 
 @app.route('/mass_schedule_task_runs', methods=['POST'])
+@negotiate(MsgpackFormatter)
+@negotiate(JSONFormatter)
 def mass_schedule_task_runs():
-    return encode_data(
-        get_sched().mass_schedule_task_runs(**decode_request(request)))
+    return get_sched().mass_schedule_task_runs(**decode_request(request))
 
 
 @app.route('/start_task_run', methods=['POST'])
+@negotiate(MsgpackFormatter)
+@negotiate(JSONFormatter)
 def start_task_run():
-    return encode_data(get_sched().start_task_run(**decode_request(request)))
+    return get_sched().start_task_run(**decode_request(request))
 
 
 @app.route('/end_task_run', methods=['POST'])
+@negotiate(MsgpackFormatter)
+@negotiate(JSONFormatter)
 def end_task_run():
-    return encode_data(get_sched().end_task_run(**decode_request(request)))
+    return get_sched().end_task_run(**decode_request(request))
 
 
 @app.route('/filter_task_to_archive', methods=['POST'])
+@negotiate(MsgpackFormatter)
+@negotiate(JSONFormatter)
 def filter_task_to_archive():
-    return encode_data(
-        get_sched().filter_task_to_archive(**decode_request(request)))
+    return get_sched().filter_task_to_archive(**decode_request(request))
 
 
 @app.route('/delete_archived_tasks', methods=['POST'])
+@negotiate(MsgpackFormatter)
+@negotiate(JSONFormatter)
 def delete_archived_tasks():
-    return encode_data(
-        get_sched().delete_archived_tasks(**decode_request(request)))
+    return get_sched().delete_archived_tasks(**decode_request(request))
+
+
+@app.route("/site-map")
+@negotiate(MsgpackFormatter)
+@negotiate(JSONFormatter)
+def site_map():
+    links = []
+    sched = get_sched()
+    for rule in app.url_map.iter_rules():
+        if has_no_empty_params(rule) and hasattr(sched, rule.endpoint):
+            links.append(dict(
+                rule=rule.rule,
+                description=getattr(sched, rule.endpoint).__doc__))
+    # links is now a list of url, endpoint tuples
+    return links
 
 
 def run_from_webserver(environ, start_response,
