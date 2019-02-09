@@ -5,58 +5,62 @@
 
 
 from arrow import utcnow
-from swh.core.config import SWHConfig
-from swh.scheduler.backend import DbBackend, autocommit
+import psycopg2.pool
+import psycopg2.extras
+
+from swh.core.db import BaseDb
+from swh.core.db.common import db_transaction, db_transaction_generator
+from swh.scheduler.backend import format_query
 
 
-class SchedulerUpdaterBackend(SWHConfig, DbBackend):
+class SchedulerUpdaterBackend:
     CONFIG_BASE_FILENAME = 'backend/scheduler-updater'
-    DEFAULT_CONFIG = {
-        'scheduling_updater_db': (
-            'str', 'dbname=softwareheritage-scheduler-updater-dev'),
-        'cache_read_limit': ('int', 1000),
-    }
+#        'cache_read_limit': ('int', 1000),
 
-    def __init__(self, **override_config):
-        super().__init__()
-        if override_config:
-            self.config = override_config
+    def __init__(self, db, cache_read_limit=1000,
+                 min_pool_conns=1, max_pool_conns=10):
+        """
+        Args:
+            db_conn: either a libpq connection string, or a psycopg2 connection
+
+        """
+        if isinstance(db, psycopg2.extensions.connection):
+            self._pool = None
+            self._db = BaseDb(db)
         else:
-            self.config = self.parse_config_file(global_config=False)
-        self.db = None
-        self.db_conn_dsn = self.config['scheduling_updater_db']
-        self.limit = self.config['cache_read_limit']
-        self.reconnect()
+            self._pool = psycopg2.pool.ThreadedConnectionPool(
+                min_pool_conns, max_pool_conns, db,
+                cursor_factory=psycopg2.extras.RealDictCursor,
+            )
+            self._db = None
+        self.limit = cache_read_limit
+
+    def get_db(self):
+        if self._db:
+            return self._db
+        return BaseDb.from_pool(self._pool)
 
     cache_put_keys = ['url', 'cnt', 'last_seen', 'origin_type']
 
-    @autocommit
-    def cache_put(self, events, timestamp=None, cursor=None):
+    @db_transaction()
+    def cache_put(self, events, timestamp=None, db=None, cur=None):
         """Write new events in the backend.
 
         """
-        if timestamp is None:
-            timestamp = utcnow()
-
-        def prepare_events(events):
-            for e in events:
-                event = e.get()
-                seen = event['last_seen']
-                if seen is None:
-                    event['last_seen'] = timestamp
-                yield event
-
-        cursor.execute('select swh_mktemp_cache()')
-        self.copy_to(prepare_events(events),
-                     'tmp_cache', self.cache_put_keys, cursor=cursor)
-        cursor.execute('select swh_cache_put()')
+        cur.execute('select swh_mktemp_cache()')
+        db.copy_to(prepare_events(events, timestamp),
+                   'tmp_cache', self.cache_put_keys, cur=cur)
+        cur.execute('select swh_cache_put()')
 
     cache_read_keys = ['id', 'url', 'origin_type', 'cnt', 'first_seen',
                        'last_seen']
 
-    @autocommit
-    def cache_read(self, timestamp=None, limit=None, cursor=None):
+    @db_transaction_generator()
+    def cache_read(self, timestamp=None, limit=None, db=None, cur=None):
         """Read events from the cache prior to timestamp.
+
+        Note that limit=None does not mean 'no limit' but use the default
+        limit (see cache_read_limit constructor argument).
 
         """
         if not timestamp:
@@ -65,18 +69,41 @@ class SchedulerUpdaterBackend(SWHConfig, DbBackend):
         if not limit:
             limit = self.limit
 
-        q = self._format_query('select {keys} from swh_cache_read(%s, %s)',
-                               self.cache_read_keys)
-        cursor.execute(q, (timestamp, limit))
-        for r in cursor.fetchall():
-            r['id'] = r['id'].tobytes()
-            yield r
+        q = format_query('select {keys} from swh_cache_read(%s, %s)',
+                         self.cache_read_keys)
+        cur.execute(q, (timestamp, limit))
+        yield from cur.fetchall()
 
-    @autocommit
-    def cache_remove(self, entries, cursor=None):
+    @db_transaction()
+    def cache_remove(self, entries, db=None, cur=None):
         """Clean events from the cache
 
         """
         q = 'delete from cache where url in (%s)' % (
             ', '.join(("'%s'" % e for e in entries)), )
-        cursor.execute(q)
+        cur.execute(q)
+
+
+def prepare_events(events, timestamp=None):
+    if timestamp is None:
+        timestamp = utcnow()
+    outevents = []
+    urls = []
+    for e in events:
+        event = e.get()
+        url = event['url'].strip()
+        if event['last_seen'] is None:
+            event['last_seen'] = timestamp
+        event['url'] = url
+
+        if url in urls:
+            idx = urls.index(url)
+            urls.append(urls.pop(idx))
+            pevent = outevents.pop(idx)
+            event['cnt'] += pevent['cnt']
+            event['last_seen'] = max(
+                event['last_seen'], pevent['last_seen'])
+        else:
+            urls.append(url)
+        outevents.append(event)
+    return outevents

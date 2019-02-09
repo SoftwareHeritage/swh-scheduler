@@ -21,53 +21,60 @@ from swh.scheduler import get_scheduler
 from . import SQL_DIR
 
 
+TASK_TYPES = {
+    'git': {
+        'type': 'update-git',
+        'description': 'Update a git repository',
+        'backend_name': 'swh.loader.git.tasks.UpdateGitRepository',
+        'default_interval': datetime.timedelta(days=64),
+        'min_interval': datetime.timedelta(hours=12),
+        'max_interval': datetime.timedelta(days=64),
+        'backoff_factor': 2,
+        'max_queue_length': None,
+        'num_retries': 7,
+        'retry_delay': datetime.timedelta(hours=2),
+    },
+    'hg': {
+        'type': 'update-hg',
+        'description': 'Update a mercurial repository',
+        'backend_name': 'swh.loader.mercurial.tasks.UpdateHgRepository',
+        'default_interval': datetime.timedelta(days=64),
+        'min_interval': datetime.timedelta(hours=12),
+        'max_interval': datetime.timedelta(days=64),
+        'backoff_factor': 2,
+        'max_queue_length': None,
+        'num_retries': 7,
+        'retry_delay': datetime.timedelta(hours=2),
+    },
+}
+
+TEMPLATES = {
+    'git': {
+        'type': 'update-git',
+        'arguments': {
+            'args': [],
+            'kwargs': {},
+        },
+        'next_run': None,
+    },
+    'hg': {
+        'type': 'update-hg',
+        'arguments': {
+            'args': [],
+            'kwargs': {},
+        },
+        'next_run': None,
+        'policy': 'oneshot',
+    }
+}
+
+
 @pytest.mark.db
 class CommonSchedulerTest(SingleDbTestFixture):
     TEST_DB_NAME = 'softwareheritage-scheduler-test'
     TEST_DB_DUMP = os.path.join(SQL_DIR, '*.sql')
 
-    def setUp(self):
-        super().setUp()
-
-        tt = {
-            'type': 'update-git',
-            'description': 'Update a git repository',
-            'backend_name': 'swh.loader.git.tasks.UpdateGitRepository',
-            'default_interval': datetime.timedelta(days=64),
-            'min_interval': datetime.timedelta(hours=12),
-            'max_interval': datetime.timedelta(days=64),
-            'backoff_factor': 2,
-            'max_queue_length': None,
-            'num_retries': 7,
-            'retry_delay': datetime.timedelta(hours=2),
-        }
-        tt2 = tt.copy()
-        tt2['type'] = 'update-hg'
-        tt2['description'] = 'Update a mercurial repository'
-        tt2['backend_name'] = 'swh.loader.mercurial.tasks.UpdateHgRepository'
-        tt2['max_queue_length'] = 42
-        tt2['num_retries'] = None
-        tt2['retry_delay'] = None
-
-        self.task_types = {
-            tt['type']: tt,
-            tt2['type']: tt2,
-        }
-
-        self.task1_template = t1_template = {
-            'type': tt['type'],
-            'arguments': {
-                'args': [],
-                'kwargs': {},
-            },
-            'next_run': None,
-        }
-        self.task2_template = t2_template = copy.deepcopy(t1_template)
-        t2_template['type'] = tt2['type']
-        t2_template['policy'] = 'oneshot'
-
     def tearDown(self):
-        self.backend.close_connection()
         self.empty_tables()
         super().tearDown()
 
@@ -85,18 +92,20 @@ class CommonSchedulerTest(SingleDbTestFixture):
         self.conn.commit()
 
     def test_add_task_type(self):
-        tt, tt2 = self.task_types.values()
+        tt = TASK_TYPES['git']
         self.backend.create_task_type(tt)
         self.assertEqual(tt, self.backend.get_task_type(tt['type']))
         with self.assertRaisesRegex(psycopg2.IntegrityError,
                                     r'\(type\)=\(%s\)' % tt['type']):
             self.backend.create_task_type(tt)
+
+        tt2 = TASK_TYPES['hg']
         self.backend.create_task_type(tt2)
         self.assertEqual(tt, self.backend.get_task_type(tt['type']))
         self.assertEqual(tt2, self.backend.get_task_type(tt2['type']))
 
     def test_get_task_types(self):
-        tt, tt2 = self.task_types.values()
+        tt, tt2 = TASK_TYPES['git'], TASK_TYPES['hg']
         self.backend.create_task_type(tt)
         self.backend.create_task_type(tt2)
         self.assertCountEqual([tt2, tt], self.backend.get_task_types())
@@ -143,17 +152,18 @@ class CommonSchedulerTest(SingleDbTestFixture):
         return tasks
 
     def _create_task_types(self):
-        for tt in self.task_types.values():
+        for tt in TASK_TYPES.values():
             self.backend.create_task_type(tt)
 
     def test_create_tasks(self):
         priority_ratio = self._priority_ratio()
         self._create_task_types()
         num_tasks_priority = 100
-        tasks_1 = self._tasks_from_template(self.task1_template, utcnow(), 100)
+        tasks_1 = self._tasks_from_template(
+            TEMPLATES['git'], utcnow(), 100)
         tasks_2 = self._tasks_from_template(
-                self.task2_template, utcnow(), 100,
-                num_tasks_priority, priorities=priority_ratio)
+            TEMPLATES['hg'], utcnow(), 100,
+            num_tasks_priority, priorities=priority_ratio)
         tasks = tasks_1 + tasks_2
 
         # tasks are returned only once with their ids
@@ -173,7 +183,7 @@ class CommonSchedulerTest(SingleDbTestFixture):
 
         for task, orig_task in zip(ret, tasks):
             task = copy.deepcopy(task)
-            task_type = self.task_types[orig_task['type']]
+            task_type = TASK_TYPES[orig_task['type'].split('-')[-1]]
             self.assertNotIn(task['id'], ids)
             self.assertEqual(task['status'], 'next_run_not_scheduled')
             self.assertEqual(task['current_interval'],
@@ -205,8 +215,8 @@ class CommonSchedulerTest(SingleDbTestFixture):
     def test_peek_ready_tasks_no_priority(self):
         self._create_task_types()
         t = utcnow()
-        task_type = self.task1_template['type']
-        tasks = self._tasks_from_template(self.task1_template, t, 100)
+        task_type = TEMPLATES['git']['type']
+        tasks = self._tasks_from_template(TEMPLATES['git'], t, 100)
         random.shuffle(tasks)
         self.backend.create_tasks(tasks)
 
@@ -257,12 +267,12 @@ class CommonSchedulerTest(SingleDbTestFixture):
         priority_ratio = self._priority_ratio()
         self._create_task_types()
         t = utcnow()
-        task_type = self.task1_template['type']
+        task_type = TEMPLATES['git']['type']
         num_tasks_priority = 100
         num_tasks_no_priority = 100
         # Create tasks with and without priorities
         tasks = self._tasks_from_template(
-            self.task1_template, t,
+            TEMPLATES['git'], t,
             num=num_tasks_no_priority,
             num_priority=num_tasks_priority,
             priorities=priority_ratio)
@@ -315,12 +325,12 @@ class CommonSchedulerTest(SingleDbTestFixture):
         priority_ratio = self._priority_ratio()
         self._create_task_types()
         t = utcnow()
-        task_type = self.task1_template['type']
+        task_type = TEMPLATES['git']['type']
         num_tasks_priority = 100
         num_tasks_no_priority = 100
         # Create tasks with and without priorities
         tasks = self._tasks_from_template(
-            self.task1_template, t,
+            TEMPLATES['git'], t,
             num=num_tasks_no_priority,
             num_priority=num_tasks_priority,
             priorities=priority_ratio)
@@ -343,7 +353,7 @@ class CommonSchedulerTest(SingleDbTestFixture):
     def test_get_tasks(self):
         self._create_task_types()
         t = utcnow()
-        tasks = self._tasks_from_template(self.task1_template, t, 100)
+        tasks = self._tasks_from_template(TEMPLATES['git'], t, 100)
         tasks = self.backend.create_tasks(tasks)
         random.shuffle(tasks)
         while len(tasks) > 1:
@@ -360,8 +370,8 @@ class CommonSchedulerTest(SingleDbTestFixture):
         """
         self._create_task_types()
         _time = utcnow()
-        recurring = self._tasks_from_template(self.task1_template, _time, 12)
-        oneshots = self._tasks_from_template(self.task2_template, _time, 12)
+        recurring = self._tasks_from_template(TEMPLATES['git'], _time, 12)
+        oneshots = self._tasks_from_template(TEMPLATES['hg'], _time, 12)
         total_tasks = len(recurring) + len(oneshots)
 
         # simulate scheduling tasks
@@ -434,9 +444,9 @@ class CommonSchedulerTest(SingleDbTestFixture):
         self._create_task_types()
         _time = utcnow()
         recurring = self._tasks_from_template(
-            self.task1_template, _time, 12)
+            TEMPLATES['git'], _time, 12)
         oneshots = self._tasks_from_template(
-            self.task2_template, _time, 12)
+            TEMPLATES['hg'], _time, 12)
         total_tasks = len(recurring) + len(oneshots)
         pending_tasks = self.backend.create_tasks(recurring + oneshots)
         backend_tasks = [{
@@ -470,5 +480,5 @@ class CommonSchedulerTest(SingleDbTestFixture):
 class LocalSchedulerTest(CommonSchedulerTest, unittest.TestCase):
     def setUp(self):
         super().setUp()
-        self.config = {'scheduling_db': 'dbname=' + self.TEST_DB_NAME}
+        self.config = {'db': 'dbname=' + self.TEST_DB_NAME}
         self.backend = get_scheduler('local', self.config)

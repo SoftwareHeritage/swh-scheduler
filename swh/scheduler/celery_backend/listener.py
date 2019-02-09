@@ -3,17 +3,19 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import click
 import datetime
 import logging
+import time
 import socket
+import sys
+
+import click
 
 from arrow import utcnow
 from kombu import Queue
-from celery.events import EventReceiver
 
-from swh.scheduler import get_scheduler
-from .config import setup_log_handler, app as main_app
+import celery
+from celery.events import EventReceiver
 
 
 class ReliableEventReceiver(EventReceiver):
@@ -79,18 +81,22 @@ def event_monitor(app, backend):
         }
 
         messages = []
-        cursor = backend.cursor()
+        db = backend.get_db()
+        cursor = db.cursor(None)
         for action in actions['queue']:
             messages.append(action['message'])
             function = action_map[action['action']]
             args = action.get('args', ())
             kwargs = action.get('kwargs', {})
-            kwargs['cursor'] = cursor
+            kwargs['cur'] = cursor
             function(*args, **kwargs)
 
-        backend.commit()
+        db.conn.commit()
         for message in messages:
-            message.ack()
+            if not message.acknowledged:
+                message.ack()
+            else:
+                logger.info('message already acknowledged: %s', message)
         actions['queue'] = []
         actions['last_send'] = utcnow()
 
@@ -99,7 +105,11 @@ def event_monitor(app, backend):
         try_perform_actions()
 
     def catchall_event(event, message):
-        message.ack()
+        logger.info('event: %s, message:%s', event, message)
+        if not message.acknowledged:
+            message.ack()
+        else:
+            logger.info('message already acknowledged: %s', message)
         try_perform_actions()
 
     def task_started(event, message):
@@ -157,8 +167,8 @@ def event_monitor(app, backend):
         })
 
     recv = ReliableEventReceiver(
-        main_app.connection(),
-        app=main_app,
+        celery.current_app.connection(),
+        app=celery.current_app,
         handlers={
             'task-started': task_started,
             'task-result': task_succeeded,
@@ -168,39 +178,30 @@ def event_monitor(app, backend):
         node_id='listener-%s' % socket.gethostname(),
     )
 
-    recv.capture(limit=None, timeout=None, wakeup=True)
+    errors = 0
+    while True:
+        try:
+            recv.capture(limit=None, timeout=None, wakeup=True)
+            errors = 0
+        except KeyboardInterrupt:
+            logger.exception('Keyboard interrupt, exiting')
+            break
+        except Exception:
+            logger.exception('Unexpected exception')
+            if errors < 5:
+                time.sleep(errors)
+                errors += 1
+            else:
+                logger.error('Too many consecutive errors, exiting')
+                sys.exit(1)
 
 
 @click.command()
-@click.option('--cls', '-c', default='local',
-              help="Scheduler's class, default to 'local'")
-@click.option(
-    '--database', '-d', help='Scheduling database DSN')
-@click.option('--url', '-u',
-              help="(Optional) Scheduler's url access")
-@click.option('--log-level', '-l', default='INFO',
-              type=click.Choice(logging._nameToLevel.keys()),
-              help='Log level (default to INFO)')
-def main(cls, database, url, log_level):
-    setup_log_handler(loglevel=log_level, colorize=False,
-                      format='[%(levelname)s] %(name)s -- %(message)s')
-    # logging.basicConfig(level=level)
-
-    scheduler = None
-    override_config = {}
-    if cls == 'local':
-        if database:
-            override_config = {'scheduling_db': database}
-        scheduler = get_scheduler(cls, args=override_config)
-    elif cls == 'remote':
-        if url:
-            override_config = {'url': url}
-        scheduler = get_scheduler(cls, args=override_config)
-
-    if not scheduler:
-        raise ValueError('Scheduler class (local/remote) must be instantiated')
-
-    event_monitor(main_app, backend=scheduler)
+@click.pass_context
+def main(ctx):
+    click.echo("Deprecated! Use 'swh-scheduler listener' instead.",
+               err=True)
+    ctx.exit(1)
 
 
 if __name__ == '__main__':

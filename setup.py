@@ -52,7 +52,7 @@ setup(
     include_package_data=True,
     entry_points='''
         [console_scripts]
-        swh-scheduler=swh.scheduler.cli:cli
+        swh-scheduler=swh.scheduler.cli:main
     ''',
     classifiers=[
         "Programming Language :: Python :: 3",

@@ -39,6 +39,7 @@ swh/scheduler/tests/test_celery_tasks.py
 swh/scheduler/tests/test_scheduler.py
 swh/scheduler/tests/test_utils.py
 swh/scheduler/tests/updater/__init__.py
+swh/scheduler/tests/updater/conftest.py
 swh/scheduler/tests/updater/test_backend.py
 swh/scheduler/tests/updater/test_consumer.py
 swh/scheduler/tests/updater/test_events.py
