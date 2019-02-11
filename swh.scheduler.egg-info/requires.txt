@@ -9,7 +9,7 @@ vcversioner
 swh.core>=0.0.51
 
 [testing]
-hypothesis
 pytest<4
 pytest-postgresql
 celery>=4
+hypothesis>=3.11.0
