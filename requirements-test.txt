@@ -1,5 +1,5 @@
-hypothesis
 # pytest<4 because of https://github.com/pytest-dev/pytest/issues/4641
 pytest < 4
 pytest-postgresql
 celery >= 4
+hypothesis >= 3.11.0
