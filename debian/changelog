@@ -1,3 +1,13 @@
+swh-scheduler (0.0.42-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.42     - (tagged by Antoine R. Dumont
+    (@ardumont) <antoine.romain.dumont@gmail.com> on 2019-02-11 14:28:10
+    +0100)
+  * Upstream changes:     - v0.0.42     - Fix dependency requirements
+    for hypothesis
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 11 Feb 2019 13:33:48 +0000
+
 swh-scheduler (0.0.41-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.0.41     - (tagged by David Douard
