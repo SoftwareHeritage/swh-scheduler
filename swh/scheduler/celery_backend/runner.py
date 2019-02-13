@@ -5,6 +5,7 @@
 
 import arrow
 import logging
+from kombu.utils.uuid import uuid
 
 from swh.scheduler import get_scheduler, compute_nb_tasks_from
 
@@ -77,17 +78,17 @@ def run_ready_tasks(backend, app):
             return all_backend_tasks
 
         backend_tasks = []
+        celery_tasks = []
         for task in pending_tasks:
             args = task['arguments']['args']
             kwargs = task['arguments']['kwargs']
 
             backend_name = task_types[task['type']]['backend_name']
-            celery_result = app.send_task(
-                backend_name, args=args, kwargs=kwargs,
-            )
+            backend_id = uuid()
+            celery_tasks.append((backend_name, backend_id, args, kwargs))
             data = {
                 'task': task['id'],
-                'backend_id': celery_result.id,
+                'backend_id': backend_id,
                 'scheduled': arrow.utcnow(),
             }
 
@@ -95,6 +96,11 @@ def run_ready_tasks(backend, app):
         logger.debug('Sent %s celery tasks', len(backend_tasks))
 
         backend.mass_schedule_task_runs(backend_tasks)
+        for backend_name, backend_id, args, kwargs in celery_tasks:
+            app.send_task(
+                backend_name, task_id=backend_id, args=args, kwargs=kwargs,
+            )
+
         all_backend_tasks.extend(backend_tasks)
 
 
