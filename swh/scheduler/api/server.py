@@ -178,11 +178,16 @@ def site_map():
     return links
 
 
+api_cfg = None
+
+
 def run_from_webserver(environ, start_response,
                        config_path=DEFAULT_CONFIG_PATH):
     """Run the WSGI app from the webserver, loading the configuration."""
-    cfg = config.load_named_config(config_path, DEFAULT_CONFIG)
-    app.config.update(cfg)
+    global api_cfg
+    if not api_cfg:
+        api_cfg = config.load_named_config(config_path, DEFAULT_CONFIG)
+        app.config.update(api_cfg)
     handler = logging.StreamHandler()
     app.logger.addHandler(handler)
     return app(environ, start_response)
