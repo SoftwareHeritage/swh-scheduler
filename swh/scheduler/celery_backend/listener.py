@@ -6,7 +6,6 @@
 import datetime
 import logging
 import time
-import socket
 import sys
 
 import click
@@ -175,7 +174,7 @@ def event_monitor(app, backend):
             'task-failed': task_failed,
             '*': catchall_event,
         },
-        node_id='listener-%s' % socket.gethostname(),
+        node_id='listener',
     )
 
     errors = 0
