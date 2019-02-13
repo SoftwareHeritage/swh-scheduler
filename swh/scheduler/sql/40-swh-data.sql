@@ -108,6 +108,32 @@ insert into task_type(
        backend_name,
        default_interval, min_interval, max_interval, backoff_factor)
 values (
+       'swh-lister-bitbucket-incremental',
+       'Incrementally list BitBucket',
+       'swh.lister.bitbucket.tasks.IncrementalBitBucketLister',
+       '1 day',
+       '1 day',
+       '1 day', 1);
+
+insert into task_type(
+       type,
+       description,
+       backend_name,
+       default_interval, min_interval, max_interval, backoff_factor)
+values (
+       'swh-lister-bitbucket-full',
+       'Full update of Bitbucket repos list',
+       'swh.lister.bitbucket.tasks.FullBitBucketRelister',
+       '90 days',
+       '90 days',
+       '90 days', 1);
+
+insert into task_type(
+       type,
+       description,
+       backend_name,
+       default_interval, min_interval, max_interval, backoff_factor)
+values (
        'swh-lister-github-incremental',
        'Incrementally list GitHub',
        'swh.lister.github.tasks.IncrementalGitHubLister',
