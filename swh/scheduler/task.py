@@ -46,10 +46,11 @@ class SWHTask(celery.app.task.Task):
 
     def on_failure(self, exc, task_id, args, kwargs, einfo):
         self.statsd.increment('swh_task_failure_count')
-        self.send_event('task-result-exception')
 
     def on_success(self, retval, task_id, args, kwargs):
         self.statsd.increment('swh_task_success_count')
+        # this is a swh specific event. Used to attach the retval to the
+        # task_run
         self.send_event('task-result', result=retval)
 
     @property
