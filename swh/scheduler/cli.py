@@ -11,6 +11,7 @@ import json
 import locale
 import logging
 import time
+import datetime
 
 from swh.core import utils, config
 from . import compute_nb_tasks_from
@@ -36,16 +37,33 @@ DATETIME = DateTimeType()
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 
-def pretty_print_list(list, indent):
+def format_dict(d):
+    ret = {}
+    for k, v in d.items():
+        if isinstance(v, (arrow.Arrow, datetime.date, datetime.datetime)):
+            v = arrow.get(v).format()
+        elif isinstance(v, dict):
+            v = format_dict(v)
+        ret[k] = v
+    return ret
+
+
+def pretty_print_list(list, indent=0):
     """Pretty-print a list"""
     return ''.join('%s%s\n' % (' ' * indent, item) for item in list)
 
 
-def pretty_print_dict(dict, indent):
+def pretty_print_dict(dict, indent=0):
     """Pretty-print a list"""
     return ''.join('%s%s: %s\n' %
                    (' ' * indent, click.style(key, bold=True), value)
                    for key, value in dict.items())
+
+
+def pretty_print_run(run, indent=4):
+    fmt = ('{indent}{backend_id} [{status}]\n'
+           '{indent}  scheduled: {scheduled} [{started}:{ended}]')
+    return fmt.format(indent=' '*indent, **format_dict(run))
 
 
 def pretty_print_task(task, full=False):
@@ -320,9 +338,11 @@ def list_pending_tasks(ctx, task_types, limit, before):
 @click.option('--after', '-a', required=False, type=DATETIME,
               metavar='DATETIME',
               help='Limit to tasks supposed to run after the given date.')
+@click.option('--list-runs', '-r', is_flag=True, default=False,
+              help='Also list past executions of each task.')
 @click.pass_context
 def list_tasks(ctx, task_id, task_type, limit, status, policy, priority,
-               before, after):
+               before, after, list_runs):
     """List tasks.
     """
     scheduler = ctx.obj['scheduler']
@@ -350,11 +370,21 @@ def list_tasks(ctx, task_id, task_type, limit, status, policy, priority,
         status=status, priority=priority, policy=policy,
         before=before, after=after,
         limit=limit)
+    if list_runs:
+        runs = {t['id']: [] for t in tasks}
+        for r in scheduler.get_task_runs([task['id'] for task in tasks]):
+            runs[r['task']].append(r)
+    else:
+        runs = {}
 
     output.append('Found %d tasks\n' % (
         len(tasks)))
     for task in tasks:
         output.append(pretty_print_task(task, full=True))
+        if runs.get(task['id']):
+            output.append(click.style('  Executions:', bold=True))
+            for run in runs[task['id']]:
+                output.append(pretty_print_run(run, indent=4))
 
     click.echo('\n'.join(output))
 
