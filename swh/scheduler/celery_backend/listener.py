@@ -36,8 +36,6 @@ class ReliableEventReceiver(EventReceiver):
                          accept=self.accept)]
 
     def _receive(self, bodies, message):
-        logging.debug('## event-receiver: bodies: %s' % bodies)
-        logging.debug('## event-receiver: message: %s' % message)
         if not isinstance(bodies, list):  # celery<4 returned body as element
             bodies = [bodies]
         for body in bodies:
@@ -48,9 +46,6 @@ class ReliableEventReceiver(EventReceiver):
         """Process the received event by dispatching it to the appropriate
         handler."""
         handler = self.handlers.get(type) or self.handlers.get('*')
-        logging.debug('## event-receiver: type: %s' % type)
-        logging.debug('## event-receiver: event: %s' % event)
-        logging.debug('## event-receiver: handler: %s' % handler)
         handler and handler(event, message)
 
 
@@ -104,7 +99,7 @@ def event_monitor(app, backend):
         try_perform_actions()
 
     def catchall_event(event, message):
-        logger.info('event: %s, message:%s', event, message)
+        logger.debug('event: %s %s', event['type'], event.get('name', 'N/A'))
         if not message.acknowledged:
             message.ack()
         else:
@@ -112,8 +107,8 @@ def event_monitor(app, backend):
         try_perform_actions()
 
     def task_started(event, message):
-        logger.debug('task_started: event: %s' % event)
-        logger.debug('task_started: message: %s' % message)
+        logger.debug('task_started: %s %s %s', event['type'],
+                     event.get('name', 'N/A'))
 
         queue_action({
             'action': 'start_task_run',
@@ -129,7 +124,7 @@ def event_monitor(app, backend):
 
     def task_succeeded(event, message):
         logger.debug('task_succeeded: event: %s' % event)
-        logger.debug('task_succeeded: message: %s' % message)
+        logger.debug('                message: %s' % message)
         result = event['result']
 
         logger.debug('task_succeeded: result: %s' % result)
@@ -153,7 +148,7 @@ def event_monitor(app, backend):
 
     def task_failed(event, message):
         logger.debug('task_failed: event: %s' % event)
-        logger.debug('task_failed: message: %s' % message)
+        logger.debug('             message: %s' % message)
 
         queue_action({
             'action': 'end_task_run',
