@@ -1,10 +1,8 @@
-# Copyright (C) 2015  The Software Heritage developers
+# Copyright (C) 2015-2019  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import itertools
-import importlib
 import logging
 import os
 import urllib.parse
@@ -18,8 +16,6 @@ from kombu import Exchange, Queue
 from kombu.five import monotonic as _monotonic
 
 import requests
-
-from swh.scheduler.task import Task
 
 from swh.core.config import load_named_config, merge_configs
 from swh.core.logger import JournalHandler
@@ -97,31 +93,8 @@ def setup_queues_and_tasks(sender, instance, **kwargs):
     for these task classes.
 
     """
-
     logger.info('Setup Queues & Tasks for %s', sender)
-
     instance.app.conf['worker_name'] = sender
-
-    for module_name in itertools.chain(
-            # celery worker -I flag
-            instance.app.conf['include'],
-            # set from the celery / swh worker instance configuration file
-            instance.app.conf['imports'],
-    ):
-        module = importlib.import_module(module_name)
-        for name in dir(module):
-            obj = getattr(module, name)
-            if (
-                    isinstance(obj, type)
-                    and issubclass(obj, Task)
-                    and obj != Task  # Don't register the abstract class itself
-            ):
-                class_name = '%s.%s' % (module_name, name)
-                register_task_class(instance.app, class_name, obj)
-
-    for task_name in instance.app.tasks:
-        if task_name.startswith('swh.'):
-            instance.app.amqp.queues.select_add(task_name)
 
 
 @Panel.register
@@ -146,7 +119,7 @@ def get_queue_stats(app, queue_name):
     or `None` if the current configuration does not use RabbitMQ.
 
     Interesting keys:
-     - consumers (number of consumers for the queue)
+     - Consumers (number of consumers for the queue)
      - messages (number of messages in queue)
      - messages_unacknowledged (number of messages currently being
        processed)
