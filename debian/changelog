@@ -1,8 +1,12 @@
-swh-scheduler (0.0.44-1~swh1~bpo9+1) stretch-swh; urgency=medium
+swh-scheduler (0.0.45-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for stretch-swh
+  * New upstream release 0.0.45     - (tagged by Antoine R. Dumont
+    (@ardumont) <antoine.romain.dumont@gmail.com> on 2019-02-15 10:43:07
+    +0100)
+  * Upstream changes:     - v0.0.45     - celery_backend/config: Fix
+    loglevel for amqp module
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 13 Feb 2019 15:36:13 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 15 Feb 2019 09:48:25 +0000
 
 swh-scheduler (0.0.44-1~swh1) unstable-swh; urgency=medium
 
