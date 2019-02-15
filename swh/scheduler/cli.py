@@ -405,7 +405,7 @@ def respawn_tasks(ctx, task_ids, next_run):
 @click.option('--dry-run/--no-dry-run', is_flag=True, default=False,
               help='Default to list only what would be archived.')
 @click.option('--verbose', is_flag=True, default=False,
-              help='Default to list only what would be archived.')
+              help='Verbose mode')
 @click.option('--cleanup/--no-cleanup', is_flag=True, default=True,
               help='Clean up archived tasks (default)')
 @click.option('--start-from', type=click.INT, default=-1,
@@ -577,7 +577,8 @@ def task_type(ctx):
 
 
 @task_type.command('list')
-@click.option('--verbose', '-v', is_flag=True, default=False)
+@click.option('--verbose', '-v', is_flag=True, default=False,
+              help='Verbose mode')
 @click.option('--task_type', '-t', multiple=True, default=None,
               help='List task types of given type')
 @click.option('--task_name', '-n', multiple=True, default=None,
