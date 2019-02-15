@@ -1,3 +1,13 @@
+swh-scheduler (0.0.46-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.46     - (tagged by Antoine R. Dumont
+    (@ardumont) <antoine.romain.dumont@gmail.com> on 2019-02-15 15:05:47
+    +0100)
+  * Upstream changes:     - v0.0.46     - scheduler.task: Remove no
+    longer used Task class
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 15 Feb 2019 14:15:26 +0000
+
 swh-scheduler (0.0.45-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.0.45     - (tagged by Antoine R. Dumont
