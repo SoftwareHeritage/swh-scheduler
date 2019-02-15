@@ -76,7 +76,7 @@ def setup_log_handler(loglevel=None, logfile=None, format=None,
     logger = logging.getLogger('amqp')
     logger.addFilter(lambda record: not record.msg.startswith(
         'heartbeat_tick'))
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(loglevel)
     # Silence useless "Starting new HTTP connection" messages
     logging.getLogger('urllib3').setLevel(logging.WARNING)
 
