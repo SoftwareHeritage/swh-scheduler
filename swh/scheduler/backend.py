@@ -227,7 +227,9 @@ class SchedulerBackend:
             where.append('next_run >= %s')
             args.append(after)
 
-        query = 'select * from task where ' + ' and '.join(where)
+        query = 'select * from task'
+        if where:
+            query += ' where ' + ' and '.join(where)
         if limit:
             query += ' limit %s :: bigint'
             args.append(limit)

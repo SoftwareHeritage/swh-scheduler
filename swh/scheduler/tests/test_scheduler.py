@@ -370,6 +370,13 @@ class CommonSchedulerTest(SingleDbTestFixture):
             ret = self.backend.get_tasks(task['id'] for task in cur_tasks)
             self.assertCountEqual(ret, cur_tasks)
 
+    def test_search_tasks(self):
+        self._create_task_types()
+        t = utcnow()
+        tasks = self._tasks_from_template(TEMPLATES['git'], t, 100)
+        tasks = self.backend.create_tasks(tasks)
+        self.assertCountEqual(self.backend.search_tasks(), tasks)
+
     def test_filter_task_to_archive(self):
         """Filtering only list disabled recurring or completed oneshot tasks
 
