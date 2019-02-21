@@ -100,6 +100,13 @@ def get_tasks():
     return get_sched().get_tasks(**decode_request(request))
 
 
+@app.route('/get_task_runs', methods=['POST'])
+@negotiate(MsgpackFormatter)
+@negotiate(JSONFormatter)
+def get_task_runs():
+    return get_sched().get_task_runs(**decode_request(request))
+
+
 @app.route('/search_tasks', methods=['POST'])
 @negotiate(MsgpackFormatter)
 @negotiate(JSONFormatter)
