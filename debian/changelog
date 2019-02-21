@@ -1,8 +1,8 @@
-swh-scheduler (0.0.47-1~swh1~bpo9+1) stretch-swh; urgency=medium
+swh-scheduler (0.0.47-1~swh2) unstable-swh; urgency=low
 
-  * Rebuild for stretch-swh
+  * Upstream release to fix build dependencies issue
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 21 Feb 2019 09:14:45 +0000
+ -- Antoine Romain Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Thu, 21 Feb 2019 15:41:24 +0100
 
 swh-scheduler (0.0.47-1~swh1) unstable-swh; urgency=medium
 
