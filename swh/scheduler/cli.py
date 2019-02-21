@@ -70,6 +70,46 @@ def pretty_print_task(task, full=False):
     """Pretty-print a task
 
     If 'full' is True, also print the status and priority fields.
+
+    >>> task = {
+    ...     'id': 1234,
+    ...     'arguments': {
+    ...         'args': ['foo', 'bar'],
+    ...         'kwargs': {'key': 'value'},
+    ...     },
+    ...     'current_interval': datetime.timedelta(hours=1),
+    ...     'next_run': datetime.datetime(2019, 2, 21, 13, 52, 35, 407818),
+    ...     'policy': 'oneshot',
+    ...     'priority': None,
+    ...     'status': 'next_run_not_scheduled',
+    ...     'type': 'test_task',
+    ... }
+    >>> print(click.unstyle(pretty_print_task(task)))
+    Task 1234
+      Next run: ... (2019-02-21 13:52:35+00:00)
+      Interval: 1:00:00
+      Type: test_task
+      Policy: oneshot
+      Args:
+        foo
+        bar
+      Keyword args:
+        key: value
+    <BLANKLINE>
+    >>> print(click.unstyle(pretty_print_task(task, full=True)))
+    Task 1234
+      Next run: ... (2019-02-21 13:52:35+00:00)
+      Interval: 1:00:00
+      Type: test_task
+      Policy: oneshot
+      Status: next_run_not_scheduled
+      Priority:\x20
+      Args:
+        foo
+        bar
+      Keyword args:
+        key: value
+    <BLANKLINE>
     """
     next_run = arrow.get(task['next_run'])
     lines = [
