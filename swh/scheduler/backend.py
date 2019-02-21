@@ -227,7 +227,9 @@ class SchedulerBackend:
             where.append('next_run >= %s')
             args.append(after)
 
-        query = 'select * from task where ' + ' and '.join(where)
+        query = 'select * from task'
+        if where:
+            query += ' where ' + ' and '.join(where)
         if limit:
             query += ' limit %s :: bigint'
             args.append(limit)
@@ -454,3 +456,29 @@ class SchedulerBackend:
         cur.execute(
             "select * from swh_scheduler_delete_archived_tasks(%s, %s)",
             (_task_ids, _task_run_ids))
+
+    task_run_keys = ['id', 'task', 'backend_id', 'scheduled',
+                     'started', 'ended', 'metadata', 'status', ]
+
+    @db_transaction()
+    def get_task_runs(self, task_ids, limit=None, db=None, cur=None):
+        """Search task run for a task id"""
+        where = []
+        args = []
+
+        if task_ids:
+            if isinstance(task_ids, (str, int)):
+                where.append('task = %s')
+            else:
+                where.append('task in %s')
+                task_ids = tuple(task_ids)
+            args.append(task_ids)
+        else:
+            return ()
+
+        query = 'select * from task_run where ' + ' and '.join(where)
+        if limit:
+            query += ' limit %s :: bigint'
+            args.append(limit)
+        cur.execute(query, args)
+        return cur.fetchall()

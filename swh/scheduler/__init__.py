@@ -16,6 +16,8 @@ DEFAULT_CONFIG = {
         },
     })
 }
+# current configuration. To be set by the config loading mechanism
+CONFIG = {}
 
 
 def compute_nb_tasks_from(num_tasks):
