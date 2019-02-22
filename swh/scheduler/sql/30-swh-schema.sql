@@ -424,7 +424,7 @@ as $$
    limit lim;
 $$;
 
-comment on function swh_scheduler_task_to_archive is 'Read archivable tasks function';
+comment on function swh_scheduler_task_to_archive (timestamptz, timestamptz, bigint, bigint) is 'Read archivable tasks function';
 
 create or replace function swh_scheduler_delete_archived_tasks(
   task_ids bigint[], task_run_ids bigint[])
@@ -443,7 +443,7 @@ as $$
                and tr.task is null);
 $$;
 
-comment on function swh_scheduler_delete_archived_tasks is 'Clean up archived tasks function';
+comment on function swh_scheduler_delete_archived_tasks(bigint[], bigint[]) is 'Clean up archived tasks function';
 
 create or replace function swh_scheduler_update_task_on_task_end ()
   returns trigger
