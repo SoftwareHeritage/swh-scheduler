@@ -592,7 +592,6 @@ def api_server(ctx, host, port, debug):
         ctx.exit(1)
 
     from swh.scheduler.api import server
-    server.app.scheduler = ctx.obj['scheduler']
     server.app.config.update(ctx.obj['config'])
     if debug is None:
         debug = ctx.obj['loglevel'] <= logging.DEBUG
