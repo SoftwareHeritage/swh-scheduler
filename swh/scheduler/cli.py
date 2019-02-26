@@ -17,6 +17,7 @@ from swh.core import utils, config
 from . import compute_nb_tasks_from
 from .backend_es import SWHElasticSearchClient
 from . import get_scheduler, DEFAULT_CONFIG
+from .cli_utils import parse_options
 
 
 locale.setlocale(locale.LC_ALL, '')
@@ -300,8 +301,7 @@ def schedule_task(ctx, type, options, policy, priority, next_run):
 
     now = arrow.utcnow()
 
-    args = [x for x in options if '=' not in x]
-    kw = dict(x.split('=', 1) for x in options if '=' in x)
+    (args, kw) = parse_options(options)
     task = {'type': type,
             'policy': policy,
             'priority': priority,
