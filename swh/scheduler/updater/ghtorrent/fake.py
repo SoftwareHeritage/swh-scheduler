@@ -9,12 +9,7 @@ import string
 from arrow import utcnow
 from kombu import Connection
 
-from swh.scheduler.updater.ghtorrent import events
-
-
-class RabbitMQConn:
-    # FIXME
-    pass
+from swh.scheduler.updater.ghtorrent import RabbitMQConn, events
 
 
 class FakeRandomOriginGenerator:
