@@ -28,7 +28,6 @@ CONFIG_NAME_TEMPLATE = 'worker/%s'
 
 DEFAULT_CONFIG = {
     'task_broker': ('str', 'amqp://guest@localhost//'),
-    'result_backend': ('str', 'rpc://'),
     'task_modules': ('list[str]', []),
     'task_queues': ('list[str]', []),
     'task_soft_time_limit': ('int', 0),
@@ -228,8 +227,6 @@ CELERY_DEFAULT_CONFIG = dict(
     worker_disable_rate_limits=True,
     # Task routing
     task_routes=route_for_task,
-    # Task queues this worker will consume from
-    task_queues=CELERY_QUEUES,
     # Allow pool restarts from remote
     worker_pool_restarts=True,
     # Do not prefetch tasks
@@ -246,13 +243,13 @@ def build_app(config=None):
         {k: v for (k, (_, v)) in DEFAULT_CONFIG.items()},
         config or {})
 
-    config['task_queues'] = [Queue(queue, Exchange(queue), routing_key=queue)
-                             for queue in config.get('task_queues', ())]
+    config['task_queues'] = CELERY_QUEUES + [
+        Queue(queue, Exchange(queue), routing_key=queue)
+        for queue in config.get('task_queues', ())]
     logger.debug('Creating a Celery app with %s', config)
 
     # Instantiate the Celery app
     app = Celery(broker=config['task_broker'],
-                 backend=config['result_backend'],
                  task_cls='swh.scheduler.task:SWHTask')
     app.add_defaults(CELERY_DEFAULT_CONFIG)
     app.add_defaults(config)
