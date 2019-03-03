@@ -1,8 +1,9 @@
-# Copyright (C) 2018  The Software Heritage developers
+# Copyright (C) 2018-2019  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import os
 import logging
 
 from flask import request, Flask
@@ -14,7 +15,6 @@ from swh.core.api import (decode_request,
 
 from swh.core.api import negotiate, JSONFormatter, MsgpackFormatter
 from swh.scheduler import get_scheduler as get_scheduler_from
-from swh.scheduler import DEFAULT_CONFIG, DEFAULT_CONFIG_PATH
 
 
 app = Flask(__name__)
@@ -185,19 +185,74 @@ def site_map():
     return links
 
 
+def load_and_check_config(config_file, type='local'):
+    """Check the minimal configuration is set to run the api or raise an
+       error explanation.
+
+    Args:
+        config_file (str): Path to the configuration file to load
+        type (str): configuration type. For 'local' type, more
+                    checks are done.
+
+    Raises:
+        Error if the setup is not as expected
+
+    Returns:
+        configuration as a dict
+
+    """
+    if not config_file:
+        raise EnvironmentError('Configuration file must be defined')
+
+    if not os.path.exists(config_file):
+        raise FileNotFoundError('Configuration file %s does not exist' % (
+            config_file, ))
+
+    cfg = config.read(config_file)
+
+    vcfg = cfg.get('scheduler')
+    if not vcfg:
+        raise KeyError("Missing '%scheduler' configuration")
+
+    if type == 'local':
+        cls = vcfg.get('cls')
+        if cls != 'local':
+            raise ValueError(
+                "The scheduler backend can only be started with a 'local' "
+                "configuration")
+
+        args = vcfg.get('args')
+        if not args:
+            raise KeyError(
+                "Invalid configuration; missing 'args' config entry")
+
+        db = args.get('db')
+        if not db:
+            raise KeyError(
+                "Invalid configuration; missing 'db' config entry")
+
+    return cfg
+
+
 api_cfg = None
 
 
-def run_from_webserver(environ, start_response,
-                       config_path=DEFAULT_CONFIG_PATH):
-    """Run the WSGI app from the webserver, loading the configuration."""
+def make_app_from_configfile():
+    """Run the WSGI app from the webserver, loading the configuration from
+       a configuration file.
+
+       SWH_CONFIG_FILENAME environment variable defines the
+       configuration path to load.
+
+    """
     global api_cfg
     if not api_cfg:
-        api_cfg = config.load_named_config(config_path, DEFAULT_CONFIG)
+        config_file = os.environ.get('SWH_CONFIG_FILENAME')
+        api_cfg = load_and_check_config(config_file)
         app.config.update(api_cfg)
     handler = logging.StreamHandler()
     app.logger.addHandler(handler)
-    return app(environ, start_response)
+    return app
 
 
 if __name__ == '__main__':

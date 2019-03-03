@@ -107,8 +107,8 @@ def event_monitor(app, backend):
         try_perform_actions()
 
     def task_started(event, message):
-        logger.debug('task_started: %s %s %s', event['type'],
-                     event.get('name', 'N/A'))
+        logger.debug('task_started: %s %s',
+                     event['type'], event.get('name', 'N/A'))
 
         queue_action({
             'action': 'start_task_run',
