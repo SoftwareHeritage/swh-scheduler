@@ -7,24 +7,10 @@
 from swh.core.api import SWHRemoteAPI
 
 
-class SchedulerAPIError(Exception):
-    """Specific internal scheduler api issue (mainly connection)
-
-    """
-
-    def __str__(self):
-        args = self.args
-        return 'An unexpected error occurred in the api backend: %s' % args
-
-
 class RemoteScheduler(SWHRemoteAPI):
     """Proxy to a remote scheduler API
 
     """
-    def __init__(self, url, timeout=None):
-        super().__init__(
-            api_exception=SchedulerAPIError, url=url, timeout=timeout)
-
     def close_connection(self):
         return self.post('close_connection', {})
 
