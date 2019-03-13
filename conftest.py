@@ -7,8 +7,6 @@ settings.register_profile("slow", max_examples=20, deadline=5000)
 
 # Modules that should not be loaded by --doctest-modules
 collect_ignore = [
-    # ImportError
-    'swh/scheduler/updater/ghtorrent/fake.py',
     # NotImplementedError: save_group is not supported by this backend.
     'swh/scheduler/tests/tasks.py',
     # OSError: Configuration file must be defined
