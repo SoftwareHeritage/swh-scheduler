@@ -14,10 +14,13 @@ import time
 import datetime
 
 from swh.core import utils, config
+from swh.storage import get_storage
+from swh.storage.algos.origin import iter_origins
+
 from . import compute_nb_tasks_from
 from .backend_es import SWHElasticSearchClient
 from . import get_scheduler, DEFAULT_CONFIG
-from .cli_utils import parse_options
+from .cli_utils import parse_options, schedule_origin_batches
 
 
 locale.setlocale(locale.LC_ALL, '')
@@ -288,6 +291,10 @@ def schedule_tasks(ctx, columns, delimiter, file):
 def schedule_task(ctx, type, options, policy, priority, next_run):
     """Schedule one task from arguments.
 
+    The first argument is the name of the task type, further ones are
+    positional and keyword argument(s) of the task, in YAML format.
+    Keyword args are of the form key=value.
+
     Usage sample:
 
     swh-scheduler --database 'service=swh-scheduler' \
@@ -325,6 +332,54 @@ def schedule_task(ctx, type, options, policy, priority, next_run):
         output.append(pretty_print_task(task))
 
     click.echo('\n'.join(output))
+
+
+@task.command('schedule_origins')
+@click.argument('type', nargs=1, required=True)
+@click.argument('options', nargs=-1)
+@click.option('--batch-size', '-b', 'origin_batch_size',
+              default=10, show_default=True, type=int,
+              help="Number of origins per task")
+@click.option('--min-id',
+              default=0, show_default=True, type=int,
+              help="Only schedule tasks for origins whose ID is greater")
+@click.option('--max-id',
+              default=None, type=int,
+              help="Only schedule tasks for origins whose ID is lower")
+@click.option('--storage-url', '-g',
+              help="URL of the (graph) storage API")
+@click.option('--dry-run/--no-dry-run', is_flag=True,
+              default=False,
+              help='List only what would be scheduled.')
+@click.pass_context
+def schedule_origin_metadata_index(
+        ctx, type, options, storage_url, origin_batch_size,
+        min_id, max_id, dry_run):
+    """Schedules tasks for origins that are already known.
+
+    The first argument is the name of the task type, further ones are
+    keyword argument(s) of the task in the form key=value, where value is
+    in YAML format.
+
+    Usage sample:
+
+    swh-scheduler --database 'service=swh-scheduler' \
+        task schedule_origins indexer_origin_metadata
+    """
+    scheduler = ctx.obj['scheduler']
+    storage = get_storage('remote', {'url': storage_url})
+    if dry_run:
+        scheduler = None
+
+    (args, kw) = parse_options(options)
+    if args:
+        raise click.ClickException('Only keywords arguments are allowed.')
+
+    origins = iter_origins(storage, origin_from=min_id, origin_to=max_id)
+    origin_ids = (origin['id'] for origin in origins)
+
+    schedule_origin_batches(
+        scheduler, type, origin_ids, origin_batch_size, kw)
 
 
 @task.command('list-pending')

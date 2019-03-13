@@ -11,6 +11,8 @@ from unittest.mock import patch
 from click.testing import CliRunner
 import pytest
 
+from swh.storage.in_memory import Storage
+
 from swh.scheduler.cli import cli
 from swh.scheduler.utils import create_task_dict
 
@@ -575,3 +577,107 @@ Task 1
 '''.lstrip()
     assert result.exit_code == 0, result.output
     assert re.fullmatch(expected, result.output, re.MULTILINE), result.output
+
+
+def _fill_storage_with_origins(storage, nb_origins):
+    storage.origin_add([
+        {
+            'type': 'type{}'.format(i),
+            'url': 'http://example.com/{}'.format(i),
+        }
+        for i in range(nb_origins)
+    ])
+
+
+@pytest.fixture
+def storage():
+    """An instance of swh.storage.in_memory.Storage that gets injected
+    into the CLI functions."""
+    storage = Storage()
+    with patch('swh.scheduler.cli.get_storage') as get_storage_mock:
+        get_storage_mock.return_value = storage
+        yield storage
+
+
+@patch('swh.scheduler.cli_utils.TASK_BATCH_SIZE', 3)
+def test_task_schedule_origins_dry_run(
+        swh_scheduler, storage):
+    """Tests the scheduling when origin_batch_size*task_batch_size is a
+    divisor of nb_origins."""
+    _fill_storage_with_origins(storage, 90)
+
+    result = invoke(swh_scheduler, False, [
+        'task', 'schedule_origins', '--dry-run', 'swh-test-ping',
+    ])
+
+    # Check the output
+    expected = r'''^\[INFO\] swh.core.config -- Loading config file .*
+Scheduled 3 tasks \(30 origins\).
+Scheduled 6 tasks \(60 origins\).
+Scheduled 9 tasks \(90 origins\).
+Done.
+'''
+    assert result.exit_code == 0, result.output
+    assert re.match(expected, result.output, re.MULTILINE), repr(result.output)
+
+    # Check scheduled tasks
+    tasks = swh_scheduler.search_tasks()
+    assert len(tasks) == 0
+
+
+@patch('swh.scheduler.cli_utils.TASK_BATCH_SIZE', 3)
+def test_task_schedule_origins(swh_scheduler, storage):
+    """Tests the scheduling when neither origin_batch_size or
+    task_batch_size is a divisor of nb_origins."""
+    _fill_storage_with_origins(storage, 70)
+
+    result = invoke(swh_scheduler, False, [
+        'task', 'schedule_origins', 'swh-test-ping',
+        '--batch-size', '20',
+    ])
+
+    # Check the output
+    expected = r'''^\[INFO\] swh.core.config -- Loading config file .*
+Scheduled 3 tasks \(60 origins\).
+Scheduled 4 tasks \(70 origins\).
+Done.
+'''
+    assert result.exit_code == 0, result.output
+    assert re.match(expected, result.output, re.MULTILINE), repr(result.output)
+
+    # Check scheduled tasks
+    tasks = swh_scheduler.search_tasks()
+    assert len(tasks) == 4
+    assert tasks[0]['arguments']['args'] == [list(range(1, 21))]
+    assert tasks[1]['arguments']['args'] == [list(range(21, 41))]
+    assert tasks[2]['arguments']['args'] == [list(range(41, 61))]
+    assert tasks[3]['arguments']['args'] == [list(range(61, 71))]
+    assert all(task['arguments']['kwargs'] == {} for task in tasks)
+
+
+def test_task_schedule_origins_kwargs(swh_scheduler, storage):
+    """Tests support of extra keyword-arguments."""
+    _fill_storage_with_origins(storage, 30)
+
+    result = invoke(swh_scheduler, False, [
+        'task', 'schedule_origins', 'swh-test-ping',
+        '--batch-size', '20',
+        'key1="value1"', 'key2="value2"',
+    ])
+
+    # Check the output
+    expected = r'''^\[INFO\] swh.core.config -- Loading config file .*
+Scheduled 2 tasks \(30 origins\).
+Done.
+'''
+    assert result.exit_code == 0, result.output
+    assert re.match(expected, result.output, re.MULTILINE), repr(result.output)
+
+    # Check scheduled tasks
+    tasks = swh_scheduler.search_tasks()
+    assert len(tasks) == 2
+    assert tasks[0]['arguments']['args'] == [list(range(1, 21))]
+    assert tasks[1]['arguments']['args'] == [list(range(21, 31))]
+    assert all(task['arguments']['kwargs'] ==
+               {'key1': 'value1', 'key2': 'value2'}
+               for task in tasks)
