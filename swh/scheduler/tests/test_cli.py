@@ -61,7 +61,7 @@ Task 1
   Args:
     \['arg1', 'arg2'\]
   Keyword args:
-    key: value
+    key: 'value'
 
 Task 2
   Next run: just now \(.*\)
@@ -71,7 +71,7 @@ Task 2
   Args:
     \['arg3', 'arg4'\]
   Keyword args:
-    key: value
+    key: 'value'
 
 '''.lstrip()
     assert result.exit_code == 0, result.output
@@ -99,10 +99,10 @@ Task 1
   Type: swh-test-ping
   Policy: oneshot
   Args:
-    arg1
-    arg2
+    'arg1'
+    'arg2'
   Keyword args:
-    key: value
+    key: 'value'
 
 '''.lstrip()
     assert result.exit_code == 0, result.output
@@ -124,10 +124,10 @@ Task 1
   Type: swh-test-ping
   Policy: recurring
   Args:
-    arg1
-    arg2
+    'arg1'
+    'arg2'
   Keyword args:
-    key: value
+    key: 'value'
 
 '''.lstrip()
     assert result.exit_code == 0, result.output
@@ -167,7 +167,7 @@ Task 1
   Policy: oneshot
   Args:
   Keyword args:
-    key: value
+    key: 'value'
 
 '''.lstrip()
     assert result.exit_code == 0, result.output

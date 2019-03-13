@@ -51,14 +51,14 @@ def format_dict(d):
 
 def pretty_print_list(list, indent=0):
     """Pretty-print a list"""
-    return ''.join('%s%s\n' % (' ' * indent, item) for item in list)
+    return ''.join('%s%r\n' % (' ' * indent, item) for item in list)
 
 
 def pretty_print_dict(dict, indent=0):
     """Pretty-print a list"""
-    return ''.join('%s%s: %s\n' %
+    return ''.join('%s%s: %r\n' %
                    (' ' * indent, click.style(key, bold=True), value)
-                   for key, value in dict.items())
+                   for key, value in sorted(dict.items()))
 
 
 def pretty_print_run(run, indent=4):
@@ -75,8 +75,8 @@ def pretty_print_task(task, full=False):
     >>> task = {
     ...     'id': 1234,
     ...     'arguments': {
-    ...         'args': ['foo', 'bar'],
-    ...         'kwargs': {'key': 'value'},
+    ...         'args': ['foo', 'bar', True],
+    ...         'kwargs': {'key': 'value', 'key2': 42},
     ...     },
     ...     'current_interval': datetime.timedelta(hours=1),
     ...     'next_run': datetime.datetime(2019, 2, 21, 13, 52, 35, 407818),
@@ -92,10 +92,12 @@ def pretty_print_task(task, full=False):
       Type: test_task
       Policy: oneshot
       Args:
-        foo
-        bar
+        'foo'
+        'bar'
+        True
       Keyword args:
-        key: value
+        key: 'value'
+        key2: 42
     <BLANKLINE>
     >>> print(click.unstyle(pretty_print_task(task, full=True)))
     Task 1234
@@ -106,10 +108,12 @@ def pretty_print_task(task, full=False):
       Status: next_run_not_scheduled
       Priority:\x20
       Args:
-        foo
-        bar
+        'foo'
+        'bar'
+        True
       Keyword args:
-        key: value
+        key: 'value'
+        key2: 42
     <BLANKLINE>
     """
     next_run = arrow.get(task['next_run'])
