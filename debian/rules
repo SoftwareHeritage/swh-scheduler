@@ -1,5 +1,7 @@
 #!/usr/bin/make -f
 
+export LC_ALL=C.UTF-8
+
 export PYBUILD_NAME=swh.scheduler
 export PYBUILD_TEST_ARGS=-m 'not db and not fs'
 
