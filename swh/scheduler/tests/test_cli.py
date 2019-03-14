@@ -31,7 +31,8 @@ def invoke(scheduler, catch_exceptions, args):
         config_fd.write(CLI_CONFIG)
         config_fd.seek(0)
         get_scheduler_mock.return_value = scheduler
-        result = runner.invoke(cli, ['-C' + config_fd.name] + args)
+        args = ['-C' + config_fd.name, '-l', 'WARNING'] + args
+        result = runner.invoke(cli, args)
     if not catch_exceptions and result.exception:
         print(result.output)
         raise result.exception
@@ -53,7 +54,6 @@ def test_schedule_tasks(swh_scheduler):
             csv_fd.name
         ])
     expected = r'''
-\[INFO\] swh.core.config -- Loading config file .*
 Created 2 tasks
 
 Task 1
@@ -93,7 +93,6 @@ def test_schedule_tasks_columns(swh_scheduler):
             csv_fd.name
         ])
     expected = r'''
-\[INFO\] swh.core.config -- Loading config file .*
 Created 1 tasks
 
 Task 1
@@ -118,7 +117,6 @@ def test_schedule_task(swh_scheduler):
         'swh-test-ping', 'arg1', 'arg2', 'key=value',
     ])
     expected = r'''
-\[INFO\] swh.core.config -- Loading config file .*
 Created 1 tasks
 
 Task 1
@@ -143,7 +141,6 @@ def test_list_pending_tasks_none(swh_scheduler):
     ])
 
     expected = r'''
-\[INFO\] swh.core.config -- Loading config file .*
 Found 0 swh-test-ping tasks
 
 '''.lstrip()
@@ -162,7 +159,6 @@ def test_list_pending_tasks(swh_scheduler):
     ])
 
     expected = r'''
-\[INFO\] swh.core.config -- Loading config file .*
 Found 1 swh-test-ping tasks
 
 Task 1
@@ -185,7 +181,6 @@ Task 1
     ])
 
     expected = r'''
-\[INFO\] swh.core.config -- Loading config file .*
 Found 0 swh-test-ping tasks
 
 '''.lstrip()
@@ -202,7 +197,6 @@ def test_list_pending_tasks_filter(swh_scheduler):
     ])
 
     expected = r'''
-\[INFO\] swh.core.config -- Loading config file .*
 Found 0 swh-test-ping tasks
 
 '''.lstrip()
@@ -221,7 +215,6 @@ def test_list_pending_tasks_filter_2(swh_scheduler):
     ])
 
     expected = r'''
-\[INFO\] swh.core.config -- Loading config file .*
 Found 1 swh-test-ping tasks
 
 Task 2
@@ -252,7 +245,6 @@ def test_list_pending_tasks_limit(swh_scheduler):
     ])
 
     expected = r'''
-\[INFO\] swh.core.config -- Loading config file .*
 Found 2 swh-test-ping tasks
 
 Task 1
@@ -300,7 +292,6 @@ def test_list_pending_tasks_before(swh_scheduler):
     ])
 
     expected = r'''
-\[INFO\] swh.core.config -- Loading config file .*
 Found 1 swh-test-ping tasks
 
 Task 2
@@ -330,7 +321,6 @@ def test_list_tasks(swh_scheduler):
     ])
 
     expected = r'''
-\[INFO\] swh.core.config -- Loading config file .*
 Found 2 tasks
 
 Task 1
@@ -371,7 +361,6 @@ def test_list_tasks_id(swh_scheduler):
     ])
 
     expected = r'''
-\[INFO\] swh.core.config -- Loading config file .*
 Found 1 tasks
 
 Task 2
@@ -401,7 +390,6 @@ def test_list_tasks_id_2(swh_scheduler):
     ])
 
     expected = r'''
-\[INFO\] swh.core.config -- Loading config file .*
 Found 2 tasks
 
 Task 2
@@ -442,7 +430,6 @@ def test_list_tasks_type(swh_scheduler):
     ])
 
     expected = r'''
-\[INFO\] swh.core.config -- Loading config file .*
 Found 2 tasks
 
 Task 1
@@ -483,7 +470,6 @@ def test_list_tasks_limit(swh_scheduler):
     ])
 
     expected = r'''
-\[INFO\] swh.core.config -- Loading config file .*
 Found 2 tasks
 
 Task 1
@@ -527,7 +513,6 @@ def test_list_tasks_before(swh_scheduler):
     ])
 
     expected = r'''
-\[INFO\] swh.core.config -- Loading config file .*
 Found 1 tasks
 
 Task 2
@@ -560,7 +545,6 @@ def test_list_tasks_after(swh_scheduler):
     ])
 
     expected = r'''
-\[INFO\] swh.core.config -- Loading config file .*
 Found 1 tasks
 
 Task 1
@@ -611,14 +595,15 @@ def test_task_schedule_origins_dry_run(
     ])
 
     # Check the output
-    expected = r'''^\[INFO\] swh.core.config -- Loading config file .*
+    expected = r'''
 Scheduled 3 tasks \(30 origins\).
 Scheduled 6 tasks \(60 origins\).
 Scheduled 9 tasks \(90 origins\).
 Done.
-'''
+'''.lstrip()
     assert result.exit_code == 0, result.output
-    assert re.match(expected, result.output, re.MULTILINE), repr(result.output)
+    assert re.fullmatch(expected, result.output, re.MULTILINE), \
+        repr(result.output)
 
     # Check scheduled tasks
     tasks = swh_scheduler.search_tasks()
@@ -637,13 +622,14 @@ def test_task_schedule_origins(swh_scheduler, storage):
     ])
 
     # Check the output
-    expected = r'''^\[INFO\] swh.core.config -- Loading config file .*
+    expected = r'''
 Scheduled 3 tasks \(60 origins\).
 Scheduled 4 tasks \(70 origins\).
 Done.
-'''
+'''.lstrip()
     assert result.exit_code == 0, result.output
-    assert re.match(expected, result.output, re.MULTILINE), repr(result.output)
+    assert re.fullmatch(expected, result.output, re.MULTILINE), \
+        repr(result.output)
 
     # Check scheduled tasks
     tasks = swh_scheduler.search_tasks()
@@ -666,12 +652,13 @@ def test_task_schedule_origins_kwargs(swh_scheduler, storage):
     ])
 
     # Check the output
-    expected = r'''^\[INFO\] swh.core.config -- Loading config file .*
+    expected = r'''
 Scheduled 2 tasks \(30 origins\).
 Done.
-'''
+'''.lstrip()
     assert result.exit_code == 0, result.output
-    assert re.match(expected, result.output, re.MULTILINE), repr(result.output)
+    assert re.fullmatch(expected, result.output, re.MULTILINE), \
+        repr(result.output)
 
     # Check scheduled tasks
     tasks = swh_scheduler.search_tasks()
