@@ -7,7 +7,6 @@
 # Percentage of tasks with priority to schedule
 PRIORITY_SLOT = 0.6
 
-DEFAULT_CONFIG_PATH = 'backend/scheduler'
 DEFAULT_CONFIG = {
     'scheduler': ('dict', {
         'cls': 'local',
