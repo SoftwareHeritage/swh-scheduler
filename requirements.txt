@@ -9,6 +9,7 @@ elasticsearch > 5.4
 flask
 kombu
 psycopg2
+pyyaml
 vcversioner
 
 # test dependencies

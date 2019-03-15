@@ -5,8 +5,10 @@ elasticsearch>5.4
 flask
 kombu
 psycopg2
+pyyaml
 vcversioner
 swh.core>=0.0.51
+swh.storage>=0.0.129
 
 [testing]
 pytest<4

@@ -37,8 +37,8 @@ logger = logging.getLogger(__name__)
 
 
 @setup_logging.connect
-def setup_log_handler(loglevel=None, logfile=None, format=None,
-                      colorize=None, log_console=True, **kwargs):
+def setup_log_handler(loglevel=None, logfile=None, format=None, colorize=None,
+                      log_console=None, log_journal=None, **kwargs):
     """Setup logging according to Software Heritage preferences.
 
     We use the command-line loglevel for tasks only, as we never
@@ -54,8 +54,16 @@ def setup_log_handler(loglevel=None, logfile=None, format=None,
     root_logger = logging.getLogger('')
     root_logger.setLevel(logging.INFO)
 
-    if loglevel <= logging.DEBUG:
+    log_target = os.environ.get('SWH_LOG_TARGET', 'console')
+    if log_target == 'console':
         log_console = True
+    elif log_target == 'journal':
+        log_journal = True
+
+    # this looks for log levels *higher* than DEBUG
+    if loglevel <= logging.DEBUG and log_console is None:
+        log_console = True
+
     if log_console:
         color_formatter = ColorFormatter(format) if colorize else formatter
         console = logging.StreamHandler()
@@ -63,10 +71,11 @@ def setup_log_handler(loglevel=None, logfile=None, format=None,
         console.setFormatter(color_formatter)
         root_logger.addHandler(console)
 
-    systemd_journal = JournalHandler()
-    systemd_journal.setLevel(logging.DEBUG)
-    systemd_journal.setFormatter(formatter)
-    root_logger.addHandler(systemd_journal)
+    if log_journal:
+        systemd_journal = JournalHandler()
+        systemd_journal.setLevel(logging.DEBUG)
+        systemd_journal.setFormatter(formatter)
+        root_logger.addHandler(systemd_journal)
 
     logging.getLogger('celery').setLevel(logging.INFO)
     # Silence amqp heartbeat_tick messages
