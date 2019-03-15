@@ -1,8 +1,19 @@
-swh-scheduler (0.0.49-1~swh2~bpo9+1) stretch-swh; urgency=medium
+swh-scheduler (0.0.50-1~swh2) unstable-swh; urgency=medium
 
-  * Rebuild for stretch-swh
+  * Update build- and runtime dependencies
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 14 Mar 2019 12:44:48 +0000
+ -- Nicolas Dandrimont <olasd@debian.org>  Fri, 15 Mar 2019 18:24:11 +0100
+
+swh-scheduler (0.0.50-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.50     - (tagged by Nicolas Dandrimont
+    <nicolas@dandrimont.eu> on 2019-03-15 18:07:24 +0100)
+  * Upstream changes:     - Release swh.scheduler v0.0.50     - Add an
+    explicit log target for stdout and/or journald     - Avoid useless
+    log lines     - Improve test coverage     - Add support for non-
+    string options in the CLI
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 15 Mar 2019 17:16:03 +0000
 
 swh-scheduler (0.0.49-1~swh2) unstable-swh; urgency=medium
 

@@ -58,4 +58,3 @@ swh/scheduler/updater/events.py
 swh/scheduler/updater/writer.py
 swh/scheduler/updater/ghtorrent/__init__.py
 swh/scheduler/updater/ghtorrent/cli.py
-swh/scheduler/updater/ghtorrent/fake.py
