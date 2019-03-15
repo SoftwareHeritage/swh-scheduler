@@ -89,8 +89,6 @@ def event_monitor(app, backend):
         for message in messages:
             if not message.acknowledged:
                 message.ack()
-            else:
-                logger.info('message already acknowledged: %s', message)
         actions['queue'] = []
         actions['last_send'] = utcnow()
 
@@ -102,8 +100,6 @@ def event_monitor(app, backend):
         logger.debug('event: %s %s', event['type'], event.get('name', 'N/A'))
         if not message.acknowledged:
             message.ack()
-        else:
-            logger.info('message already acknowledged: %s', message)
         try_perform_actions()
 
     def task_started(event, message):

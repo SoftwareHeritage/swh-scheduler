@@ -17,6 +17,9 @@ import swh.scheduler.celery_backend.config  # noqa
 # celery_backend.config becomes the celery.current_app
 
 
+# test_cli tests depends on a en/C locale, so ensure it
+os.environ['LC_ALL'] = 'C.UTF-8'
+
 DUMP_FILES = os.path.join(SQL_DIR, '*.sql')
 
 # celery tasks for testing purpose; tasks themselves should be
