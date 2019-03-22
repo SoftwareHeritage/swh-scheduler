@@ -1,2 +1,2 @@
-swh.core >= 0.0.51
+swh.core >= 0.0.56
 swh.storage >= 0.0.129
