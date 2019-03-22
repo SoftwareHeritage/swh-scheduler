@@ -1,3 +1,13 @@
+swh-scheduler (0.0.51-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.51     - (tagged by Antoine R. Dumont
+    (@ardumont) <antoine.romain.dumont@gmail.com> on 2019-03-22 12:09:22
+    +0100)
+  * Upstream changes:     - v0.0.51     - requirements.txt: Remove kombu
+    dependency
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 22 Mar 2019 11:16:06 +0000
+
 swh-scheduler (0.0.50-1~swh2) unstable-swh; urgency=medium
 
   * Update build- and runtime dependencies
