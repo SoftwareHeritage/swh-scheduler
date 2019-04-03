@@ -1,8 +1,12 @@
-swh-scheduler (0.0.51-1~swh1~bpo9+1) stretch-swh; urgency=medium
+swh-scheduler (0.0.52-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for stretch-swh
+  * New upstream release 0.0.52     - (tagged by Nicolas Dandrimont
+    <nicolas@dandrimont.eu> on 2019-04-03 10:54:06 +0200)
+  * Upstream changes:     - Release swh.scheduler v0.0.52     - Move to
+    result_serializer = json to work around celery 4.3 bug     - Fix db
+    initialization
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 22 Mar 2019 11:18:15 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 03 Apr 2019 08:59:00 +0000
 
 swh-scheduler (0.0.51-1~swh1) unstable-swh; urgency=medium
 
