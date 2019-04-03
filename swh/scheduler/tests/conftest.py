@@ -51,7 +51,7 @@ def celery_config():
     return {
         'accept_content': ['application/x-msgpack', 'application/json'],
         'task_serializer': 'msgpack',
-        'result_serializer': 'msgpack',
+        'result_serializer': 'json',
         }
 
 
