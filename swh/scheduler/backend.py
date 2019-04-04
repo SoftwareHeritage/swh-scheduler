@@ -121,7 +121,7 @@ class SchedulerBackend:
         'type', 'arguments', 'next_run', 'policy', 'status', 'retries_left',
         'priority'
     ]
-    task_keys = task_create_keys + ['id', 'current_interval', 'status']
+    task_keys = task_create_keys + ['id', 'current_interval']
 
     @db_transaction()
     def create_tasks(self, tasks, policy='recurring', db=None, cur=None):
