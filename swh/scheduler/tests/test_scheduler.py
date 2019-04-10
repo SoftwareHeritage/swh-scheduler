@@ -371,11 +371,16 @@ class CommonSchedulerTest(SingleDbTestFixture):
             self.assertCountEqual(ret, cur_tasks)
 
     def test_search_tasks(self):
+        def make_real_dicts(l):
+            """RealDictRow is not a real dict."""
+            return [dict(d.items()) for d in l]
         self._create_task_types()
         t = utcnow()
         tasks = self._tasks_from_template(TEMPLATES['git'], t, 100)
         tasks = self.backend.create_tasks(tasks)
-        self.assertCountEqual(self.backend.search_tasks(), tasks)
+        self.assertCountEqual(
+            make_real_dicts(self.backend.search_tasks()),
+            make_real_dicts(tasks))
 
     def test_filter_task_to_archive(self):
         """Filtering only list disabled recurring or completed oneshot tasks

@@ -40,6 +40,10 @@ class SchedulerUpdaterBackend:
             return self._db
         return BaseDb.from_pool(self._pool)
 
+    def put_db(self, db):
+        if db is not self._db:
+            db.put_conn()
+
     cache_put_keys = ['url', 'cnt', 'last_seen', 'origin_type']
 
     @db_transaction()
