@@ -310,3 +310,29 @@ values (
        'swh.indexer.tasks.OriginMetadata',
        '1 day', '12:00:00', '1 days', 2,
        20000);
+
+insert into task_type(
+       type,
+       description,
+       backend_name,
+       default_interval, min_interval, max_interval, backoff_factor)
+values (
+       'list-npm-full',
+       'Full npm lister',
+       'swh.lister.npm.tasks.NpmListerTask',
+       '1 week',
+       '1 week',
+       '1 week', 1);
+
+insert into task_type(
+       type,
+       description,
+       backend_name,
+       default_interval, min_interval, max_interval, backoff_factor,
+       max_queue_length)
+values (
+       'load-npm',
+       'Load npm origin',
+       'swh.loader.npm.tasks.LoadNpm',
+       '64 days', '12:00:00', '64 days', 2,
+       5000);

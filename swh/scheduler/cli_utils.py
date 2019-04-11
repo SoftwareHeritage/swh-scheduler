@@ -51,7 +51,7 @@ def schedule_origin_batches(
 
 def parse_argument(option):
     try:
-        return yaml.load(option)
+        return yaml.safe_load(option)
     except Exception:
         raise click.ClickException('Invalid argument: {}'.format(option))
 
