@@ -1,8 +1,13 @@
-swh-scheduler (0.0.53-1~swh1~bpo9+1) stretch-swh; urgency=medium
+swh-scheduler (0.0.54-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for stretch-swh
+  * New upstream release 0.0.54     - (tagged by Antoine R. Dumont
+    (@ardumont) <antoine.romain.dumont@gmail.com> on 2019-04-11 11:33:40
+    +0200)
+  * Upstream changes:     - v0.0.54     - cli_utils: Use yaml.safe_load
+    instead of yaml.load     - Fix support of latest versions of swh-
+    core and psycopg2     - sql/data: Add npm related task types
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 04 Apr 2019 14:57:20 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 11 Apr 2019 09:40:14 +0000
 
 swh-scheduler (0.0.53-1~swh1) unstable-swh; urgency=medium
 

@@ -61,6 +61,10 @@ class SchedulerBackend:
             return self._db
         return BaseDb.from_pool(self._pool)
 
+    def put_db(self, db):
+        if db is not self._db:
+            db.put_conn()
+
     task_type_keys = [
         'type', 'description', 'backend_name', 'default_interval',
         'min_interval', 'max_interval', 'backoff_factor', 'max_queue_length',
