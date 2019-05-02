@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2018  The Software Heritage developers
+# Copyright (C) 2016-2019  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -12,15 +12,6 @@ import locale
 import logging
 import time
 import datetime
-
-from swh.core import utils, config
-from swh.storage import get_storage
-from swh.storage.algos.origin import iter_origins
-
-from . import compute_nb_tasks_from
-from .backend_es import SWHElasticSearchClient
-from . import get_scheduler, DEFAULT_CONFIG
-from .cli_utils import parse_options, schedule_origin_batches
 
 
 locale.setlocale(locale.LC_ALL, '')
@@ -156,22 +147,22 @@ def pretty_print_task(task, full=False):
               help="Scheduling database DSN (imply cls is 'local')")
 @click.option('--url', '-u', default=None,
               help="Scheduler's url access (imply cls is 'remote')")
-@click.option('--log-level', '-l', default='INFO',
-              type=click.Choice(logging._nameToLevel.keys()),
-              help="Log level (default to INFO)")
 @click.option('--no-stdout', is_flag=True, default=False,
               help="Do NOT output logs on the console")
 @click.pass_context
-def cli(ctx, config_file, database, url, log_level, no_stdout):
-    """Software Heritage Scheduler CLI interface
+def cli(ctx, config_file, database, url, no_stdout):
+    """Scheduler CLI interface.
 
     Default to use the the local scheduler instance (plugged to the
     main scheduler db).
 
     """
+    from swh.core import config
     from swh.scheduler.celery_backend.config import setup_log_handler
-    log_level = setup_log_handler(
-        loglevel=log_level, colorize=False,
+    from swh.scheduler import get_scheduler, DEFAULT_CONFIG
+
+    setup_log_handler(
+        loglevel=ctx.obj['log_level'], colorize=False,
         format='[%(levelname)s] %(name)s -- %(message)s',
         log_console=not no_stdout)
 
@@ -201,7 +192,6 @@ def cli(ctx, config_file, database, url, log_level, no_stdout):
 
     ctx.obj['scheduler'] = scheduler
     ctx.obj['config'] = conf
-    ctx.obj['loglevel'] = log_level
 
 
 @cli.group('task')
@@ -306,6 +296,8 @@ def schedule_task(ctx, type, options, policy, priority, next_run):
     Note: if the priority is not given, the task won't have the priority set,
     which is considered as the lowest priority level.
     """
+    from .utils import parse_options
+
     scheduler = ctx.obj['scheduler']
     if not scheduler:
         raise ValueError('Scheduler class (local/remote) must be instantiated')
@@ -366,6 +358,10 @@ def schedule_origin_metadata_index(
     swh-scheduler --database 'service=swh-scheduler' \
         task schedule_origins indexer_origin_metadata
     """
+    from swh.storage import get_storage
+    from swh.storage.algos.origin import iter_origins
+    from .utils import parse_options, schedule_origin_batches
+
     scheduler = ctx.obj['scheduler']
     storage = get_storage('remote', {'url': storage_url})
     if dry_run:
@@ -395,10 +391,10 @@ def list_pending_tasks(ctx, task_types, limit, before):
     You can override the number of tasks to fetch
 
     """
+    from swh.scheduler import compute_nb_tasks_from
     scheduler = ctx.obj['scheduler']
     if not scheduler:
         raise ValueError('Scheduler class (local/remote) must be instantiated')
-
     num_tasks, num_tasks_priority = compute_nb_tasks_from(limit)
 
     output = []
@@ -549,6 +545,9 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
        With --dry-run flag set (default), only list those.
 
     """
+    from swh.core.utils import grouper
+    from .backend_es import SWHElasticSearchClient
+
     scheduler = ctx.obj['scheduler']
     if not scheduler:
         raise ValueError('Scheduler class (local/remote) must be instantiated')
@@ -604,7 +603,7 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
 
     gen = index_data(before, last_id=start_from, batch_index=batch_index)
     if cleanup:
-        for task_ids in utils.grouper(gen, n=batch_clean):
+        for task_ids in grouper(gen, n=batch_clean):
             task_ids = list(task_ids)
             log.info('Clean up %s tasks: [%s, ...]' % (
                 len(task_ids), task_ids[0]))
@@ -612,7 +611,7 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
                 continue
             ctx.obj['scheduler'].delete_archived_tasks(task_ids)
     else:
-        for task_ids in utils.grouper(gen, n=batch_index):
+        for task_ids in grouper(gen, n=batch_index):
             task_ids = list(task_ids)
             log.info('Indexed %s tasks: [%s, ...]' % (
                 len(task_ids), task_ids[0]))
@@ -693,7 +692,7 @@ def api_server(ctx, host, port, debug):
     from swh.scheduler.api import server
     server.app.config.update(ctx.obj['config'])
     if debug is None:
-        debug = ctx.obj['loglevel'] <= logging.DEBUG
+        debug = ctx.obj['log_level'] <= logging.DEBUG
     server.app.run(host, port=port, debug=bool(debug))
 
 
