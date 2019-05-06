@@ -1,3 +1,11 @@
+swh-scheduler (0.0.55-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.55     - (tagged by Antoine Lambert
+    <antoine.lambert@inria.fr> on 2019-05-06 11:47:43 +0200)
+  * Upstream changes:     - version 0.0.55
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 06 May 2019 09:54:51 +0000
+
 swh-scheduler (0.0.54-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.0.54     - (tagged by Antoine R. Dumont
