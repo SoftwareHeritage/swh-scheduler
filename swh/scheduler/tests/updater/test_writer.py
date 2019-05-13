@@ -10,7 +10,7 @@ from glob import glob
 import pytest
 
 from swh.core.utils import numfile_sortkey as sortkey
-from swh.core.tests.db_testing import DbTestFixture
+from swh.core.db.tests.db_testing import DbTestFixture
 from swh.scheduler.tests import SQL_DIR
 from swh.scheduler.updater.events import LISTENED_EVENTS, SWHEvent
 from swh.scheduler.updater.writer import UpdaterWriter
