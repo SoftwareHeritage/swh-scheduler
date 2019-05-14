@@ -6,7 +6,7 @@ flask
 psycopg2
 pyyaml
 vcversioner
-swh.core>=0.0.56
+swh.core[db,http]>=0.0.60
 swh.storage>=0.0.129
 
 [testing]

@@ -7,6 +7,7 @@ import datetime
 import re
 import tempfile
 from unittest.mock import patch
+import logging
 
 from click.testing import CliRunner
 import pytest
@@ -26,13 +27,13 @@ scheduler:
 
 def invoke(scheduler, catch_exceptions, args):
     runner = CliRunner()
-    with patch('swh.scheduler.cli.get_scheduler') as get_scheduler_mock, \
+    with patch('swh.scheduler.get_scheduler') as get_scheduler_mock, \
             tempfile.NamedTemporaryFile('a', suffix='.yml') as config_fd:
         config_fd.write(CLI_CONFIG)
         config_fd.seek(0)
         get_scheduler_mock.return_value = scheduler
-        args = ['-C' + config_fd.name, '-l', 'WARNING'] + args
-        result = runner.invoke(cli, args)
+        args = ['-C' + config_fd.name, ] + args
+        result = runner.invoke(cli, args, obj={'log_level': logging.WARNING})
     if not catch_exceptions and result.exception:
         print(result.output)
         raise result.exception
@@ -578,12 +579,12 @@ def storage():
     """An instance of swh.storage.in_memory.Storage that gets injected
     into the CLI functions."""
     storage = Storage()
-    with patch('swh.scheduler.cli.get_storage') as get_storage_mock:
+    with patch('swh.storage.get_storage') as get_storage_mock:
         get_storage_mock.return_value = storage
         yield storage
 
 
-@patch('swh.scheduler.cli_utils.TASK_BATCH_SIZE', 3)
+@patch('swh.scheduler.cli.utils.TASK_BATCH_SIZE', 3)
 def test_task_schedule_origins_dry_run(
         swh_scheduler, storage):
     """Tests the scheduling when origin_batch_size*task_batch_size is a
@@ -610,7 +611,7 @@ Done.
     assert len(tasks) == 0
 
 
-@patch('swh.scheduler.cli_utils.TASK_BATCH_SIZE', 3)
+@patch('swh.scheduler.cli.utils.TASK_BATCH_SIZE', 3)
 def test_task_schedule_origins(swh_scheduler, storage):
     """Tests the scheduling when neither origin_batch_size or
     task_batch_size is a divisor of nb_origins."""
