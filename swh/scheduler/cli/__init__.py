@@ -6,8 +6,7 @@
 import click
 import logging
 
-
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+from swh.core.cli import CONTEXT_SETTINGS
 
 
 @click.group(context_settings=CONTEXT_SETTINGS)
@@ -32,12 +31,13 @@ def cli(ctx, config_file, database, url, no_stdout):
     from swh.scheduler.celery_backend.config import setup_log_handler
     from swh.scheduler import get_scheduler, DEFAULT_CONFIG
 
+    ctx.ensure_object(dict)
+    log_level = ctx.obj.get('log_level', logging.INFO)
+
     setup_log_handler(
-        loglevel=ctx.obj['log_level'], colorize=False,
+        loglevel=log_level, colorize=False,
         format='[%(levelname)s] %(name)s -- %(message)s',
         log_console=not no_stdout)
-
-    ctx.ensure_object(dict)
 
     logger = logging.getLogger(__name__)
     scheduler = None
