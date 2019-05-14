@@ -76,16 +76,23 @@ def event_monitor(app, backend):
 
         messages = []
         db = backend.get_db()
-        cursor = db.cursor(None)
-        for action in actions['queue']:
-            messages.append(action['message'])
-            function = action_map[action['action']]
-            args = action.get('args', ())
-            kwargs = action.get('kwargs', {})
-            kwargs['cur'] = cursor
-            function(*args, **kwargs)
+        try:
+            cursor = db.cursor(None)
+            for action in actions['queue']:
+                messages.append(action['message'])
+                function = action_map[action['action']]
+                args = action.get('args', ())
+                kwargs = action.get('kwargs', {})
+                kwargs['cur'] = cursor
+                function(*args, **kwargs)
 
-        db.conn.commit()
+        except Exception:
+            db.conn.rollback()
+        else:
+            db.conn.commit()
+        finally:
+            backend.put_db(db)
+
         for message in messages:
             if not message.acknowledged:
                 message.ack()

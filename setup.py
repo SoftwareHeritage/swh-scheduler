@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2015-2018  The Software Heritage developers
+# Copyright (C) 2015-2019  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -53,6 +53,8 @@ setup(
     entry_points='''
         [console_scripts]
         swh-scheduler=swh.scheduler.cli:main
+        [swh.cli.subcommands]
+        scheduler=swh.scheduler.cli:cli
     ''',
     classifiers=[
         "Programming Language :: Python :: 3",

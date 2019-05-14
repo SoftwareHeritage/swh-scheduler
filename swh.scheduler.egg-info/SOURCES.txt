@@ -16,7 +16,6 @@ swh.scheduler.egg-info/top_level.txt
 swh/scheduler/__init__.py
 swh/scheduler/backend.py
 swh/scheduler/backend_es.py
-swh/scheduler/cli.py
 swh/scheduler/cli_utils.py
 swh/scheduler/task.py
 swh/scheduler/utils.py
@@ -28,6 +27,11 @@ swh/scheduler/celery_backend/__init__.py
 swh/scheduler/celery_backend/config.py
 swh/scheduler/celery_backend/listener.py
 swh/scheduler/celery_backend/runner.py
+swh/scheduler/cli/__init__.py
+swh/scheduler/cli/admin.py
+swh/scheduler/cli/task.py
+swh/scheduler/cli/task_type.py
+swh/scheduler/cli/utils.py
 swh/scheduler/sql/30-swh-schema.sql
 swh/scheduler/sql/40-swh-func.sql
 swh/scheduler/sql/50-swh-data.sql
