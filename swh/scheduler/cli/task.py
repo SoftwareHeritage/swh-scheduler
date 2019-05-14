@@ -235,10 +235,10 @@ def schedule_task(ctx, type, options, policy, priority, next_run):
     Usage sample:
 
     swh-scheduler --database 'service=swh-scheduler' \
-        task add swh-lister-pypi
+        task add list-pypi
 
     swh-scheduler --database 'service=swh-scheduler' \
-        task add swh-lister-debian --policy=oneshot distribution=stretch
+        task add list-debian-distribution --policy=oneshot distribution=stretch
 
     Note: if the priority is not given, the task won't have the priority set,
     which is considered as the lowest priority level.
@@ -303,7 +303,7 @@ def schedule_origin_metadata_index(
     Usage sample:
 
     swh-scheduler --database 'service=swh-scheduler' \
-        task schedule_origins indexer_origin_metadata
+        task schedule_origins index-origin-metadata
     """
     from swh.storage import get_storage
     from swh.storage.algos.origin import iter_origins

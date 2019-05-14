@@ -32,7 +32,7 @@ insert into task_type(
        num_retries,
        max_queue_length)
 values (
-       'load-deposit-from-archive',
+       'load-deposit',
        'Loading deposit archive into swh through swh-loader-tar',
        'swh.deposit.loader.tasks.LoadDepositArchiveTsk',
        '1 day', '1 day', '1 day', 1, 3, 1000);
@@ -44,7 +44,7 @@ insert into task_type(
        default_interval, min_interval, max_interval, backoff_factor,
        num_retries, max_queue_length)
 values (
-       'check-deposit-archive',
+       'check-deposit',
        'Pre-checking deposit step before loading into swh archive',
        'swh.deposit.loader.tasks.ChecksDepositTsk',
        '1 day', '1 day', '1 day', 1, 3, 1000);
@@ -379,10 +379,10 @@ select swh_add_backward_compatible_task_name('origin-update-svn',
                                              'load-svn');
 
 select swh_add_backward_compatible_task_name('swh-deposit-archive-loading',
-                                             'load-deposit-from-archive');
+                                             'load-deposit');
 
 select swh_add_backward_compatible_task_name('swh-deposit-archive-checks',
-                                             'check-deposit-archive');
+                                             'check-deposit');
 
 select swh_add_backward_compatible_task_name('swh-vault-cooking',
                                              'cook-vault-bundle');
