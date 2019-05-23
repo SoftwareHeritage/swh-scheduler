@@ -447,4 +447,7 @@ select swh_add_backward_compatible_task_name('indexer_revision_metadata',
 select swh_add_backward_compatible_task_name('indexer_origin_metadata',
                                              'index-origin-metadata');
 
+select swh_add_backward_compatible_task_name('swh-vault-batch-cooking',
+                                             'cook-vault-bundle-batch');
+
 drop function swh_add_backward_compatible_task_name(text, text);
