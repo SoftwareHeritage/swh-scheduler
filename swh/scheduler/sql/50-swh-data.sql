@@ -365,11 +365,11 @@ as $$
       max_interval, backoff_factor,
       max_queue_length, num_retries,
       retry_delay)
-  (select old_task_name, description,
+  (select new_task_name, description,
           backend_name, default_interval,
           min_interval, max_interval, backoff_factor,
           max_queue_length, num_retries, retry_delay
-   from task_type where type = new_task_name);
+   from task_type where type = old_task_name);
 $$;
 
 select swh_add_backward_compatible_task_name('swh-loader-mount-dump-and-load-svn-repository',
