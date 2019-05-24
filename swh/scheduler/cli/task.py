@@ -493,7 +493,7 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
 
     """
     from swh.core.utils import grouper
-    from .backend_es import SWHElasticSearchClient
+    from swh.scheduler.backend_es import SWHElasticSearchClient
 
     scheduler = ctx.obj['scheduler']
     if not scheduler:
