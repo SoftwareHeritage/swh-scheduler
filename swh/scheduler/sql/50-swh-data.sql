@@ -349,3 +349,42 @@ values (
        'swh.loader.npm.tasks.LoadNpm',
        '64 days', '12:00:00', '64 days', 2,
        5000);
+
+insert into task_type(
+       type,
+       description,
+       backend_name,
+       default_interval, min_interval, max_interval, backoff_factor)
+values (
+       'list-gnu-full',
+       'Full gnu lister',
+       'swh.lister.gnu.tasks.GNUListerTask',
+       '90 days',
+       '90 days',
+       '90 days', 1);
+
+insert into task_type(
+       type,
+       description,
+       backend_name,
+       default_interval, min_interval, max_interval, backoff_factor)
+values (
+       'list-phabricator-full',
+       'Full Phabricator instance lister',
+       'swh.lister.phabricator.tasks.FullPhabricatorLister',
+       '90 days',
+       '90 days',
+       '90 days', 1);
+
+insert into task_type(
+       type,
+       description,
+       backend_name,
+       default_interval, min_interval, max_interval, backoff_factor)
+values (
+       'list-phabricator-incremental',
+       'Incremental Phabricator instance lister',
+       'swh.lister.phabricator.tasks.IncrementalPhabricatorLister',
+       '1 week',
+       '1 week',
+       '1 week', 1);
