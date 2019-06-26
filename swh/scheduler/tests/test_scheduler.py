@@ -15,7 +15,7 @@ import psycopg2
 from arrow import utcnow
 import pytest
 
-from swh.core.tests.db_testing import SingleDbTestFixture
+from swh.core.db.tests.db_testing import SingleDbTestFixture
 from swh.scheduler import get_scheduler
 
 from . import SQL_DIR

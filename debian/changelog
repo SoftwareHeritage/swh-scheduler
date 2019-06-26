@@ -1,8 +1,10 @@
-swh-scheduler (0.0.56-1~swh1~bpo9+1) stretch-swh; urgency=medium
+swh-scheduler (0.0.57-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for stretch-swh
+  * New upstream release 0.0.57     - (tagged by David Douard
+    <david.douard@sdfa3.org> on 2019-06-26 14:56:32 +0200)
+  * Upstream changes:     - v0.0.57
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 14 May 2019 12:42:08 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 26 Jun 2019 13:05:20 +0000
 
 swh-scheduler (0.0.56-1~swh1) unstable-swh; urgency=medium
 
