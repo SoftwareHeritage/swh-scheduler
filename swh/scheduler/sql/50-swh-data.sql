@@ -32,7 +32,7 @@ insert into task_type(
        num_retries,
        max_queue_length)
 values (
-       'load-deposit-from-archive',
+       'load-deposit',
        'Loading deposit archive into swh through swh-loader-tar',
        'swh.deposit.loader.tasks.LoadDepositArchiveTsk',
        '1 day', '1 day', '1 day', 1, 3, 1000);
@@ -44,7 +44,7 @@ insert into task_type(
        default_interval, min_interval, max_interval, backoff_factor,
        num_retries, max_queue_length)
 values (
-       'check-deposit-archive',
+       'check-deposit',
        'Pre-checking deposit step before loading into swh archive',
        'swh.deposit.loader.tasks.ChecksDepositTsk',
        '1 day', '1 day', '1 day', 1, 3, 1000);
@@ -350,101 +350,41 @@ values (
        '64 days', '12:00:00', '64 days', 2,
        5000);
 
---- For backward compatibility with previous task names
---- TODO: remove this once all swh components have been migrated to use the
----       new task names
+insert into task_type(
+       type,
+       description,
+       backend_name,
+       default_interval, min_interval, max_interval, backoff_factor)
+values (
+       'list-gnu-full',
+       'Full gnu lister',
+       'swh.lister.gnu.tasks.GNUListerTask',
+       '90 days',
+       '90 days',
+       '90 days', 1);
 
-create or replace function swh_add_backward_compatible_task_name(
-      old_task_name text, new_task_name text)
-  returns void
-  language sql
-as $$
-  insert into task_type (
-      type, description, backend_name,
-      default_interval, min_interval,
-      max_interval, backoff_factor,
-      max_queue_length, num_retries,
-      retry_delay)
-  (select old_task_name, description,
-          backend_name, default_interval,
-          min_interval, max_interval, backoff_factor,
-          max_queue_length, num_retries, retry_delay
-   from task_type where type = new_task_name);
-$$;
+insert into task_type(
+       type,
+       description,
+       backend_name,
+       default_interval, min_interval, max_interval, backoff_factor)
+values (
+       'list-phabricator-full',
+       'Full Phabricator instance lister',
+       'swh.lister.phabricator.tasks.FullPhabricatorLister',
+       '90 days',
+       '90 days',
+       '90 days', 1);
 
-select swh_add_backward_compatible_task_name('swh-loader-mount-dump-and-load-svn-repository',
-                                             'load-svn-from-archive');
-
-select swh_add_backward_compatible_task_name('origin-update-svn',
-                                             'load-svn');
-
-select swh_add_backward_compatible_task_name('swh-deposit-archive-loading',
-                                             'load-deposit-from-archive');
-
-select swh_add_backward_compatible_task_name('swh-deposit-archive-checks',
-                                             'check-deposit-archive');
-
-select swh_add_backward_compatible_task_name('swh-vault-cooking',
-                                             'cook-vault-bundle');
-
-select swh_add_backward_compatible_task_name('origin-update-hg',
-                                             'load-hg');
-
-select swh_add_backward_compatible_task_name('origin-load-archive-hg',
-                                             'load-hg-from-archive');
-
-select swh_add_backward_compatible_task_name('origin-update-git',
-                                             'load-git');
-
-select swh_add_backward_compatible_task_name('swh-lister-bitbucket-incremental',
-                                             'list-bitbucket-incremental');
-
-select swh_add_backward_compatible_task_name('swh-lister-bitbucket-full',
-                                             'list-bitbucket-full');
-
-select swh_add_backward_compatible_task_name('swh-lister-github-incremental',
-                                             'list-github-incremental');
-
-select swh_add_backward_compatible_task_name('swh-lister-github-full',
-                                             'list-github-full');
-
-select swh_add_backward_compatible_task_name('swh-lister-debian',
-                                             'list-debian-distribution');
-
-select swh_add_backward_compatible_task_name('load-deb-package',
-                                             'load-debian-package');
-
-select swh_add_backward_compatible_task_name('swh-lister-gitlab-incremental',
-                                             'list-gitlab-incremental');
-
-select swh_add_backward_compatible_task_name('swh-lister-gitlab-full',
-                                             'list-gitlab-full');
-
-select swh_add_backward_compatible_task_name('swh-lister-pypi',
-                                             'list-pypi');
-
-select swh_add_backward_compatible_task_name('origin-update-pypi',
-                                             'load-pypi');
-
-select swh_add_backward_compatible_task_name('indexer_mimetype',
-                                             'index-mimetype');
-
-select swh_add_backward_compatible_task_name('indexer_range_mimetype',
-                                             'index-mimetype-for-range');
-
-select swh_add_backward_compatible_task_name('indexer_fossology_license',
-                                             'index-fossology-license');
-
-select swh_add_backward_compatible_task_name('indexer_range_fossology_license',
-                                             'index-fossology-license-for-range');
-
-select swh_add_backward_compatible_task_name('indexer_origin_head',
-                                             'index-origin-head');
-
-select swh_add_backward_compatible_task_name('indexer_revision_metadata',
-                                             'index-revision-metadata');
-
-select swh_add_backward_compatible_task_name('indexer_origin_metadata',
-                                             'index-origin-metadata');
-
-drop function swh_add_backward_compatible_task_name(text, text);
+insert into task_type(
+       type,
+       description,
+       backend_name,
+       default_interval, min_interval, max_interval, backoff_factor)
+values (
+       'list-phabricator-incremental',
+       'Incremental Phabricator instance lister',
+       'swh.lister.phabricator.tasks.IncrementalPhabricatorLister',
+       '1 week',
+       '1 week',
+       '1 week', 1);

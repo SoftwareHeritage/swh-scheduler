@@ -3,14 +3,15 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import click
 import logging
 
+import click
 
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+from swh.core.cli import CONTEXT_SETTINGS, AliasedGroup
 
 
-@click.group(context_settings=CONTEXT_SETTINGS)
+@click.group(name='scheduler', context_settings=CONTEXT_SETTINGS,
+             cls=AliasedGroup)
 @click.option('--config-file', '-C', default=None,
               type=click.Path(exists=True, dir_okay=False,),
               help="Configuration file.")
@@ -22,22 +23,22 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
               help="Do NOT output logs on the console")
 @click.pass_context
 def cli(ctx, config_file, database, url, no_stdout):
-    """Scheduler CLI interface.
+    """Software Heritage Scheduler tools.
 
-    Default to use the the local scheduler instance (plugged to the
+    Use a local scheduler instance by default (plugged to the
     main scheduler db).
-
     """
     from swh.core import config
     from swh.scheduler.celery_backend.config import setup_log_handler
     from swh.scheduler import get_scheduler, DEFAULT_CONFIG
 
+    ctx.ensure_object(dict)
+    log_level = ctx.obj.get('log_level', logging.INFO)
+
     setup_log_handler(
-        loglevel=ctx.obj['log_level'], colorize=False,
+        loglevel=log_level, colorize=False,
         format='[%(levelname)s] %(name)s -- %(message)s',
         log_console=not no_stdout)
-
-    ctx.ensure_object(dict)
 
     logger = logging.getLogger(__name__)
     scheduler = None
@@ -64,11 +65,15 @@ def cli(ctx, config_file, database, url, no_stdout):
     ctx.obj['scheduler'] = scheduler
     ctx.obj['config'] = conf
 
-
 from . import admin, task, task_type  # noqa
 
 
 def main():
+    import click.core
+    click.core.DEPRECATED_HELP_NOTICE = '''
+
+DEPRECATED! Please use the command 'swh scheduler'.'''
+    cli.deprecated = True
     return cli(auto_envvar_prefix='SWH_SCHEDULER')
 
 

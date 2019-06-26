@@ -47,7 +47,7 @@ class UpdaterWriter:
         """
         if event['origin_type'] == 'git':
             return create_oneshot_task_dict(
-                'origin-update-git',
+                'load-git',
                 event['url'],
                 priority='normal')
         self.log.warning('Type %s is not supported for now, only git' % (

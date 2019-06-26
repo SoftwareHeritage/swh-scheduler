@@ -31,8 +31,8 @@ def create_task_dict(type, policy, *args, **kwargs):
 
     Args:
         type (str): Type of oneshot task as per swh-scheduler's db
-                    table task_type's column (Ex: origin-update-git,
-                    swh-deposit-archive-checks)
+                    table task_type's column (Ex: load-git,
+                    check-deposit)
         policy (str): oneshot or recurring policy
 
     Returns:
@@ -64,8 +64,8 @@ def create_oneshot_task_dict(type, *args, **kwargs):
 
     Args:
         type (str): Type of oneshot task as per swh-scheduler's db
-                    table task_type's column (Ex: origin-update-git,
-                    swh-deposit-archive-checks)
+                    table task_type's column (Ex: load-git,
+                    check-deposit)
 
     Returns:
         Expected dictionary for the one-shot task scheduling api

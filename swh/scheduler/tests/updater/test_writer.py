@@ -10,7 +10,7 @@ from glob import glob
 import pytest
 
 from swh.core.utils import numfile_sortkey as sortkey
-from swh.core.tests.db_testing import DbTestFixture
+from swh.core.db.tests.db_testing import DbTestFixture
 from swh.scheduler.tests import SQL_DIR
 from swh.scheduler.updater.events import LISTENED_EVENTS, SWHEvent
 from swh.scheduler.updater.writer import UpdaterWriter
@@ -89,8 +89,7 @@ class UpdaterWriterTest(UpdaterTestUtil, CommonSchedulerTest,
         data = list(self.scheduler_updater_backend.cache_read())
         self.assertEqual(len(data), expected_length)
 
-        r = self.scheduler_backend.peek_ready_tasks(
-            'origin-update-git')
+        r = self.scheduler_backend.peek_ready_tasks('load-git')
 
         # first read on an empty scheduling db results with nothing in it
         self.assertEqual(len(r), 0)
@@ -98,8 +97,7 @@ class UpdaterWriterTest(UpdaterTestUtil, CommonSchedulerTest,
         # Read from cache to scheduler db
         self.writer.run()
 
-        r = self.scheduler_backend.peek_ready_tasks(
-            'origin-update-git')
+        r = self.scheduler_backend.peek_ready_tasks('load-git')
 
         # other reads after writes are still empty since it's not supported
         self.assertEqual(len(r), 0)
@@ -121,8 +119,7 @@ class UpdaterWriterTest(UpdaterTestUtil, CommonSchedulerTest,
         data = list(self.scheduler_updater_backend.cache_read())
         self.assertEqual(len(data), expected_length)
 
-        r = self.scheduler_backend.peek_ready_tasks(
-            'origin-update-git')
+        r = self.scheduler_backend.peek_ready_tasks('load-git')
 
         # first read on an empty scheduling db results with nothing in it
         self.assertEqual(len(r), 0)
@@ -131,14 +128,13 @@ class UpdaterWriterTest(UpdaterTestUtil, CommonSchedulerTest,
         self.writer.run()
 
         # now, we should have scheduling task ready
-        r = self.scheduler_backend.peek_ready_tasks(
-            'origin-update-git')
+        r = self.scheduler_backend.peek_ready_tasks('load-git')
 
         self.assertEqual(len(r), expected_length)
 
         # Check the task has been scheduled
         for t in r:
-            self.assertEqual(t['type'], 'origin-update-git')
+            self.assertEqual(t['type'], 'load-git')
             self.assertEqual(t['priority'], 'normal')
             self.assertEqual(t['policy'], 'oneshot')
             self.assertEqual(t['status'], 'next_run_not_scheduled')
@@ -152,7 +148,6 @@ class UpdaterWriterTest(UpdaterTestUtil, CommonSchedulerTest,
         self.assertEqual(len(data), 0)
 
         # provided, no runner is ran, still the same amount of scheduling tasks
-        r = self.scheduler_backend.peek_ready_tasks(
-            'origin-update-git')
+        r = self.scheduler_backend.peek_ready_tasks('load-git')
 
         self.assertEqual(len(r), expected_length)
