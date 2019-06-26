@@ -6,9 +6,12 @@ create table dbversion
 );
 
 comment on table dbversion is 'Schema update tracking';
+comment on column dbversion.version is 'SQL schema version';
+comment on column dbversion.release is 'Version deployment timestamp';
+comment on column dbversion.description is 'Version description';
 
 insert into dbversion (version, release, description)
-       values (12, now(), 'Work In Progress');
+       values (13, now(), 'Work In Progress');
 
 create table task_type (
   type text primary key,
@@ -80,6 +83,9 @@ comment on column task.policy is 'Whether the task is one-shot or recurring';
 comment on column task.retries_left is 'The number of "short delay" retries of the task in case of '
                                        'transient failure';
 comment on column task.priority is 'Policy of the given task';
+comment on column task.id is 'Task Identifier';
+comment on column task.type is 'References task_type table';
+comment on column task.status is 'Task status (''next_run_not_scheduled'', ''next_run_scheduled'', ''completed'', ''disabled'')';
 
 create type task_run_status as enum ('scheduled', 'started', 'eventful', 'uneventful', 'failed', 'permfailed', 'lost');
 comment on type task_run_status is 'Status of a given task run';
@@ -99,4 +105,9 @@ comment on column task_run.backend_id is 'id of the task run in the job-running 
 comment on column task_run.metadata is 'Useful metadata for the given task run. '
                                        'For instance, the worker that took on the job, '
                                        'or the logs for the run.';
+comment on column task_run.id is 'Task run identifier';
+comment on column task_run.task is 'References task table';
+comment on column task_run.scheduled is 'Scheduled run time for task';
+comment on column task_run.started is 'Task starting time';
+comment on column task_run.ended is 'Task ending time';
 

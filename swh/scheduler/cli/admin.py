@@ -11,7 +11,7 @@ import click
 from . import cli
 
 
-@cli.command('runner')
+@cli.command('start-runner')
 @click.option('--period', '-p', default=0,
               help=('Period (in s) at witch pending tasks are checked and '
                     'executed. Set to 0 (default) for a one shot.'))
@@ -46,7 +46,7 @@ def runner(ctx, period):
         ctx.exit(0)
 
 
-@cli.command('listener')
+@cli.command('start-listener')
 @click.pass_context
 def listener(ctx):
     """Starts a swh-scheduler listener service.
@@ -65,7 +65,7 @@ def listener(ctx):
     event_monitor(app, backend=scheduler)
 
 
-@cli.command('api-server')
+@cli.command('rpc-serve')
 @click.option('--host', default='0.0.0.0',
               help="Host to run the scheduler server api")
 @click.option('--port', default=5008, type=click.INT,
@@ -75,7 +75,7 @@ def listener(ctx):
                     "Defaults to True if log-level is DEBUG, False otherwise.")
               )
 @click.pass_context
-def api_server(ctx, host, port, debug):
+def rpc_server(ctx, host, port, debug):
     """Starts a swh-scheduler API HTTP server.
     """
     if ctx.obj['config']['scheduler']['cls'] == 'remote':
@@ -90,24 +90,29 @@ def api_server(ctx, host, port, debug):
     server.app.run(host, port=port, debug=bool(debug))
 
 
-@cli.command('updater')
+@cli.command('start-updater')
 @click.option('--verbose/--no-verbose', '-v', default=False,
               help='Verbose mode')
 @click.pass_context
 def updater(ctx, verbose):
-    """Insert tasks in the scheduler from the scheduler-updater's events
+    """Starts a scheduler-updater service.
+
+    Insert tasks in the scheduler from the scheduler-updater's events read from
+    the db cache (filled e.g. by the ghtorrent consumer service) .
 
     """
     from swh.scheduler.updater.writer import UpdaterWriter
     UpdaterWriter(**ctx.obj['config']).run()
 
 
-@cli.command('ghtorrent')
+@cli.command('start-ghtorrent')
 @click.option('--verbose/--no-verbose', '-v', default=False,
               help='Verbose mode')
 @click.pass_context
 def ghtorrent(ctx, verbose):
-    """Consume events from ghtorrent and write them to cache.
+    """Starts a ghtorrent consumer service.
+
+    Consumes events from ghtorrent and write them to a cache.
 
     """
     from swh.scheduler.updater.ghtorrent import GHTorrentConsumer
@@ -117,3 +122,12 @@ def ghtorrent(ctx, verbose):
     back_config = ctx.obj['config'].get('scheduler_updater', {})
     backend = SchedulerUpdaterBackend(**back_config)
     GHTorrentConsumer(backend, **ght_config).run()
+
+
+# for bw compat
+cli.add_alias(ghtorrent, 'ghtorrent')
+cli.add_alias(listener, 'listener')
+cli.add_alias(runner, 'runner')
+cli.add_alias(updater, 'updater')
+cli.add_alias(rpc_server, 'serve')
+cli.add_alias(rpc_server, 'api-server')
