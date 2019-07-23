@@ -4,10 +4,10 @@
 # See top-level LICENSE file for more information
 
 
-from swh.core.api import SWHRemoteAPI
+from swh.core.api import RPCClient
 
 
-class RemoteScheduler(SWHRemoteAPI):
+class RemoteScheduler(RPCClient):
     """Proxy to a remote scheduler API
 
     """
