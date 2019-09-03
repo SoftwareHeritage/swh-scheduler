@@ -2,6 +2,7 @@ import os
 import pytest
 import glob
 from datetime import timedelta
+import pkg_resources
 
 from swh.core.utils import numfile_sortkey as sortkey
 from swh.scheduler import get_scheduler
@@ -34,9 +35,12 @@ def celery_enable_logging():
 
 @pytest.fixture(scope='session')
 def celery_includes():
-    return [
+    task_modules = [
         'swh.scheduler.tests.tasks',
     ]
+    for entrypoint in pkg_resources.iter_entry_points('swh.workers'):
+        task_modules.extend(entrypoint.load()().get('task_modules', []))
+    return task_modules
 
 
 @pytest.fixture(scope='session')

@@ -1,8 +1,18 @@
-swh-scheduler (0.0.57-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-scheduler (0.0.58-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 0.0.58     - (tagged by Antoine R. Dumont
+    (@ardumont) <antoine.romain.dumont@gmail.com> on 2019-09-03 10:19:34
+    +0200)
+  * Upstream changes:     - v0.0.58     - celery: auto add tasks
+    declared in the swh.workers entry point in task_modules     -
+    api/client: use RPCClient instead of deprecated SWHRemoteAPI     -
+    Make schedule_origins use origin urls instead of ids in task
+    arguments.     - docs: add code of conduct document     - docs: very
+    beginning of a practical documentation on the scheduler     -
+    config: Add a pre-commit config file     - data: Insert new cgit
+    instance lister task     - data: Insert load-tar task-type
 
- -- Nicolas Dandrimont <olasd@debian.org>  Thu, 11 Jul 2019 13:39:36 +0200
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 03 Sep 2019 08:28:19 +0000
 
 swh-scheduler (0.0.57-1~swh1) unstable-swh; urgency=medium
 

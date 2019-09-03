@@ -5,6 +5,7 @@
 
 import logging
 import os
+import pkg_resources
 import urllib.parse
 
 from celery import Celery
@@ -196,6 +197,16 @@ if not CONFIG:
 
     # Load the Celery config
     CONFIG = load_named_config(CONFIG_NAME, DEFAULT_CONFIG)
+
+CONFIG.setdefault('task_modules', [])
+# load tasks modules declared as plugin entry points
+for entrypoint in pkg_resources.iter_entry_points('swh.workers'):
+    worker_registrer_fn = entrypoint.load()
+    # The registry function is expected to return a dict which the 'tasks' key
+    # is a string (or a list of strings) with the name of the python module in
+    # which celery tasks are defined.
+    task_modules = worker_registrer_fn().get('task_modules', [])
+    CONFIG['task_modules'].extend(task_modules)
 
 # Celery Queues
 CELERY_QUEUES = [Queue('celery', Exchange('celery'), routing_key='celery')]

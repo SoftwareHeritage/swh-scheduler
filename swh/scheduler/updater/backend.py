@@ -103,10 +103,10 @@ def prepare_events(events, timestamp=None):
         if url in urls:
             idx = urls.index(url)
             urls.append(urls.pop(idx))
-            pevent = outevents.pop(idx)
-            event['cnt'] += pevent['cnt']
+            prev_event = outevents.pop(idx)
+            event['cnt'] += prev_event['cnt']
             event['last_seen'] = max(
-                event['last_seen'], pevent['last_seen'])
+                event['last_seen'], prev_event['last_seen'])
         else:
             urls.append(url)
         outevents.append(event)
