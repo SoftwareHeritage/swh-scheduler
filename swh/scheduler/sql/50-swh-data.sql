@@ -401,3 +401,16 @@ values (
        '64 days',
        '64 days',
        '64 days', 1);
+
+insert into task_type(
+       type,
+       description,
+       backend_name,
+       default_interval, min_interval, max_interval, backoff_factor, num_retries)
+values (
+       'load-tar',
+       'Load Tar from gnu',
+       'swh.loader.package.tasks.LoadGNU',
+       '64 days',
+       '64 days',
+       '64 days', 1, 3);
