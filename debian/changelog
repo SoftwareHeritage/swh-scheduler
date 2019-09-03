@@ -1,3 +1,9 @@
+swh-scheduler (0.0.58-1~swh1~bpo9+1) stretch-swh; urgency=medium
+
+  * Rebuild for stretch-swh
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 03 Sep 2019 08:30:07 +0000
+
 swh-scheduler (0.0.58-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.0.58     - (tagged by Antoine R. Dumont
