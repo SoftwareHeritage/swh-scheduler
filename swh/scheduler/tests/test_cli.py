@@ -565,13 +565,15 @@ Task 1
 
 
 def _fill_storage_with_origins(storage, nb_origins):
-    storage.origin_add([
+    origins = [
         {
             'type': 'type{}'.format(i),
             'url': 'http://example.com/{}'.format(i),
         }
         for i in range(nb_origins)
-    ])
+    ]
+    storage.origin_add(origins)
+    return origins
 
 
 @pytest.fixture
@@ -611,11 +613,28 @@ Done.
     assert len(tasks) == 0
 
 
+def _assert_origin_tasks_contraints(
+        tasks, max_tasks, max_task_size, expected_origins):
+    # check there are not too many tasks
+    assert len(tasks) <= max_tasks
+
+    # check tasks are not too large
+    assert all(len(task['arguments']['args'][0]) <= max_task_size
+               for task in tasks)
+
+    # check the tasks are exhaustive
+    assert sum([len(task['arguments']['args'][0]) for task in tasks]) == \
+        len(expected_origins)
+    assert \
+        set.union(*(set(task['arguments']['args'][0]) for task in tasks)) == \
+        {origin['url'] for origin in expected_origins}
+
+
 @patch('swh.scheduler.cli.utils.TASK_BATCH_SIZE', 3)
 def test_task_schedule_origins(swh_scheduler, storage):
     """Tests the scheduling when neither origin_batch_size or
     task_batch_size is a divisor of nb_origins."""
-    _fill_storage_with_origins(storage, 70)
+    origins = _fill_storage_with_origins(storage, 70)
 
     result = invoke(swh_scheduler, False, [
         'task', 'schedule_origins', 'swh-test-ping',
@@ -632,19 +651,15 @@ Done.
     assert re.fullmatch(expected, result.output, re.MULTILINE), \
         repr(result.output)
 
-    # Check scheduled tasks
+    # Check tasks
     tasks = swh_scheduler.search_tasks()
-    assert len(tasks) == 4
-    assert tasks[0]['arguments']['args'] == [list(range(1, 21))]
-    assert tasks[1]['arguments']['args'] == [list(range(21, 41))]
-    assert tasks[2]['arguments']['args'] == [list(range(41, 61))]
-    assert tasks[3]['arguments']['args'] == [list(range(61, 71))]
+    _assert_origin_tasks_contraints(tasks, 4, 20, origins)
     assert all(task['arguments']['kwargs'] == {} for task in tasks)
 
 
 def test_task_schedule_origins_kwargs(swh_scheduler, storage):
     """Tests support of extra keyword-arguments."""
-    _fill_storage_with_origins(storage, 30)
+    origins = _fill_storage_with_origins(storage, 30)
 
     result = invoke(swh_scheduler, False, [
         'task', 'schedule_origins', 'swh-test-ping',
@@ -661,11 +676,9 @@ Done.
     assert re.fullmatch(expected, result.output, re.MULTILINE), \
         repr(result.output)
 
-    # Check scheduled tasks
+    # Check tasks
     tasks = swh_scheduler.search_tasks()
-    assert len(tasks) == 2
-    assert tasks[0]['arguments']['args'] == [list(range(1, 21))]
-    assert tasks[1]['arguments']['args'] == [list(range(21, 31))]
+    _assert_origin_tasks_contraints(tasks, 2, 20, origins)
     assert all(task['arguments']['kwargs'] ==
                {'key1': 'value1', 'key2': 'value2'}
                for task in tasks)
