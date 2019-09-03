@@ -15,7 +15,7 @@ Build-Depends: debhelper (>= 9),
                python3-pytest,
                python3-psycopg2,
                python3-setuptools,
-               python3-swh.core (>= 0.0.51~),
+               python3-swh.core (>= 0.0.65~),
                python3-swh.storage (>= 0.0.129~),
                python3-vcversioner,
                python3-pytest-postgresql,
@@ -25,7 +25,7 @@ Homepage: https://forge.softwareheritage.org/diffusion/DSCH/
 
 Package: python3-swh.scheduler
 Architecture: all
-Depends: python3-swh.core (>= 0.0.51~), python3-swh.storage (>= 0.0.129~), ${misc:Depends}, ${python3:Depends}
+Depends: python3-swh.core (>= 0.0.65~), python3-swh.storage (>= 0.0.129~), ${misc:Depends}, ${python3:Depends}
 Description: Software Heritage Scheduler
 
 Package: python3-swh.scheduler.updater
