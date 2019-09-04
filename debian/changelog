@@ -1,3 +1,11 @@
+swh-scheduler (0.0.59-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.59     - (tagged by David Douard
+    <david.douard@sdfa3.org> on 2019-09-04 16:08:27 +0200)
+  * Upstream changes:     - v0.0.59
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 04 Sep 2019 14:11:48 +0000
+
 swh-scheduler (0.0.58-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.0.58     - (tagged by Antoine R. Dumont
