@@ -11,3 +11,4 @@ dist/
 version.txt
 /.hypothesis/
 /.tox/
+.mypy_cache/
