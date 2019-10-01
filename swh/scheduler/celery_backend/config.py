@@ -18,6 +18,8 @@ from kombu.five import monotonic as _monotonic
 
 import requests
 
+from typing import Any, Dict
+
 from swh.scheduler import CONFIG as SWH_CONFIG
 
 from swh.core.config import load_named_config, merge_configs
@@ -177,7 +179,7 @@ def register_task_class(app, name, cls):
 
 INSTANCE_NAME = os.environ.get(CONFIG_NAME_ENVVAR)
 CONFIG_NAME = os.environ.get('SWH_CONFIG_FILENAME')
-CONFIG = {}
+CONFIG = {}  # type: Dict[str, Any]
 
 if CONFIG_NAME:
     # load the celery config from the main config file given as
@@ -186,7 +188,7 @@ if CONFIG_NAME:
     # celery specific configuration.
     SWH_CONFIG.clear()
     SWH_CONFIG.update(load_named_config(CONFIG_NAME))
-    CONFIG = SWH_CONFIG.get('celery')
+    CONFIG = SWH_CONFIG.get('celery', default={})
 
 if not CONFIG:
     # otherwise, back to compat config loading mechanism

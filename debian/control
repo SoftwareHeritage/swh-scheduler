@@ -19,7 +19,7 @@ Build-Depends: debhelper (>= 9),
                python3-swh.storage (>= 0.0.129~),
                python3-vcversioner,
                python3-pytest-postgresql,
-	       postgresql-contrib,
+               postgresql-contrib,
 Standards-Version: 3.9.6
 Homepage: https://forge.softwareheritage.org/diffusion/DSCH/
 
