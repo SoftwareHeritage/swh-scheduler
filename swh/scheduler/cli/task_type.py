@@ -46,9 +46,9 @@ def list_task_types(ctx, verbose, task_type, task_name):
 
 
 @task_type.command('add')
-@click.argument('type', required=1)
-@click.argument('task-name', required=1)
-@click.argument('description', required=1)
+@click.argument('type', required=True)
+@click.argument('task-name', required=True)
+@click.argument('description', required=True)
 @click.option('--default-interval', '-i', default='90 days',
               help='Default interval ("90 days" by default)')
 @click.option('--min-interval', default=None,
