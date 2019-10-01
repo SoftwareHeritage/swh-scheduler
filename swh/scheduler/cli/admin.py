@@ -122,12 +122,3 @@ def ghtorrent(ctx, verbose):
     back_config = ctx.obj['config'].get('scheduler_updater', {})
     backend = SchedulerUpdaterBackend(**back_config)
     GHTorrentConsumer(backend, **ght_config).run()
-
-
-# for bw compat
-cli.add_alias(ghtorrent, 'ghtorrent')
-cli.add_alias(listener, 'listener')
-cli.add_alias(runner, 'runner')
-cli.add_alias(updater, 'updater')
-cli.add_alias(rpc_server, 'serve')
-cli.add_alias(rpc_server, 'api-server')
