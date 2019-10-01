@@ -3,6 +3,8 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+from typing import Any, Dict
+
 
 # Percentage of tasks with priority to schedule
 PRIORITY_SLOT = 0.6
@@ -16,7 +18,7 @@ DEFAULT_CONFIG = {
     })
 }
 # current configuration. To be set by the config loading mechanism
-CONFIG = {}
+CONFIG = {}  # type: Dict[str, Any]
 
 
 def compute_nb_tasks_from(num_tasks):

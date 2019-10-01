@@ -1,8 +1,22 @@
-swh-scheduler (0.0.59-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-scheduler (0.0.60-1~swh2) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * Force postgresql executable to a pg_ctl that exists when running tests.
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 04 Sep 2019 14:13:53 +0000
+ -- Nicolas Dandrimont <olasd@debian.org>  Tue, 01 Oct 2019 18:14:39 +0200
+
+swh-scheduler (0.0.60-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.60     - (tagged by Stefano Zacchiroli
+    <zack@upsilon.cc> on 2019-10-01 13:13:13 +0200)
+  * Upstream changes:     - v0.0.60     - * tox: anticipate mypy run to
+    just after flake8     - * init.py: switch to documented way of
+    extending path     - * tox.ini: add mypy section     - * typing:
+    minimal changes to make a no-op mypy run pass     - * fix typo in
+    docstring and sample file name     - * admin CLI: drop obsolete
+    backward compatibility aliases     - * click "required" param wants
+    bool, not int
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 01 Oct 2019 11:22:43 +0000
 
 swh-scheduler (0.0.59-1~swh1) unstable-swh; urgency=medium
 

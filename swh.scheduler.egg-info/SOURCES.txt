@@ -17,6 +17,7 @@ swh/scheduler/__init__.py
 swh/scheduler/backend.py
 swh/scheduler/backend_es.py
 swh/scheduler/cli_utils.py
+swh/scheduler/py.typed
 swh/scheduler/task.py
 swh/scheduler/utils.py
 swh/scheduler/api/__init__.py
