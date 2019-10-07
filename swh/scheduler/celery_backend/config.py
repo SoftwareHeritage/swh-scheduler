@@ -188,7 +188,7 @@ if CONFIG_NAME:
     # celery specific configuration.
     SWH_CONFIG.clear()
     SWH_CONFIG.update(load_named_config(CONFIG_NAME))
-    CONFIG = SWH_CONFIG.get('celery', default={})
+    CONFIG = SWH_CONFIG.get('celery', {})
 
 if not CONFIG:
     # otherwise, back to compat config loading mechanism
