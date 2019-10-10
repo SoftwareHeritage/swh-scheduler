@@ -9,6 +9,4 @@ settings.register_profile("slow", max_examples=20, deadline=5000)
 collect_ignore = [
     # NotImplementedError: save_group is not supported by this backend.
     'swh/scheduler/tests/tasks.py',
-    # OSError: Configuration file must be defined
-    'swh/scheduler/api/wsgi.py',
 ]
