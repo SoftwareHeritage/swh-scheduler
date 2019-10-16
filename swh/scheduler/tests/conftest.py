@@ -74,15 +74,10 @@ def swh_app(celery_session_app):
 
 
 @pytest.fixture
-def swh_scheduler(request, postgresql_proc, postgresql):
+def swh_scheduler(postgresql):
     scheduler_config = {
-        'db': 'postgresql://{user}@{host}:{port}/{dbname}'.format(
-            host=postgresql_proc.host,
-            port=postgresql_proc.port,
-            user='postgres',
-            dbname='tests')
+        'db': postgresql.dsn,
     }
-
     all_dump_files = sorted(glob.glob(DUMP_FILES), key=sortkey)
 
     cursor = postgresql.cursor()
