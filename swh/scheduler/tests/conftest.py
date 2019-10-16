@@ -98,3 +98,8 @@ def swh_scheduler(postgresql):
         })
 
     return scheduler
+
+
+# this alias is used to be able to easily instantiate a db-backed Scheduler
+# eg. for the RPC client/server test suite.
+swh_db_scheduler = swh_scheduler
