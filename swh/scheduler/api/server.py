@@ -170,6 +170,13 @@ def delete_archived_tasks():
     return get_sched().delete_archived_tasks(**decode_request(request))
 
 
+@app.route('/get_priority_ratios', methods=['GET', 'POST'])
+@negotiate(MsgpackFormatter)
+@negotiate(JSONFormatter)
+def get_priority_ratios():
+    return get_sched().get_priority_ratios(**decode_request(request))
+
+
 @app.route("/site-map")
 @negotiate(MsgpackFormatter)
 @negotiate(JSONFormatter)
