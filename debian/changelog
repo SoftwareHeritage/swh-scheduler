@@ -1,3 +1,14 @@
+swh-scheduler (0.0.62-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.62     - (tagged by Antoine R. Dumont
+    (@ardumont) <antoine.romain.dumont@gmail.com> on 2019-10-18 13:39:27
+    +0200)
+  * Upstream changes:     - v0.0.62     - celery_backend.config: Make
+    JournalHandler import optional     - tests: rewrite tests using
+    pytest fixtures
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 18 Oct 2019 11:46:26 +0000
+
 swh-scheduler (0.0.61-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.0.61     - (tagged by Nicolas Dandrimont
