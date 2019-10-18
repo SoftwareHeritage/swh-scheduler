@@ -13,7 +13,6 @@ import pkg_resources
 from swh.core.utils import numfile_sortkey as sortkey
 from swh.scheduler import get_scheduler
 from swh.scheduler.tests import SQL_DIR
-from swh.scheduler.tests.tasks import register_test_tasks
 
 
 # make sure we are not fooled by CELERY_ config environment vars
@@ -62,15 +61,14 @@ def celery_config():
         }
 
 
-# override the celery_session_app fixture to monkeypatch the 'main'
+# use the celery_session_app fixture to monkeypatch the 'main'
 # swh.scheduler.celery_backend.config.app Celery application
-# with the test application (and also register test tasks)
+# with the test application
 @pytest.fixture(scope='session')
 def swh_app(celery_session_app):
-    from swh.scheduler.celery_backend.config import app
-    register_test_tasks(celery_session_app)
-    app = celery_session_app  # noqa
-    yield app
+    from swh.scheduler.celery_backend import config
+    config.app = celery_session_app
+    yield celery_session_app
 
 
 @pytest.fixture
