@@ -23,7 +23,6 @@ swh/scheduler/utils.py
 swh/scheduler/api/__init__.py
 swh/scheduler/api/client.py
 swh/scheduler/api/server.py
-swh/scheduler/api/wsgi.py
 swh/scheduler/celery_backend/__init__.py
 swh/scheduler/celery_backend/config.py
 swh/scheduler/celery_backend/listener.py

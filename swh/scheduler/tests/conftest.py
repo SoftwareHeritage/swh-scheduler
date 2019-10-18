@@ -1,3 +1,9 @@
+# Copyright (C) 2016-2019  The Software Heritage developers
+# See the AUTHORS file at the top-level directory of this distribution
+# License: GNU General Public License version 3, or any later version
+# See top-level LICENSE file for more information
+
+
 import os
 import pytest
 import glob
@@ -7,15 +13,12 @@ import pkg_resources
 from swh.core.utils import numfile_sortkey as sortkey
 from swh.scheduler import get_scheduler
 from swh.scheduler.tests import SQL_DIR
+from swh.scheduler.tests.tasks import register_test_tasks
+
 
 # make sure we are not fooled by CELERY_ config environment vars
 for var in [x for x in os.environ.keys() if x.startswith('CELERY')]:
     os.environ.pop(var)
-
-import swh.scheduler.celery_backend.config  # noqa
-# this import is needed here to enforce creation of the celery current app
-# BEFORE the swh_app fixture is called, otherwise the Celery app instance from
-# celery_backend.config becomes the celery.current_app
 
 
 # test_cli tests depends on a en/C locale, so ensure it
@@ -61,23 +64,20 @@ def celery_config():
 
 # override the celery_session_app fixture to monkeypatch the 'main'
 # swh.scheduler.celery_backend.config.app Celery application
-# with the test application.
+# with the test application (and also register test tasks)
 @pytest.fixture(scope='session')
 def swh_app(celery_session_app):
-    swh.scheduler.celery_backend.config.app = celery_session_app
-    yield celery_session_app
+    from swh.scheduler.celery_backend.config import app
+    register_test_tasks(celery_session_app)
+    app = celery_session_app  # noqa
+    yield app
 
 
 @pytest.fixture
-def swh_scheduler(request, postgresql_proc, postgresql):
+def swh_scheduler(postgresql):
     scheduler_config = {
-        'db': 'postgresql://{user}@{host}:{port}/{dbname}'.format(
-            host=postgresql_proc.host,
-            port=postgresql_proc.port,
-            user='postgres',
-            dbname='tests')
+        'db': postgresql.dsn,
     }
-
     all_dump_files = sorted(glob.glob(DUMP_FILES), key=sortkey)
 
     cursor = postgresql.cursor()
@@ -98,3 +98,8 @@ def swh_scheduler(request, postgresql_proc, postgresql):
         })
 
     return scheduler
+
+
+# this alias is used to be able to easily instantiate a db-backed Scheduler
+# eg. for the RPC client/server test suite.
+swh_db_scheduler = swh_scheduler
