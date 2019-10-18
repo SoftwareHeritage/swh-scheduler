@@ -3,12 +3,10 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-from celery import group
-
-from swh.scheduler.celery_backend.config import app
+from celery import group, shared_task
 
 
-@app.task(name='swh.scheduler.tests.tasks.ping', bind=True)
+@shared_task(name='swh.scheduler.tests.tasks.ping', bind=True)
 def ping(self, **kw):
     # check this is a SWHTask
     assert hasattr(self, 'log')
@@ -20,7 +18,7 @@ def ping(self, **kw):
     return 'OK'
 
 
-@app.task(name='swh.scheduler.tests.tasks.multiping', bind=True)
+@shared_task(name='swh.scheduler.tests.tasks.multiping', bind=True)
 def multiping(self, n=10):
     promise = group(ping.s(i=i) for i in range(n))()
     self.log.debug('%s OK (spawned %s subtasks)' % (self.name, n))
@@ -28,11 +26,11 @@ def multiping(self, n=10):
     return promise.id
 
 
-@app.task(name='swh.scheduler.tests.tasks.error')
+@shared_task(name='swh.scheduler.tests.tasks.error')
 def not_implemented():
     raise NotImplementedError('Nope')
 
 
-@app.task(name='swh.scheduler.tests.tasks.add')
+@shared_task(name='swh.scheduler.tests.tasks.add')
 def add(x, y):
     return x + y
