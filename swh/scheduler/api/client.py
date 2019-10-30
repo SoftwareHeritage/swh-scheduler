@@ -104,3 +104,6 @@ class RemoteScheduler(RPCClient):
 
     def delete_archived_tasks(self, task_ids):
         return self.post('delete_archived_tasks', {'task_ids': task_ids})
+
+    def get_priority_ratios(self):
+        return self.get('get_priority_ratios')
