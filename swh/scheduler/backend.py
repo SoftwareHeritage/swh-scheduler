@@ -486,3 +486,8 @@ class SchedulerBackend:
             args.append(limit)
         cur.execute(query, args)
         return cur.fetchall()
+
+    @db_transaction()
+    def get_priority_ratios(self, db=None, cur=None):
+        cur.execute('select id, ratio from priority_ratio')
+        return {row['id']: row['ratio'] for row in cur.fetchall()}

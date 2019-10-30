@@ -4,150 +4,149 @@
 # See top-level LICENSE file for more information
 
 import os
-import unittest
 from glob import glob
 
 import pytest
+from pytest_postgresql.factories import postgresql as pg_fixture_factory
 
+from os.path import join
 from swh.core.utils import numfile_sortkey as sortkey
-from swh.core.db.tests.db_testing import DbTestFixture
 from swh.scheduler.tests import SQL_DIR
 from swh.scheduler.updater.events import LISTENED_EVENTS, SWHEvent
 from swh.scheduler.updater.writer import UpdaterWriter
 
-from . import UpdaterTestUtil
+from .conftest import make_simple_event
 
 
-@pytest.mark.db
-class CommonSchedulerTest(DbTestFixture):
-    TEST_SCHED_DB = 'softwareheritage-scheduler-test'
-    TEST_SCHED_DUMP = os.path.join(SQL_DIR, '*.sql')
-
-    TEST_SCHED_UPDATER_DB = 'softwareheritage-scheduler-updater-test'
-    TEST_SCHED_UPDATER_DUMP = os.path.join(SQL_DIR, 'updater', '*.sql')
-
-    @classmethod
-    def setUpClass(cls):
-        cls.add_db(cls.TEST_SCHED_DB,
-                   [(sqlfn, 'psql') for sqlfn in
-                    sorted(glob(cls.TEST_SCHED_DUMP), key=sortkey)])
-        cls.add_db(cls.TEST_SCHED_UPDATER_DB,
-                   [(sqlfn, 'psql') for sqlfn in
-                    sorted(glob(cls.TEST_SCHED_UPDATER_DUMP), key=sortkey)])
-        super().setUpClass()
-
-    def tearDown(self):
-        self.reset_db_tables(self.TEST_SCHED_UPDATER_DB)
-        self.reset_db_tables(self.TEST_SCHED_DB,
-                             excluded=['task_type', 'priority_ratio'])
-        super().tearDown()
+pg_scheduler = pg_fixture_factory('postgresql_proc', 'scheduler')
+pg_updater = pg_fixture_factory('postgresql_proc', 'updater')
 
 
-class UpdaterWriterTest(UpdaterTestUtil, CommonSchedulerTest,
-                        unittest.TestCase):
-    def setUp(self):
-        super().setUp()
+def pg_sched_fact(dbname, sqldir):
+    @pytest.fixture
+    def pg_scheduler_db(request):
+        pg = request.getfixturevalue('pg_%s' % dbname)
+        dump_files = sorted(glob(os.path.join(sqldir, '*.sql')),
+                            key=sortkey)
+        with pg.cursor() as cur:
+            for fname in dump_files:
+                with open(fname) as fobj:
+                    sql = fobj.read().replace('concurrently', '')
+                    cur.execute(sql)
+            pg.commit()
+        yield pg
 
-        config = {
-            'scheduler': {
-                'cls': 'local',
-                'args': {
-                    'db': 'dbname=softwareheritage-scheduler-test',
-                },
+    return pg_scheduler_db
+
+
+scheduler_db = pg_sched_fact('scheduler', SQL_DIR)
+updater_db = pg_sched_fact('updater', join(SQL_DIR, 'updater'))
+
+
+@pytest.fixture
+def swh_updater_writer(scheduler_db, updater_db):
+    config = {
+        'scheduler': {
+            'cls': 'local',
+            'args': {
+                'db': scheduler_db.dsn,
             },
-            'scheduler_updater': {
-                'cls': 'local',
-                'args': {
-                    'db':
-                    'dbname=softwareheritage-scheduler-updater-test',
-                    'cache_read_limit': 5,
-                },
+        },
+        'scheduler_updater': {
+            'cls': 'local',
+            'args': {
+                'db': updater_db.dsn,
+                'cache_read_limit': 5,
             },
-            'updater_writer': {
-                'pause': 0.1,
-                'verbose': False,
-            },
-        }
-        self.writer = UpdaterWriter(**config)
-        self.scheduler_backend = self.writer.scheduler_backend
-        self.scheduler_updater_backend = self.writer.scheduler_updater_backend
+        },
+        'updater_writer': {
+            'pause': 0.1,
+            'verbose': False,
+        },
+    }
+    return UpdaterWriter(**config)
 
-    def test_run_ko(self):
-        """Only git tasks are supported for now, other types are dismissed.
 
-        """
-        ready_events = [
-            SWHEvent(
-                self._make_simple_event(event_type, 'origin-%s' % i,
-                                        'svn'))
-            for i, event_type in enumerate(LISTENED_EVENTS)
-        ]
+def test_run_ko(swh_updater_writer):
+    """Only git tasks are supported for now, other types are dismissed.
 
-        expected_length = len(ready_events)
+    """
+    scheduler = swh_updater_writer.scheduler_backend
+    updater = swh_updater_writer.scheduler_updater_backend
 
-        self.scheduler_updater_backend.cache_put(ready_events)
-        data = list(self.scheduler_updater_backend.cache_read())
-        self.assertEqual(len(data), expected_length)
+    ready_events = [
+        SWHEvent(
+            make_simple_event(event_type, 'origin-%s' % i,
+                              'svn'))
+        for i, event_type in enumerate(LISTENED_EVENTS)
+    ]
 
-        r = self.scheduler_backend.peek_ready_tasks('load-git')
+    updater.cache_put(ready_events)
+    list(updater.cache_read())
 
-        # first read on an empty scheduling db results with nothing in it
-        self.assertEqual(len(r), 0)
+    r = scheduler.peek_ready_tasks('load-git')
 
-        # Read from cache to scheduler db
-        self.writer.run()
+    # first read on an empty scheduling db results with nothing in it
+    assert not r
 
-        r = self.scheduler_backend.peek_ready_tasks('load-git')
+    # Read from cache to scheduler db
+    swh_updater_writer.run()
 
-        # other reads after writes are still empty since it's not supported
-        self.assertEqual(len(r), 0)
+    r = scheduler.peek_ready_tasks('load-git')
 
-    def test_run_ok(self):
-        """Only git origin are supported for now
+    # other reads after writes are still empty since it's not supported
+    assert not r
 
-        """
-        ready_events = [
-            SWHEvent(
-                self._make_simple_event(event_type, 'origin-%s' % i, 'git'))
-            for i, event_type in enumerate(LISTENED_EVENTS)
-        ]
 
-        expected_length = len(ready_events)
+def test_run_ok(swh_updater_writer):
+    """Only git origin are supported for now
 
-        self.scheduler_updater_backend.cache_put(ready_events)
+    """
+    scheduler = swh_updater_writer.scheduler_backend
+    updater = swh_updater_writer.scheduler_updater_backend
 
-        data = list(self.scheduler_updater_backend.cache_read())
-        self.assertEqual(len(data), expected_length)
+    ready_events = [
+        SWHEvent(
+            make_simple_event(event_type, 'origin-%s' % i, 'git'))
+        for i, event_type in enumerate(LISTENED_EVENTS)
+    ]
 
-        r = self.scheduler_backend.peek_ready_tasks('load-git')
+    expected_length = len(ready_events)
 
-        # first read on an empty scheduling db results with nothing in it
-        self.assertEqual(len(r), 0)
+    updater.cache_put(ready_events)
 
-        # Read from cache to scheduler db
-        self.writer.run()
+    data = list(updater.cache_read())
+    assert len(data) == expected_length
 
-        # now, we should have scheduling task ready
-        r = self.scheduler_backend.peek_ready_tasks('load-git')
+    r = scheduler.peek_ready_tasks('load-git')
 
-        self.assertEqual(len(r), expected_length)
+    # first read on an empty scheduling db results with nothing in it
+    assert not r
 
-        # Check the task has been scheduled
-        for t in r:
-            self.assertEqual(t['type'], 'load-git')
-            self.assertEqual(t['priority'], 'normal')
-            self.assertEqual(t['policy'], 'oneshot')
-            self.assertEqual(t['status'], 'next_run_not_scheduled')
+    # Read from cache to scheduler db
+    swh_updater_writer.run()
 
-        # writer has nothing to do now
-        self.writer.run()
+    # now, we should have scheduling task ready
+    r = scheduler.peek_ready_tasks('load-git')
 
-        # so no more data in cache
-        data = list(self.scheduler_updater_backend.cache_read())
+    assert len(r) == expected_length
 
-        self.assertEqual(len(data), 0)
+    # Check the task has been scheduled
+    for t in r:
+        assert t['type'] == 'load-git'
+        assert t['priority'] == 'normal'
+        assert t['policy'] == 'oneshot'
+        assert t['status'] == 'next_run_not_scheduled'
 
-        # provided, no runner is ran, still the same amount of scheduling tasks
-        r = self.scheduler_backend.peek_ready_tasks('load-git')
+    # writer has nothing to do now
+    swh_updater_writer.run()
 
-        self.assertEqual(len(r), expected_length)
+    # so no more data in cache
+    data = list(updater.cache_read())
+
+    assert not data
+
+    # provided, no runner is ran, still the same amount of scheduling tasks
+    r = scheduler.peek_ready_tasks('load-git')
+
+    assert len(r) == expected_length

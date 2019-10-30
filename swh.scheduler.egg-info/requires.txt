@@ -11,6 +11,6 @@ swh.storage>=0.0.129
 
 [testing]
 pytest<4
-pytest-postgresql
+pytest-postgresql>=2.1.0
 celery>=4
 hypothesis>=3.11.0

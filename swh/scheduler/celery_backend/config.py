@@ -23,7 +23,12 @@ from typing import Any, Dict
 from swh.scheduler import CONFIG as SWH_CONFIG
 
 from swh.core.config import load_named_config, merge_configs
-from swh.core.logger import JournalHandler
+
+try:
+    from swh.core.logger import JournalHandler
+except ImportError:
+    JournalHandler = None  # type: ignore
+
 
 DEFAULT_CONFIG_NAME = 'worker'
 CONFIG_NAME_ENVVAR = 'SWH_WORKER_INSTANCE'
@@ -75,10 +80,14 @@ def setup_log_handler(loglevel=None, logfile=None, format=None, colorize=None,
         root_logger.addHandler(console)
 
     if log_journal:
-        systemd_journal = JournalHandler()
-        systemd_journal.setLevel(logging.DEBUG)
-        systemd_journal.setFormatter(formatter)
-        root_logger.addHandler(systemd_journal)
+        if not JournalHandler:
+            root_logger.warning('JournalHandler is not available, skipping. '
+                                'Please install swh-core[logging].')
+        else:
+            systemd_journal = JournalHandler()
+            systemd_journal.setLevel(logging.DEBUG)
+            systemd_journal.setFormatter(formatter)
+            root_logger.addHandler(systemd_journal)
 
     logging.getLogger('celery').setLevel(logging.INFO)
     # Silence amqp heartbeat_tick messages
