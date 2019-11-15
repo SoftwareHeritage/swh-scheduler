@@ -72,10 +72,11 @@ def swh_app(celery_session_app):
 
 
 @pytest.fixture
-def swh_scheduler(postgresql):
+def swh_scheduler_config(request, postgresql):
     scheduler_config = {
         'db': postgresql.dsn,
     }
+
     all_dump_files = sorted(glob.glob(DUMP_FILES), key=sortkey)
 
     cursor = postgresql.cursor()
@@ -84,7 +85,12 @@ def swh_scheduler(postgresql):
             cursor.execute(fobj.read())
     postgresql.commit()
 
-    scheduler = get_scheduler('local', scheduler_config)
+    return scheduler_config
+
+
+@pytest.fixture
+def swh_scheduler(swh_scheduler_config):
+    scheduler = get_scheduler('local', swh_scheduler_config)
     for taskname in TASK_NAMES:
         scheduler.create_task_type({
             'type': 'swh-test-{}'.format(taskname),
