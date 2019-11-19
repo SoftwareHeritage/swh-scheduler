@@ -1,8 +1,21 @@
-swh-scheduler (0.0.62-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-scheduler (0.0.63-1~swh2) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * Update build dependency
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 30 Oct 2019 16:30:59 +0000
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Tue, 19 Nov 2019 17:07:40 +0100
+
+swh-scheduler (0.0.63-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.63     - (tagged by Antoine R. Dumont
+    (@ardumont) <antoine.romain.dumont@gmail.com> on 2019-11-19 14:09:12
+    +0100)
+  * Upstream changes:     - v0.0.63     - swh.scheduler.cli: Add `swh
+    scheduler task-type register` cli     - Use the shared_task
+    decorator instead of binding to a specific celery app     -
+    celery/tests: mostly revert e770eb30 to fix celery app
+    initialization in tests
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 19 Nov 2019 13:14:59 +0000
 
 swh-scheduler (0.0.62-1~swh1) unstable-swh; urgency=medium
 
