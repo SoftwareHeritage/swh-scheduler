@@ -107,32 +107,6 @@ insert into task_type(
        description,
        backend_name,
        default_interval, min_interval, max_interval, backoff_factor,
-       max_queue_length, num_retries, retry_delay)
-values (
-       'load-debian-package',
-       'Load a Debian package',
-       'swh.loader.debian.tasks.LoadDebianPackage',
-       NULL, NULL, NULL, NULL,
-       5000, 5, '1 hour');
-
-insert into task_type(
-       type,
-       description,
-       backend_name,
-       default_interval, min_interval, max_interval, backoff_factor,
-       max_queue_length)
-values (
-       'load-pypi',
-       'Load Pypi origin',
-       'swh.loader.pypi.tasks.LoadPyPI',
-       '64 days', '12:00:00', '64 days', 2,
-       5000);
-
-insert into task_type(
-       type,
-       description,
-       backend_name,
-       default_interval, min_interval, max_interval, backoff_factor,
        max_queue_length)
 values (
        'index-mimetype',
@@ -219,29 +193,3 @@ values (
        'swh.indexer.tasks.OriginMetadata',
        '1 day', '12:00:00', '1 days', 2,
        20000);
-
-insert into task_type(
-       type,
-       description,
-       backend_name,
-       default_interval, min_interval, max_interval, backoff_factor,
-       max_queue_length)
-values (
-       'load-npm',
-       'Load npm origin',
-       'swh.loader.npm.tasks.LoadNpm',
-       '64 days', '12:00:00', '64 days', 2,
-       5000);
-
-insert into task_type(
-       type,
-       description,
-       backend_name,
-       default_interval, min_interval, max_interval, backoff_factor, num_retries)
-values (
-       'load-tar',
-       'Load Tar from gnu',
-       'swh.loader.package.tasks.LoadGNU',
-       '64 days',
-       '64 days',
-       '64 days', 1, 3);
