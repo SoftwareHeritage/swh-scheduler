@@ -1,3 +1,9 @@
+swh-scheduler (0.0.63-1~swh2~bpo10+1) buster-swh; urgency=medium
+
+  * Rebuild for buster-swh
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 19 Nov 2019 16:11:39 +0000
+
 swh-scheduler (0.0.63-1~swh2) unstable-swh; urgency=medium
 
   * Update build dependency
