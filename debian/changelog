@@ -1,3 +1,13 @@
+swh-scheduler (0.0.64-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.64     - (tagged by Antoine R. Dumont
+    (@ardumont) <antoine.romain.dumont@gmail.com> on 2019-11-20 14:26:00
+    +0100)
+  * Upstream changes:     - v0.0.64     - req-swh*: Remove old package
+    loader backend names
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 20 Nov 2019 13:29:37 +0000
+
 swh-scheduler (0.0.63-1~swh2) unstable-swh; urgency=medium
 
   * Update build dependency
