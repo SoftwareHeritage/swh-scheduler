@@ -1,6 +1,6 @@
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v1.2.3
+  rev: v2.4.0
   hooks:
   - id: trailing-whitespace
   - id: flake8
@@ -8,9 +8,19 @@ repos:
   - id: check-yaml
 
 - repo: https://github.com/codespell-project/codespell
-  rev: v1.15.0
+  rev: v1.16.0
   hooks:
   - id: codespell
+
+- repo: local
+  hooks:
+  - id: mypy
+    name: mypy
+    entry: mypy
+    args: [swh]
+    pass_filenames: false
+    language: system
+    types: [python]
 
 # unfortunately, we are far from being able to enable this...
 # - repo: https://github.com/PyCQA/pydocstyle.git
