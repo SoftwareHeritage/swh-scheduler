@@ -27,7 +27,7 @@ DUMP_FILES = os.path.join(SQL_DIR, '*.sql')
 
 # celery tasks for testing purpose; tasks themselves should be
 # in swh/scheduler/tests/tasks.py
-TASK_NAMES = ['ping', 'multiping', 'add', 'error']
+TASK_NAMES = ['ping', 'multiping', 'add', 'error', 'echo']
 
 
 @pytest.fixture(scope='session')

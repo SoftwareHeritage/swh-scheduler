@@ -1,4 +1,5 @@
 pytest
+pytest-mock
 pytest-postgresql >= 2.1.0
 celery >= 4.3
 hypothesis >= 3.11.0
