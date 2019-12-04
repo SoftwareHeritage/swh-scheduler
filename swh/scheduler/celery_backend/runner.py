@@ -7,6 +7,7 @@ import arrow
 import logging
 from kombu.utils.uuid import uuid
 
+from swh.core.statsd import statsd
 from swh.scheduler import get_scheduler, compute_nb_tasks_from
 
 
@@ -73,7 +74,10 @@ def run_ready_tasks(backend, app):
                     pending_tasks.extend(grabbed_tasks)
                     logger.info('Grabbed %s tasks %s',
                                 len(grabbed_tasks), task_type_name)
-
+                    statsd.increment(
+                        'swh_scheduler_runner_scheduled_task_total',
+                        len(grabbed_tasks),
+                        tags={'task_type': task_type_name})
         if not pending_tasks:
             return all_backend_tasks
 

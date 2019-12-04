@@ -16,6 +16,8 @@ from kombu import Queue
 import celery
 from celery.events import EventReceiver
 
+from swh.core.statsd import statsd
+
 
 class ReliableEventReceiver(EventReceiver):
     def __init__(self, channel, handlers=None, routing_key='#',
@@ -46,7 +48,10 @@ class ReliableEventReceiver(EventReceiver):
         """Process the received event by dispatching it to the appropriate
         handler."""
         handler = self.handlers.get(type) or self.handlers.get('*')
-        handler and handler(event, message)
+        if handler:
+            handler(event, message)
+            statsd.increment('swh_scheduler_listener_handled_event_total',
+                             tags={'event_type': type})
 
 
 ACTION_SEND_DELAY = datetime.timedelta(seconds=1.0)
