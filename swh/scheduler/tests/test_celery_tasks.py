@@ -17,10 +17,19 @@ def test_ping(swh_app, celery_session_worker):
     assert res.result == 'OK'
 
 
+def test_ping_with_kw(swh_app, celery_session_worker):
+    res = swh_app.send_task(
+        'swh.scheduler.tests.tasks.ping', kwargs={'a': 1})
+    assert res
+    res.wait()
+    assert res.successful()
+    assert res.result == "OK (kw={'a': 1})"
+
+
 def test_multiping(swh_app, celery_session_worker):
     "Test that a task that spawns subtasks (group) works"
     res = swh_app.send_task(
-        'swh.scheduler.tests.tasks.multiping', n=5)
+        'swh.scheduler.tests.tasks.multiping', kwargs={'n': 5})
     assert res
 
     res.wait()
@@ -37,6 +46,7 @@ def test_multiping(swh_app, celery_session_worker):
         sleep(1)
 
     results = [x.get() for x in promise.results]
+    assert len(results) == 5
     for i in range(5):
         assert ("OK (kw={'i': %s})" % i) in results
 
