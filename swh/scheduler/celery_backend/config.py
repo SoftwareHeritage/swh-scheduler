@@ -12,7 +12,7 @@ from typing import Any, Dict
 import urllib.parse
 
 from celery import Celery
-from celery.signals import setup_logging, celeryd_after_setup
+from celery.signals import setup_logging, celeryd_after_setup, worker_init
 from celery.utils.log import ColorFormatter
 from celery.worker.control import Panel
 
@@ -139,6 +139,21 @@ def setup_queues_and_tasks(sender, instance, **kwargs):
     """
     logger.info('Setup Queues & Tasks for %s', sender)
     instance.app.conf['worker_name'] = sender
+
+
+@worker_init.connect
+@_print_errors
+def on_worker_init(*args, **kwargs):
+    sentry_dsn = os.environ.get('SWH_SENTRY_DSN')
+    if sentry_dsn:
+        import sentry_sdk
+        from sentry_sdk.integrations.celery import CeleryIntegration
+
+        sentry_sdk.init(
+            dsn=sentry_dsn,
+            integrations=[CeleryIntegration()],
+            debug=bool(os.environ.get('SWH_SENTRY_DEBUG')),
+        )
 
 
 @Panel.register
