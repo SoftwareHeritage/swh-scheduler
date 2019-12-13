@@ -1,3 +1,14 @@
+swh-scheduler (0.0.65-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.65     - (tagged by Nicolas Dandrimont
+    <nicolas@dandrimont.eu> on 2019-12-13 11:45:55 +0100)
+  * Upstream changes:     - Release swh.scheduler v0.0.65     - Drop the
+    scheduler updater     - Add a statsd probe for task execution
+    timestamps     - Add listener and runner statsd probes     - CLI
+    updates     - Python packaging housekeeping
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 13 Dec 2019 10:54:31 +0000
+
 swh-scheduler (0.0.64-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.0.64     - (tagged by Antoine R. Dumont
