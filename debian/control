@@ -13,6 +13,7 @@ Build-Depends: debhelper (>= 9),
                python3-hypothesis (>= 3.11.0~),
                python3-kombu,
                python3-pytest,
+               python3-pytest-mock,
                python3-psycopg2,
                python3-setuptools,
                python3-swh.core (>= 0.0.65~),
@@ -28,9 +29,3 @@ Package: python3-swh.scheduler
 Architecture: all
 Depends: python3-swh.core (>= 0.0.65~), python3-swh.storage (>= 0.0.129~), ${misc:Depends}, ${python3:Depends}
 Description: Software Heritage Scheduler
-
-Package: python3-swh.scheduler.updater
-Architecture: all
-Depends: python3-swh.scheduler (= ${binary:Version}),
-         ${misc:Depends}, ${python3:Depends}
-Description: Software Heritage Scheduler Updater

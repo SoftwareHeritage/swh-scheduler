@@ -3,11 +3,17 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+from datetime import datetime
+
 from celery import current_app
 import celery.app.task
 from celery.utils.log import get_task_logger
 
 from swh.core.statsd import Statsd
+
+
+def ts():
+    return int(datetime.utcnow().timestamp())
 
 
 class SWHTask(celery.app.task.Task):
@@ -34,15 +40,29 @@ class SWHTask(celery.app.task.Task):
             })
             return self._statsd
         else:
-            return Statsd(constant_tags={
+            statsd = Statsd(constant_tags={
                 'task': self.name,
                 'worker': 'unknown worker',
             })
+            return statsd
 
     def __call__(self, *args, **kwargs):
         self.statsd.increment('swh_task_called_count')
+        self.statsd.gauge('swh_task_start_ts', ts())
         with self.statsd.timed('swh_task_duration_seconds'):
-            return super().__call__(*args, **kwargs)
+            result = super().__call__(*args, **kwargs)
+            try:
+                status = result['status']
+                if status == 'success':
+                    status = 'eventful' if result.get('eventful') \
+                        else 'uneventful'
+            except Exception:
+                status = 'eventful' if result else 'uneventful'
+
+            self.statsd.gauge(
+                'swh_task_end_ts', ts(),
+                tags={'status': status})
+            return result
 
     def on_failure(self, exc, task_id, args, kwargs, einfo):
         self.statsd.increment('swh_task_failure_count')

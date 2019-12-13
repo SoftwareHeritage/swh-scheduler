@@ -34,8 +34,8 @@ begin
     where not exists(select 1
                      from task
                      where type = t.type and
-                           arguments->'args' = t.arguments->'args' and
-                           arguments->'kwargs' = t.arguments->'kwargs' and
+                           md5(arguments::text) = md5(t.arguments::text) and
+                           arguments = t.arguments and
                            policy = t.policy and
                            priority is not distinct from t.priority and
                            status = t.status);
@@ -44,8 +44,8 @@ begin
     select distinct t.*
     from tmp_task tt inner join task t on (
       tt.type = t.type and
-      tt.arguments->'args' = t.arguments->'args' and
-      tt.arguments->'kwargs' = t.arguments->'kwargs' and
+      md5(tt.arguments::text) = md5(t.arguments::text) and
+      tt.arguments = t.arguments and
       tt.policy = t.policy and
       tt.priority is not distinct from t.priority and
       tt.status = t.status

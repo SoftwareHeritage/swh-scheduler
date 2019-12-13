@@ -366,6 +366,9 @@ def list_pending_tasks(ctx, task_types, limit, before):
 @click.option('--limit', '-l', required=False, type=click.INT,
               help='The maximum number of tasks to fetch.')
 @click.option('--status', '-s', multiple=True, metavar='STATUS',
+              type=click.Choice(
+                  ('next_run_not_scheduled', 'next_run_scheduled',
+                   'completed', 'disabled')),
               default=None,
               help='List tasks whose status is STATUS.')
 @click.option('--policy', '-p', default=None,
