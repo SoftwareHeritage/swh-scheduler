@@ -34,3 +34,9 @@ def not_implemented():
 @shared_task(name='swh.scheduler.tests.tasks.add')
 def add(x, y):
     return x + y
+
+
+@shared_task(name='swh.scheduler.tests.tasks.echo')
+def echo(**kw):
+    "Does nothing, just return the given kwargs dict"
+    return kw

@@ -1,4 +1,6 @@
 from time import sleep
+from itertools import count
+
 from celery.result import GroupResult
 from celery.result import AsyncResult
 
@@ -17,10 +19,19 @@ def test_ping(swh_app, celery_session_worker):
     assert res.result == 'OK'
 
 
+def test_ping_with_kw(swh_app, celery_session_worker):
+    res = swh_app.send_task(
+        'swh.scheduler.tests.tasks.ping', kwargs={'a': 1})
+    assert res
+    res.wait()
+    assert res.successful()
+    assert res.result == "OK (kw={'a': 1})"
+
+
 def test_multiping(swh_app, celery_session_worker):
     "Test that a task that spawns subtasks (group) works"
     res = swh_app.send_task(
-        'swh.scheduler.tests.tasks.multiping', n=5)
+        'swh.scheduler.tests.tasks.multiping', kwargs={'n': 5})
     assert res
 
     res.wait()
@@ -37,6 +48,7 @@ def test_multiping(swh_app, celery_session_worker):
         sleep(1)
 
     results = [x.get() for x in promise.results]
+    assert len(results) == 5
     for i in range(5):
         assert ("OK (kw={'i': %s})" % i) in results
 
@@ -91,3 +103,61 @@ def test_task_exception(swh_app, celery_session_worker, swh_scheduler):
     result = AsyncResult(id=task['backend_id'])
     with pytest.raises(NotImplementedError):
         result.get()
+
+
+def test_statsd(swh_app, celery_session_worker, mocker):
+    m = mocker.patch('swh.scheduler.task.Statsd._send_to_server')
+    mocker.patch('swh.scheduler.task.ts', side_effect=count())
+    mocker.patch('swh.core.statsd.monotonic', side_effect=count())
+    res = swh_app.send_task(
+        'swh.scheduler.tests.tasks.echo')
+    assert res
+    res.wait()
+    assert res.successful()
+    assert res.result == {}
+
+    m.assert_any_call(
+        'swh_task_called_count:1|c|'
+        '#task:swh.scheduler.tests.tasks.echo,worker:unknown worker')
+    m.assert_any_call(
+        'swh_task_start_ts:0|g|'
+        '#task:swh.scheduler.tests.tasks.echo,worker:unknown worker')
+    m.assert_any_call(
+        'swh_task_end_ts:1|g|'
+        '#status:uneventful,task:swh.scheduler.tests.tasks.echo,'
+        'worker:unknown worker')
+    m.assert_any_call(
+        'swh_task_duration_seconds:1000|ms|'
+        '#task:swh.scheduler.tests.tasks.echo,worker:unknown worker')
+    m.assert_any_call(
+        'swh_task_success_count:1|c|'
+        '#task:swh.scheduler.tests.tasks.echo,worker:unknown worker')
+
+
+def test_statsd_with_status(swh_app, celery_session_worker, mocker):
+    m = mocker.patch('swh.scheduler.task.Statsd._send_to_server')
+    mocker.patch('swh.scheduler.task.ts', side_effect=count())
+    mocker.patch('swh.core.statsd.monotonic', side_effect=count())
+    res = swh_app.send_task(
+        'swh.scheduler.tests.tasks.echo', kwargs={'status': 'eventful'})
+    assert res
+    res.wait()
+    assert res.successful()
+    assert res.result == {'status': 'eventful'}
+
+    m.assert_any_call(
+        'swh_task_called_count:1|c|'
+        '#task:swh.scheduler.tests.tasks.echo,worker:unknown worker')
+    m.assert_any_call(
+        'swh_task_start_ts:0|g|'
+        '#task:swh.scheduler.tests.tasks.echo,worker:unknown worker')
+    m.assert_any_call(
+        'swh_task_end_ts:1|g|'
+        '#status:eventful,task:swh.scheduler.tests.tasks.echo,'
+        'worker:unknown worker')
+    m.assert_any_call(
+        'swh_task_duration_seconds:1000|ms|'
+        '#task:swh.scheduler.tests.tasks.echo,worker:unknown worker')
+    m.assert_any_call(
+        'swh_task_success_count:1|c|'
+        '#task:swh.scheduler.tests.tasks.echo,worker:unknown worker')

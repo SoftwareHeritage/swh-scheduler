@@ -88,37 +88,3 @@ def rpc_server(ctx, host, port, debug):
     if debug is None:
         debug = ctx.obj['log_level'] <= logging.DEBUG
     server.app.run(host, port=port, debug=bool(debug))
-
-
-@cli.command('start-updater')
-@click.option('--verbose/--no-verbose', '-v', default=False,
-              help='Verbose mode')
-@click.pass_context
-def updater(ctx, verbose):
-    """Starts a scheduler-updater service.
-
-    Insert tasks in the scheduler from the scheduler-updater's events read from
-    the db cache (filled e.g. by the ghtorrent consumer service) .
-
-    """
-    from swh.scheduler.updater.writer import UpdaterWriter
-    UpdaterWriter(**ctx.obj['config']).run()
-
-
-@cli.command('start-ghtorrent')
-@click.option('--verbose/--no-verbose', '-v', default=False,
-              help='Verbose mode')
-@click.pass_context
-def ghtorrent(ctx, verbose):
-    """Starts a ghtorrent consumer service.
-
-    Consumes events from ghtorrent and write them to a cache.
-
-    """
-    from swh.scheduler.updater.ghtorrent import GHTorrentConsumer
-    from swh.scheduler.updater.backend import SchedulerUpdaterBackend
-
-    ght_config = ctx.obj['config'].get('ghtorrent', {})
-    back_config = ctx.obj['config'].get('scheduler_updater', {})
-    backend = SchedulerUpdaterBackend(**back_config)
-    GHTorrentConsumer(backend, **ght_config).run()
