@@ -374,10 +374,12 @@ class TestScheduler:
         # no pagination scenario
 
         # retrieve tasks to archive
-        after = _time.shift(days=-1).format('YYYY-MM-DD')
-        before = utcnow().shift(days=1).format('YYYY-MM-DD')
+        after = _time.shift(days=-1)
+        after_ts = after.format('YYYY-MM-DD')
+        before = utcnow().shift(days=1)
+        before_ts = before.format('YYYY-MM-DD')
         tasks_result = swh_scheduler.filter_task_to_archive(
-            after_ts=after, before_ts=before, limit=total_tasks)
+            after_ts=after_ts, before_ts=before_ts, limit=total_tasks)
 
         tasks_to_archive = tasks_result['tasks']
 
@@ -386,6 +388,14 @@ class TestScheduler:
 
         actual_filtered_per_status = {'recurring': 0, 'oneshot': 0}
         for task in tasks_to_archive:
+            if task['started'] is not None:
+                assert after <= task['started']
+                assert task['started'] <= before
+            if task['task_policy'] == 'oneshot':
+                assert task['task_status'] in ['completed', 'disabled']
+            if task['task_policy'] == 'recurring':
+                assert task['task_status'] in ['disabled']
+
             actual_filtered_per_status[task['task_policy']] += 1
 
         assert actual_filtered_per_status == status_per_policy
@@ -394,7 +404,7 @@ class TestScheduler:
 
         limit = 3
         tasks_result = swh_scheduler.filter_task_to_archive(
-            after_ts=after, before_ts=before, limit=limit)
+            after_ts=after_ts, before_ts=before_ts, limit=limit)
 
         tasks_to_archive2 = tasks_result['tasks']
 
@@ -405,7 +415,7 @@ class TestScheduler:
         all_tasks = tasks_to_archive2
         while next_id is not None:
             tasks_result = swh_scheduler.filter_task_to_archive(
-                after_ts=after, before_ts=before, last_id=next_id,
+                after_ts=after_ts, before_ts=before_ts, last_id=next_id,
                 limit=limit)
             tasks_to_archive2 = tasks_result['tasks']
             assert len(tasks_to_archive2) <= limit
