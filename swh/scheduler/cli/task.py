@@ -498,11 +498,12 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
     from swh.core.utils import grouper
     from swh.scheduler.backend_es import SWHElasticSearchClient
 
+    config = ctx.obj['config']
     scheduler = ctx.obj['scheduler']
     if not scheduler:
         raise ValueError('Scheduler class (local/remote) must be instantiated')
 
-    es_client = SWHElasticSearchClient()
+    es_client = SWHElasticSearchClient(**config)
     logging.basicConfig(level=logging.DEBUG if verbose else logging.INFO)
     log = logging.getLogger('swh.scheduler.cli.archive')
     logging.getLogger('urllib3').setLevel(logging.WARN)
