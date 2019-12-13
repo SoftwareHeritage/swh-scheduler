@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2018  The Software Heritage developers
+# Copyright (C) 2015-2019  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -9,10 +9,12 @@ import logging
 from arrow import Arrow, utcnow
 import psycopg2.pool
 import psycopg2.extras
+
+from typing import Any, Dict
 from psycopg2.extensions import AsIs
 
 from swh.core.db import BaseDb
-from swh.core.db.common import db_transaction, db_transaction_generator
+from swh.core.db.common import db_transaction
 
 
 logger = logging.getLogger(__name__)
@@ -414,37 +416,40 @@ class SchedulerBackend:
         )
         return cur.fetchone()
 
-    @db_transaction_generator()
-    def filter_task_to_archive(self, after_ts, before_ts, limit=10, last_id=-1,
-                               db=None, cur=None):
-        """Returns the list of task/task_run prior to a given date to archive.
+    @db_transaction()
+    def filter_task_to_archive(
+            self, after_ts: str, before_ts: str, limit: int = 10,
+            last_id: int = -1, db=None, cur=None) -> Dict[str, Any]:
+        """Compute the tasks to archive between after_ts and before_ts interval.
+        The result is paginated
 
         """
-        last_task_run_id = None
-        while True:
-            row = None
-            cur.execute(
-                "select * from swh_scheduler_task_to_archive(%s, %s, %s, %s)",
-                (after_ts, before_ts, last_id, limit)
-            )
-            for row in cur:
-                # nested type index does not accept bare values
-                # transform it as a dict to comply with this
-                row['arguments']['args'] = {
-                    i: v for i, v in enumerate(row['arguments']['args'])
-                }
-                kwargs = row['arguments']['kwargs']
-                row['arguments']['kwargs'] = json.dumps(kwargs)
-                yield row
+        tasks = []
+        cur.execute(
+            "select * from swh_scheduler_task_to_archive(%s, %s, %s, %s)",
+            (after_ts, before_ts, last_id, limit + 1)
+        )
+        for row in cur:
+            # nested type index does not accept bare values
+            # transform it as a dict to comply with this
+            row['arguments']['args'] = {
+                i: v for i, v in enumerate(row['arguments']['args'])
+            }
+            kwargs = row['arguments']['kwargs']
+            row['arguments']['kwargs'] = json.dumps(kwargs)
+            tasks.append(row)
 
-            if not row:
-                break
-            _id = row.get('task_id')
-            _task_run_id = row.get('task_run_id')
-            if last_id == _id and last_task_run_id == _task_run_id:
-                break
-            last_id = _id
-            last_task_run_id = _task_run_id
+        if len(tasks) >= limit + 1:  # remains data, add pagination information
+            result = {
+                'tasks': tasks[:limit],
+                'next_task_id': tasks[-1]['task_id'],
+            }
+        else:
+            result = {
+                'tasks': tasks
+            }
+
+        return result
 
     @db_transaction()
     def delete_archived_tasks(self, task_ids, db=None, cur=None):

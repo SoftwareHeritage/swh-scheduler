@@ -371,16 +371,49 @@ class TestScheduler:
         total_tasks_filtered = (status_per_policy['recurring'] +
                                 status_per_policy['oneshot'])
 
+        # no pagination scenario
+
         # retrieve tasks to archive
         after = _time.shift(days=-1).format('YYYY-MM-DD')
         before = utcnow().shift(days=1).format('YYYY-MM-DD')
-        tasks_to_archive = list(swh_scheduler.filter_task_to_archive(
-            after_ts=after, before_ts=before, limit=total_tasks))
+        tasks_result = swh_scheduler.filter_task_to_archive(
+            after_ts=after, before_ts=before, limit=total_tasks)
+
+        tasks_to_archive = tasks_result['tasks']
 
         assert len(tasks_to_archive) == total_tasks_filtered
+        assert tasks_result.get('next_task_id') is None
 
         actual_filtered_per_status = {'recurring': 0, 'oneshot': 0}
         for task in tasks_to_archive:
+            actual_filtered_per_status[task['task_policy']] += 1
+
+        assert actual_filtered_per_status == status_per_policy
+
+        # pagination scenario
+
+        limit = 3
+        tasks_result = swh_scheduler.filter_task_to_archive(
+            after_ts=after, before_ts=before, limit=limit)
+
+        tasks_to_archive2 = tasks_result['tasks']
+
+        assert len(tasks_to_archive2) == limit
+        next_id = tasks_result['next_task_id']
+        assert next_id is not None
+
+        all_tasks = tasks_to_archive2
+        while next_id is not None:
+            tasks_result = swh_scheduler.filter_task_to_archive(
+                after_ts=after, before_ts=before, last_id=next_id,
+                limit=limit)
+            tasks_to_archive2 = tasks_result['tasks']
+            assert len(tasks_to_archive2) <= limit
+            all_tasks.extend(tasks_to_archive2)
+            next_id = tasks_result.get('next_task_id')
+
+        actual_filtered_per_status = {'recurring': 0, 'oneshot': 0}
+        for task in all_tasks:
             actual_filtered_per_status[task['task_policy']] += 1
 
         assert actual_filtered_per_status == status_per_policy

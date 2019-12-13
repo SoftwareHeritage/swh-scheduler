@@ -537,19 +537,23 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
         return es_client.compute_index_name(date.year, date.month)
 
     def index_data(before, last_id, batch_index):
-        tasks_in = scheduler.filter_task_to_archive(
-            after, before, last_id=last_id, limit=batch_index)
-        for index_name, tasks_group in itertools.groupby(
-                tasks_in, key=group_by_index_name):
-            log.debug('Index tasks to %s' % index_name)
-            if dry_run:
-                for task in tasks_group:
-                    yield task
-                continue
+        while last_id is not None:
+            result = scheduler.filter_task_to_archive(
+                after, before, last_id=last_id, limit=batch_index)
+            tasks_in = result['tasks']
+            for index_name, tasks_group in itertools.groupby(
+                    tasks_in, key=group_by_index_name):
+                log.debug('Index tasks to %s' % index_name)
+                if dry_run:
+                    for task in tasks_group:
+                        yield task
+                    continue
 
-            yield from es_client.streaming_bulk(
-                index_name, tasks_group, source=['task_id', 'task_run_id'],
-                chunk_size=bulk_index, log=log)
+                yield from es_client.streaming_bulk(
+                    index_name, tasks_group, source=['task_id', 'task_run_id'],
+                    chunk_size=bulk_index, log=log)
+
+            last_id = result.get('next_task_id')
 
     gen = index_data(before, last_id=start_from, batch_index=batch_index)
     if cleanup:
