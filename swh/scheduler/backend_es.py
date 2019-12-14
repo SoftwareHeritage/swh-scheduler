@@ -182,10 +182,13 @@ class SWHElasticSearchClient:
             to_close = True
             self.storage.indices.open(index_name)
 
-        indexed_ids = self._streaming_bulk(
-            index_name, doc_stream, chunk_size=chunk_size, log=log)
-        yield from self.mget(index_name, indexed_ids, chunk_size=chunk_size,
-                             source=source, log=log)
-        # closing it to stay in the same state as prior to the call
-        if to_close:
-            self.storage.indices.close(index_name)
+        try:
+            indexed_ids = self._streaming_bulk(
+                index_name, doc_stream, chunk_size=chunk_size)
+            yield from self.mget(
+                index_name, indexed_ids, chunk_size=chunk_size, source=source,
+                log=log)
+        finally:
+            # closing it to stay in the same state as prior to the call
+            if to_close:
+                self.storage.indices.close(index_name)
