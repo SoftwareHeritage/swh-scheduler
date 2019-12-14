@@ -170,7 +170,14 @@ class SWHElasticSearchClient:
 
         """
         to_close = False
-        # opening index is a necessary step
+        # index must exist
+        if not self.storage.indices.exists(index_name):
+            # server is setup-ed correctly (mappings, settings are
+            # automatically set, cf. /data/README.md)
+            self.storage.indices.create(index_name)
+            # Close that new index (to avoid too much opened indices)
+            to_close = True
+        # index must be opened
         if not self.is_index_opened(index_name):
             to_close = True
             self.storage.indices.open(index_name)
