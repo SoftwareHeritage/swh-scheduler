@@ -1,4 +1,4 @@
-# Copyright (C) 2017-2018  The Software Heritage developers
+# Copyright (C) 2017-2019  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -388,9 +388,9 @@ class TestScheduler:
 
         actual_filtered_per_status = {'recurring': 0, 'oneshot': 0}
         for task in tasks_to_archive:
-            if task['started'] is not None:
-                assert after <= task['started']
-                assert task['started'] <= before
+            started = task['started']
+            date = started if started is not None else task['scheduled']
+            assert after <= date and date <= before
             if task['task_policy'] == 'oneshot':
                 assert task['task_status'] in ['completed', 'disabled']
             if task['task_policy'] == 'recurring':
