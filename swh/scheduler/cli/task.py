@@ -541,9 +541,9 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
         while page_token is not None:
             result = scheduler.filter_task_to_archive(
                 after, before, page_token=page_token, limit=batch_index)
-            tasks_in = result['tasks']
-            for index_name, tasks_group in itertools.groupby(
-                    tasks_in, key=group_by_index_name):
+            tasks_sorted = sorted(result['tasks'], key=group_by_index_name)
+            groups = itertools.groupby(tasks_sorted, key=group_by_index_name)
+            for index_name, tasks_group in groups:
                 log.debug('Index tasks to %s' % index_name)
                 if dry_run:
                     for task in tasks_group:
