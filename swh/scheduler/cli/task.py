@@ -526,7 +526,7 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
     log.debug('index: %s; cleanup: %s; period: [%s ; %s]' % (
         not dry_run, not dry_run and cleanup, after, before))
 
-    def group_by_index_name(data, es_client=es_client):
+    def get_index_name(data, es_client=es_client):
         """Given a data record, determine the index's name through its ending
            date. This varies greatly depending on the task_run's
            status.
@@ -541,8 +541,8 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
         while page_token is not None:
             result = scheduler.filter_task_to_archive(
                 after, before, page_token=page_token, limit=batch_index)
-            tasks_sorted = sorted(result['tasks'], key=group_by_index_name)
-            groups = itertools.groupby(tasks_sorted, key=group_by_index_name)
+            tasks_sorted = sorted(result['tasks'], key=get_index_name)
+            groups = itertools.groupby(tasks_sorted, key=get_index_name)
             for index_name, tasks_group in groups:
                 log.debug('Index tasks to %s' % index_name)
                 if dry_run:
