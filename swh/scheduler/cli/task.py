@@ -552,7 +552,7 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
 
                 yield from es_client.streaming_bulk(
                     index_name, tasks_group, source=['task_id', 'task_run_id'],
-                    chunk_size=bulk_index, log=log)
+                    chunk_size=bulk_index)
 
             page_token = result.get('next_page_token')
 

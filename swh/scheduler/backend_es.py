@@ -1,17 +1,21 @@
-# Copyright (C) 2018  The Software Heritage developers
+# Copyright (C) 2018-2019  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-
 """Elastic Search backend
 
 """
+
+import logging
+
 from copy import deepcopy
 
 from swh.core import utils
 from elasticsearch import Elasticsearch
 from elasticsearch import helpers
+
+logger = logging.getLogger(__name__)
 
 
 DEFAULT_CONFIG = {
@@ -67,7 +71,7 @@ class SWHElasticSearchClient:
                                   body=data)
 
     def mget(self, index_name, doc_ids, chunk_size=500,
-             source=True, log=None):
+             source=True):
         """Retrieve document's full content according to their ids as per
            source's setup.
 
@@ -97,21 +101,18 @@ class SWHElasticSearchClient:
                                     doc_type=self.doc_type,
                                     params=source)
             if not res:
-                if log:
-                    log.error('Error during retrieval of data, skipping!')
+                logger.error('Error during retrieval of data, skipping!')
                 continue
 
             for doc in res['docs']:
                 found = doc.get('found')
                 if not found:
                     msg = 'Doc id %s not found, not indexed yet' % doc['_id']
-                    if log:
-                        log.warning(msg)
+                    logger.warning(msg)
                     continue
                 yield doc['_source']
 
-    def _streaming_bulk(self, index_name, doc_stream, chunk_size=500,
-                        log=None):
+    def _streaming_bulk(self, index_name, doc_stream, chunk_size=500):
         """Bulk index data and returns the successful indexed data's
            identifier.
 
@@ -134,8 +135,7 @@ class SWHElasticSearchClient:
                                                  raise_on_error=False,
                                                  raise_on_exception=False):
             if not ok:
-                if log:
-                    log.error('Error during %s indexation. Skipping.' % result)
+                logger.error('Error during %s indexation. Skipping.', result)
                 continue
             yield result['index']['_id']
 
@@ -151,7 +151,7 @@ class SWHElasticSearchClient:
             return False
 
     def streaming_bulk(self, index_name, doc_stream, chunk_size=500,
-                       source=True, log=None):
+                       source=True):
         """Bulk index data and returns the successful indexed data as per
            source's setup.
 
@@ -186,8 +186,7 @@ class SWHElasticSearchClient:
             indexed_ids = self._streaming_bulk(
                 index_name, doc_stream, chunk_size=chunk_size)
             yield from self.mget(
-                index_name, indexed_ids, chunk_size=chunk_size, source=source,
-                log=log)
+                index_name, indexed_ids, chunk_size=chunk_size, source=source)
         finally:
             # closing it to stay in the same state as prior to the call
             if to_close:
