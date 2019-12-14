@@ -71,8 +71,7 @@ class SWHElasticSearchClient:
         """Retrieve document's full content according to their ids as per
            source's setup.
 
-           The `source` permits to retrieve only what's of interest to
-           us, e.g:
+           The `source` allows to retrieve only what's interesting, e.g:
            - source=True ; gives back the original indexed data
            - source=False ; returns without the original _source field
            - source=['task_id'] ; returns only task_id in the _source field
@@ -140,6 +139,17 @@ class SWHElasticSearchClient:
                 continue
             yield result['index']['_id']
 
+    def is_index_opened(self, index_name: str) -> bool:
+        """Determine if an index is opened or not
+
+        """
+        try:
+            self.storage.indices.stats(index_name)
+            return True
+        except Exception:
+            # fails when indice is closed (no other api call found)
+            return False
+
     def streaming_bulk(self, index_name, doc_stream, chunk_size=500,
                        source=True, log=None):
         """Bulk index data and returns the successful indexed data as per
@@ -159,8 +169,16 @@ class SWHElasticSearchClient:
             source (bool, [str]): the information to return
 
         """
+        to_close = False
+        # opening index is a necessary step
+        if not self.is_index_opened(index_name):
+            to_close = True
+            self.storage.indices.open(index_name)
 
         indexed_ids = self._streaming_bulk(
             index_name, doc_stream, chunk_size=chunk_size, log=log)
         yield from self.mget(index_name, indexed_ids, chunk_size=chunk_size,
                              source=source, log=log)
+        # closing it to stay in the same state as prior to the call
+        if to_close:
+            self.storage.indices.close(index_name)
