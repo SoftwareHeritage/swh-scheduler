@@ -10,7 +10,7 @@ from arrow import Arrow, utcnow
 import psycopg2.pool
 import psycopg2.extras
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from psycopg2.extensions import AsIs
 
 from swh.core.db import BaseDb
@@ -418,12 +418,28 @@ class SchedulerBackend:
 
     @db_transaction()
     def filter_task_to_archive(
-            self, after_ts: str, before_ts: str, limit: int = 10,
-            last_id: int = -1, db=None, cur=None) -> Dict[str, Any]:
-        """Compute the tasks to archive between after_ts and before_ts interval.
-        The result is paginated
+            self, after_ts: str, before_ts: str,
+            limit: int = 10, page_token: Optional[str] = None,
+            db=None, cur=None) -> Dict[str, Any]:
+        """Compute the tasks to archive within the datetime interval
+        [after_ts, before_ts[. The method returns a paginated result.
+
+        Returns:
+            dict with the following keys:
+              - **next_page_token**: opaque token to be used as
+                `page_token` to retrieve the next page of result. If absent,
+                there is no more pages to gather.
+              - **tasks**: list of task dictionaries with the following keys:
+
+                    **id** (str): origin task id
+                    **started** (Optional[datetime]): started date
+                    **scheduled** (datetime): scheduled date
+                    **arguments** (json dict): task's arguments
+                    ...
 
         """
+        assert not page_token or isinstance(page_token, str)
+        last_id = -1 if page_token is None else int(page_token)
         tasks = []
         cur.execute(
             "select * from swh_scheduler_task_to_archive(%s, %s, %s, %s)",
@@ -442,7 +458,7 @@ class SchedulerBackend:
         if len(tasks) >= limit + 1:  # remains data, add pagination information
             result = {
                 'tasks': tasks[:limit],
-                'next_task_id': tasks[-1]['task_id'],
+                'next_page_token': str(tasks[-1]['task_id']),
             }
         else:
             result = {

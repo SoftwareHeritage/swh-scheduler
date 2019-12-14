@@ -7,10 +7,13 @@ import copy
 import datetime
 import random
 import uuid
+
 from collections import defaultdict
+from typing import Any, Dict
+
+from arrow import utcnow
 
 import psycopg2
-from arrow import utcnow
 import pytest
 
 
@@ -309,6 +312,22 @@ class TestScheduler:
         assert make_real_dicts(swh_scheduler.search_tasks()) \
             == make_real_dicts(tasks)
 
+    def assert_filtered_task_ok(
+            self, task: Dict[str, Any],
+            after: datetime.datetime,
+            before: datetime.datetime) -> None:
+        """Ensure filtered tasks have the right expected properties
+           (within the range, recurring disabled, etc..)
+
+        """
+        started = task['started']
+        date = started if started is not None else task['scheduled']
+        assert after <= date and date <= before
+        if task['task_policy'] == 'oneshot':
+            assert task['task_status'] in ['completed', 'disabled']
+        if task['task_policy'] == 'recurring':
+            assert task['task_status'] in ['disabled']
+
     def test_filter_task_to_archive(self, swh_scheduler):
         """Filtering only list disabled recurring or completed oneshot tasks
 
@@ -384,46 +403,40 @@ class TestScheduler:
         tasks_to_archive = tasks_result['tasks']
 
         assert len(tasks_to_archive) == total_tasks_filtered
-        assert tasks_result.get('next_task_id') is None
+        assert tasks_result.get('next_page_token') is None
 
         actual_filtered_per_status = {'recurring': 0, 'oneshot': 0}
         for task in tasks_to_archive:
-            started = task['started']
-            date = started if started is not None else task['scheduled']
-            assert after <= date and date <= before
-            if task['task_policy'] == 'oneshot':
-                assert task['task_status'] in ['completed', 'disabled']
-            if task['task_policy'] == 'recurring':
-                assert task['task_status'] in ['disabled']
-
+            self.assert_filtered_task_ok(task, after, before)
             actual_filtered_per_status[task['task_policy']] += 1
 
         assert actual_filtered_per_status == status_per_policy
 
         # pagination scenario
 
-        limit = 3
+        nb_tasks = 3
         tasks_result = swh_scheduler.filter_task_to_archive(
-            after_ts=after_ts, before_ts=before_ts, limit=limit)
+            after_ts=after_ts, before_ts=before_ts, limit=nb_tasks)
 
         tasks_to_archive2 = tasks_result['tasks']
 
-        assert len(tasks_to_archive2) == limit
-        next_id = tasks_result['next_task_id']
-        assert next_id is not None
+        assert len(tasks_to_archive2) == nb_tasks
+        next_page_token = tasks_result['next_page_token']
+        assert next_page_token is not None
 
         all_tasks = tasks_to_archive2
-        while next_id is not None:
+        while next_page_token is not None:  # Retrieve paginated results
             tasks_result = swh_scheduler.filter_task_to_archive(
-                after_ts=after_ts, before_ts=before_ts, last_id=next_id,
-                limit=limit)
+                after_ts=after_ts, before_ts=before_ts, limit=nb_tasks,
+                page_token=next_page_token)
             tasks_to_archive2 = tasks_result['tasks']
-            assert len(tasks_to_archive2) <= limit
+            assert len(tasks_to_archive2) <= nb_tasks
             all_tasks.extend(tasks_to_archive2)
-            next_id = tasks_result.get('next_task_id')
+            next_page_token = tasks_result.get('next_page_token')
 
         actual_filtered_per_status = {'recurring': 0, 'oneshot': 0}
         for task in all_tasks:
+            self.assert_filtered_task_ok(task, after, before)
             actual_filtered_per_status[task['task_policy']] += 1
 
         assert actual_filtered_per_status == status_per_policy

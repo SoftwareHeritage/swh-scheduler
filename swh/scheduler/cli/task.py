@@ -536,10 +536,10 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
             date = data['scheduled']
         return es_client.compute_index_name(date.year, date.month)
 
-    def index_data(before, last_id, batch_index):
-        while last_id is not None:
+    def index_data(before, page_token, batch_index):
+        while page_token is not None:
             result = scheduler.filter_task_to_archive(
-                after, before, last_id=last_id, limit=batch_index)
+                after, before, page_token=page_token, limit=batch_index)
             tasks_in = result['tasks']
             for index_name, tasks_group in itertools.groupby(
                     tasks_in, key=group_by_index_name):
@@ -553,9 +553,9 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
                     index_name, tasks_group, source=['task_id', 'task_run_id'],
                     chunk_size=bulk_index, log=log)
 
-            last_id = result.get('next_task_id')
+            page_token = result.get('next_page_token')
 
-    gen = index_data(before, last_id=start_from, batch_index=batch_index)
+    gen = index_data(before, page_token=start_from, batch_index=batch_index)
     if cleanup:
         for task_ids in grouper(gen, n=batch_clean):
             task_ids = list(task_ids)
