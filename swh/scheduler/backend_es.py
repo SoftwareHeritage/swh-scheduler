@@ -60,19 +60,6 @@ class ElasticSearchBackend:
         return '%s-%s-%s' % (
             self.index_name_prefix, year, '%02d' % month)
 
-    def index(self, data):
-        """Index given data to elasticsearch.
-
-        The field 'ended' in data is used to compute the index to
-        index data to.
-
-        """
-        date = data['ended']
-        index_name = self.compute_index_name(date.year, date.month)
-        return self.storage.index(index=index_name,
-                                  doc_type=self.doc_type,
-                                  body=data)
-
     def mget(self, index_name, doc_ids, chunk_size=500,
              source=True):
         """Retrieve document's full content according to their ids as per
