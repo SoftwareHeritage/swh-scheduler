@@ -10,25 +10,47 @@ from .common import tasks_from_template, TEMPLATES
 
 def test_tasks_from_template_no_priority():
     nb_tasks = 3
+    template = TEMPLATES['git']
     next_run = datetime.datetime.utcnow()
-    tasks = tasks_from_template(
-        TEMPLATES['git'], next_run, nb_tasks)
+    tasks = tasks_from_template(template, next_run, nb_tasks)
 
     assert len(tasks) == nb_tasks
 
     for i, t in enumerate(tasks):
-        assert t['type'] == TEMPLATES['git']['type']
+        assert t['type'] == template['type']
         assert t['arguments'] is not None
         assert t.get('policy') is None  # not defined in template
         assert len(t['arguments']['args']) == 1
         assert len(t['arguments']['kwargs'].keys()) == 1
         assert t['next_run'] == next_run - datetime.timedelta(microseconds=i)
         assert t.get('priority') is None
+        assert t.get('status') is None  # not in template nor as parameter
+
+
+def test_tasks_from_template_disabled():
+    nb_tasks = 2
+    template = TEMPLATES['git']
+    next_run = datetime.datetime.utcnow()
+    tasks = tasks_from_template(template, next_run, nb_tasks,
+                                status='disabled')
+
+    assert len(tasks) == nb_tasks
+
+    for i, t in enumerate(tasks):
+        assert t['type'] == template['type']
+        assert t['arguments'] is not None
+        assert t.get('policy') is None  # not defined in template
+        assert len(t['arguments']['args']) == 1
+        assert len(t['arguments']['kwargs'].keys()) == 1
+        assert t['next_run'] == next_run - datetime.timedelta(microseconds=i)
+        assert t.get('priority') is None
+        assert t['status'] == 'disabled'
 
 
 def test_tasks_from_template_priority():
     nb_tasks_no_priority = 3
     nb_tasks_priority = 10
+    template = TEMPLATES['hg']
     priorities = {
         'high': 0.5,
         'normal': 0.3,
@@ -37,7 +59,7 @@ def test_tasks_from_template_priority():
 
     next_run = datetime.datetime.utcnow()
     tasks = tasks_from_template(
-        TEMPLATES['hg'], next_run,
+        template, next_run,
         nb_tasks_no_priority, num_priority=nb_tasks_priority,
         priorities=priorities)
 
@@ -45,9 +67,9 @@ def test_tasks_from_template_priority():
 
     repartition_priority = {k: 0 for k in priorities.keys()}
     for i, t in enumerate(tasks):
-        assert t['type'] == TEMPLATES['hg']['type']
+        assert t['type'] == template['type']
         assert t['arguments'] is not None
-        assert t['policy'] == TEMPLATES['hg']['policy']
+        assert t['policy'] == template['policy']
         assert len(t['arguments']['args']) == 1
         assert len(t['arguments']['kwargs'].keys()) == 1
         assert t['next_run'] == next_run - datetime.timedelta(microseconds=i)

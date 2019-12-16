@@ -28,8 +28,36 @@ TEMPLATES = {
 }
 
 
+TASK_TYPES = {
+    'git': {
+        'type': 'update-git',
+        'description': 'Update a git repository',
+        'backend_name': 'swh.loader.git.tasks.UpdateGitRepository',
+        'default_interval': datetime.timedelta(days=64),
+        'min_interval': datetime.timedelta(hours=12),
+        'max_interval': datetime.timedelta(days=64),
+        'backoff_factor': 2,
+        'max_queue_length': None,
+        'num_retries': 7,
+        'retry_delay': datetime.timedelta(hours=2),
+    },
+    'hg': {
+        'type': 'update-hg',
+        'description': 'Update a mercurial repository',
+        'backend_name': 'swh.loader.mercurial.tasks.UpdateHgRepository',
+        'default_interval': datetime.timedelta(days=64),
+        'min_interval': datetime.timedelta(hours=12),
+        'max_interval': datetime.timedelta(days=64),
+        'backoff_factor': 2,
+        'max_queue_length': None,
+        'num_retries': 7,
+        'retry_delay': datetime.timedelta(hours=2),
+    },
+}
+
+
 def tasks_from_template(template, max_timestamp, num,
-                        num_priority=0, priorities=None):
+                        num_priority=0, priorities=None, status=None):
     """Build tasks from template
 
     """
@@ -42,6 +70,8 @@ def tasks_from_template(template, max_timestamp, num,
             ret['arguments']['args'] = list(args)
         if kwargs:
             ret['arguments']['kwargs'] = kwargs
+        if status:
+            ret['status'] = status
         return ret
 
     def _pop_priority(priorities):

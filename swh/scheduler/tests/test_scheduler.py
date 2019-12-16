@@ -16,35 +16,7 @@ from arrow import utcnow
 import psycopg2
 import pytest
 
-from .common import tasks_from_template, TEMPLATES
-
-
-TASK_TYPES = {
-    'git': {
-        'type': 'update-git',
-        'description': 'Update a git repository',
-        'backend_name': 'swh.loader.git.tasks.UpdateGitRepository',
-        'default_interval': datetime.timedelta(days=64),
-        'min_interval': datetime.timedelta(hours=12),
-        'max_interval': datetime.timedelta(days=64),
-        'backoff_factor': 2,
-        'max_queue_length': None,
-        'num_retries': 7,
-        'retry_delay': datetime.timedelta(hours=2),
-    },
-    'hg': {
-        'type': 'update-hg',
-        'description': 'Update a mercurial repository',
-        'backend_name': 'swh.loader.mercurial.tasks.UpdateHgRepository',
-        'default_interval': datetime.timedelta(days=64),
-        'min_interval': datetime.timedelta(hours=12),
-        'max_interval': datetime.timedelta(days=64),
-        'backoff_factor': 2,
-        'max_queue_length': None,
-        'num_retries': 7,
-        'retry_delay': datetime.timedelta(hours=2),
-    },
-}
+from .common import tasks_from_template, TEMPLATES, TASK_TYPES
 
 
 def subdict(d, keys=None, excl=()):
