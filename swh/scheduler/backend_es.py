@@ -31,7 +31,10 @@ DEFAULT_CONFIG = {
 }
 
 
-class SWHElasticSearchClient:
+class ElasticSearchBackend:
+    """ElasticSearch backend to index tasks
+
+    """
     def __init__(self, **config):
         self.config = deepcopy(DEFAULT_CONFIG)
         self.config.update(config)
