@@ -50,8 +50,74 @@ class ElasticSearchBackend:
             # compression or not
             http_compress=options['http_compress'])
         self.index_name_prefix = es_conf['index_name_prefix']
-        # document's index type (cf. ../../data/elastic-template.json)
+        # document's index type (cf. /data/elastic-template.json)
         self.doc_type = 'task'
+
+    def initialize(self):
+        self.storage.indices.put_mapping(
+            index=f"{self.index_name_prefix}-*",
+            doc_type=self.doc_type,
+            # to allow type definition below
+            include_type_name=True,
+            # to allow install mapping even if no index yet
+            allow_no_indices=True,
+            body={
+                "properties": {
+                    "task_id": {"type": "double"},
+                    "task_policy": {"type": "text"},
+                    "task_status": {"type": "text"},
+                    "task_run_id": {"type": "double"},
+                    "arguments": {
+                        "type": "object",
+                        "properties": {
+                            "args": {
+                                "type": "nested",
+                                "dynamic": False
+                            },
+                            "kwargs": {
+                                "type": "text"
+                            }
+                        }
+                    },
+                    "type": {"type": "text"},
+                    "backend_id": {"type": "text"},
+                    "metadata": {
+                        "type": "object",
+                        "enabled": False
+                    },
+                    "scheduled":  {
+                        "type": "date",
+                        "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||strict_date_optional_time||epoch_millis"  # noqa
+                    },
+                    "started":  {
+                        "type": "date",
+                        "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||strict_date_optional_time||epoch_millis"  # noqa
+                    },
+                    "ended":  {
+                        "type": "date",
+                        "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||strict_date_optional_time||epoch_millis"  # noqa
+                    }
+                }
+            })
+
+        self.storage.indices.put_settings(
+            index=f"{self.index_name_prefix}-*",
+            allow_no_indices=True,
+            body={
+                "index": {
+                    "codec": "best_compression",
+                    "refresh_interval": "1s",
+                    "number_of_shards": 1
+                }
+            })
+
+    def create(self, index_name) -> None:
+        """Create and initialize index_name with mapping for all indices
+           matching `swh-tasks-` pattern
+
+        """
+        assert index_name.startswith(self.index_name_prefix)
+        self.storage.indices.create(index_name)
 
     def compute_index_name(self, year, month):
         """Given a year, month, compute the index's name.
@@ -162,9 +228,7 @@ class ElasticSearchBackend:
         to_close = False
         # index must exist
         if not self.storage.indices.exists(index_name):
-            # server is setup-ed correctly (mappings, settings are
-            # automatically set, cf. /data/README.md)
-            self.storage.indices.create(index_name)
+            self.create(index_name)
             # Close that new index (to avoid too much opened indices)
             to_close = True
         # index must be opened

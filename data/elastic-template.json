@@ -4,7 +4,7 @@
     "settings": {
         "index": {
             "codec": "best_compression",
-            "refresh_interval": "30s",
+            "refresh_interval": "1s",
             "number_of_shards": 1
         }
     },
