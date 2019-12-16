@@ -13,6 +13,8 @@ import arrow
 import csv
 import click
 
+from typing import Any, Dict
+
 from . import cli
 
 
@@ -497,22 +499,22 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
     """
     from swh.core.utils import grouper
     from swh.scheduler.backend_es import ElasticSearchBackend
-
     config = ctx.obj['config']
     scheduler = ctx.obj['scheduler']
+
     if not scheduler:
         raise ValueError('Scheduler class (local/remote) must be instantiated')
 
-    es_storage = ElasticSearchBackend(**config)
     logging.basicConfig(level=logging.DEBUG if verbose else logging.INFO)
-    log = logging.getLogger('swh.scheduler.cli.archive')
+    logger = logging.getLogger(__name__)
     logging.getLogger('urllib3').setLevel(logging.WARN)
-    logging.getLogger('elasticsearch').setLevel(logging.WARN)
+    logging.getLogger('elasticsearch').setLevel(logging.ERROR)
     if dry_run:
-        log.info('**DRY-RUN** (only reading db)')
+        logger.info('**DRY-RUN** (only reading db)')
     if not cleanup:
-        log.info('**NO CLEANUP**')
+        logger.info('**NO CLEANUP**')
 
+    es_storage = ElasticSearchBackend(**config)
     now = arrow.utcnow()
 
     # Default to archive tasks from a rolling month starting the week
@@ -523,10 +525,11 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
     if not after:
         after = now.shift(weeks=-1).shift(months=-1).format('YYYY-MM-DD')
 
-    log.debug('index: %s; cleanup: %s; period: [%s ; %s]' % (
+    logger.debug('index: %s; cleanup: %s; period: [%s ; %s]' % (
         not dry_run, not dry_run and cleanup, after, before))
 
-    def get_index_name(data, es_storage=es_storage):
+    def get_index_name(data: Dict[str, Any],
+                       es_storage: ElasticSearchBackend = es_storage) -> str:
         """Given a data record, determine the index's name through its ending
            date. This varies greatly depending on the task_run's
            status.
@@ -544,7 +547,7 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
             tasks_sorted = sorted(result['tasks'], key=get_index_name)
             groups = itertools.groupby(tasks_sorted, key=get_index_name)
             for index_name, tasks_group in groups:
-                log.debug('Index tasks to %s' % index_name)
+                logger.debug('Index tasks to %s' % index_name)
                 if dry_run:
                     for task in tasks_group:
                         yield task
@@ -560,7 +563,7 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
     if cleanup:
         for task_ids in grouper(gen, n=batch_clean):
             task_ids = list(task_ids)
-            log.info('Clean up %s tasks: [%s, ...]' % (
+            logger.info('Clean up %s tasks: [%s, ...]' % (
                 len(task_ids), task_ids[0]))
             if dry_run:  # no clean up
                 continue
@@ -568,5 +571,5 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
     else:
         for task_ids in grouper(gen, n=batch_index):
             task_ids = list(task_ids)
-            log.info('Indexed %s tasks: [%s, ...]' % (
+            logger.info('Indexed %s tasks: [%s, ...]' % (
                 len(task_ids), task_ids[0]))
