@@ -503,7 +503,7 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
     if not scheduler:
         raise ValueError('Scheduler class (local/remote) must be instantiated')
 
-    es_client = ElasticSearchBackend(**config)
+    es_storage = ElasticSearchBackend(**config)
     logging.basicConfig(level=logging.DEBUG if verbose else logging.INFO)
     log = logging.getLogger('swh.scheduler.cli.archive')
     logging.getLogger('urllib3').setLevel(logging.WARN)
@@ -526,7 +526,7 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
     log.debug('index: %s; cleanup: %s; period: [%s ; %s]' % (
         not dry_run, not dry_run and cleanup, after, before))
 
-    def get_index_name(data, es_client=es_client):
+    def get_index_name(data, es_storage=es_storage):
         """Given a data record, determine the index's name through its ending
            date. This varies greatly depending on the task_run's
            status.
@@ -535,7 +535,7 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
         date = data.get('started')
         if not date:
             date = data['scheduled']
-        return es_client.compute_index_name(date.year, date.month)
+        return es_storage.compute_index_name(date.year, date.month)
 
     def index_data(before, page_token, batch_index):
         while page_token is not None:
@@ -550,7 +550,7 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
                         yield task
                     continue
 
-                yield from es_client.streaming_bulk(
+                yield from es_storage.streaming_bulk(
                     index_name, tasks_group, source=['task_id', 'task_run_id'],
                     chunk_size=bulk_index)
 
