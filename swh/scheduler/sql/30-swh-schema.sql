@@ -11,7 +11,7 @@ comment on column dbversion.release is 'Version deployment timestamp';
 comment on column dbversion.description is 'Version description';
 
 insert into dbversion (version, release, description)
-       values (14, now(), 'Work In Progress');
+       values (15, now(), 'Work In Progress');
 
 create table task_type (
   type text primary key,
@@ -110,4 +110,3 @@ comment on column task_run.task is 'References task table';
 comment on column task_run.scheduled is 'Scheduled run time for task';
 comment on column task_run.started is 'Task starting time';
 comment on column task_run.ended is 'Task ending time';
-
