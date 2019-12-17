@@ -305,8 +305,9 @@ as $$
    from task_run tr inner join task t on tr.task=t.id
    where ((t.policy = 'oneshot' and t.status in ('completed', 'disabled')) or
           (t.policy = 'recurring' and t.status = 'disabled')) and
-          ((ts_after <= tr.started and tr.started < ts_before) or tr.started is null) and
-          t.id > last_id
+          ((ts_after <= tr.started and tr.started < ts_before) or
+           (tr.started is null and (ts_after <= tr.scheduled and tr.scheduled < ts_before))) and
+          t.id >= last_id
    order by tr.task, tr.started
    limit lim;
 $$;
@@ -405,4 +406,3 @@ create trigger update_task_on_task_end
   for each row
   when (new.status NOT IN ('scheduled', 'started'))
   execute procedure swh_scheduler_update_task_on_task_end ();
-

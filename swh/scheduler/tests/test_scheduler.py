@@ -1,4 +1,4 @@
-# Copyright (C) 2017-2018  The Software Heritage developers
+# Copyright (C) 2017-2019  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -7,10 +7,13 @@ import copy
 import datetime
 import random
 import uuid
+
 from collections import defaultdict
+from typing import Any, Dict
+
+from arrow import utcnow
 
 import psycopg2
-from arrow import utcnow
 import pytest
 
 
@@ -309,6 +312,22 @@ class TestScheduler:
         assert make_real_dicts(swh_scheduler.search_tasks()) \
             == make_real_dicts(tasks)
 
+    def assert_filtered_task_ok(
+            self, task: Dict[str, Any],
+            after: datetime.datetime,
+            before: datetime.datetime) -> None:
+        """Ensure filtered tasks have the right expected properties
+           (within the range, recurring disabled, etc..)
+
+        """
+        started = task['started']
+        date = started if started is not None else task['scheduled']
+        assert after <= date and date <= before
+        if task['task_policy'] == 'oneshot':
+            assert task['task_status'] in ['completed', 'disabled']
+        if task['task_policy'] == 'recurring':
+            assert task['task_status'] in ['disabled']
+
     def test_filter_task_to_archive(self, swh_scheduler):
         """Filtering only list disabled recurring or completed oneshot tasks
 
@@ -371,16 +390,53 @@ class TestScheduler:
         total_tasks_filtered = (status_per_policy['recurring'] +
                                 status_per_policy['oneshot'])
 
+        # no pagination scenario
+
         # retrieve tasks to archive
-        after = _time.shift(days=-1).format('YYYY-MM-DD')
-        before = utcnow().shift(days=1).format('YYYY-MM-DD')
-        tasks_to_archive = list(swh_scheduler.filter_task_to_archive(
-            after_ts=after, before_ts=before, limit=total_tasks))
+        after = _time.shift(days=-1)
+        after_ts = after.format('YYYY-MM-DD')
+        before = utcnow().shift(days=1)
+        before_ts = before.format('YYYY-MM-DD')
+        tasks_result = swh_scheduler.filter_task_to_archive(
+            after_ts=after_ts, before_ts=before_ts, limit=total_tasks)
+
+        tasks_to_archive = tasks_result['tasks']
 
         assert len(tasks_to_archive) == total_tasks_filtered
+        assert tasks_result.get('next_page_token') is None
 
         actual_filtered_per_status = {'recurring': 0, 'oneshot': 0}
         for task in tasks_to_archive:
+            self.assert_filtered_task_ok(task, after, before)
+            actual_filtered_per_status[task['task_policy']] += 1
+
+        assert actual_filtered_per_status == status_per_policy
+
+        # pagination scenario
+
+        nb_tasks = 3
+        tasks_result = swh_scheduler.filter_task_to_archive(
+            after_ts=after_ts, before_ts=before_ts, limit=nb_tasks)
+
+        tasks_to_archive2 = tasks_result['tasks']
+
+        assert len(tasks_to_archive2) == nb_tasks
+        next_page_token = tasks_result['next_page_token']
+        assert next_page_token is not None
+
+        all_tasks = tasks_to_archive2
+        while next_page_token is not None:  # Retrieve paginated results
+            tasks_result = swh_scheduler.filter_task_to_archive(
+                after_ts=after_ts, before_ts=before_ts, limit=nb_tasks,
+                page_token=next_page_token)
+            tasks_to_archive2 = tasks_result['tasks']
+            assert len(tasks_to_archive2) <= nb_tasks
+            all_tasks.extend(tasks_to_archive2)
+            next_page_token = tasks_result.get('next_page_token')
+
+        actual_filtered_per_status = {'recurring': 0, 'oneshot': 0}
+        for task in all_tasks:
+            self.assert_filtered_task_ok(task, after, before)
             actual_filtered_per_status[task['task_policy']] += 1
 
         assert actual_filtered_per_status == status_per_policy
