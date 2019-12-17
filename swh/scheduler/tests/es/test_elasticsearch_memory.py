@@ -10,9 +10,7 @@ import random
 
 import pytest
 
-from swh.scheduler.backend_es_memory import (
-    BasicSerializer, BasicTransport
-)
+from swh.scheduler.elasticsearch_memory import BasicSerializer, BasicTransport
 
 from ..common import tasks_from_template, TEMPLATES
 from typing import Any, Dict

@@ -20,7 +20,7 @@ def test_get_elasticsearch():
 
     es = get_elasticsearch('memory')
     assert es
-    from swh.scheduler.backend_es_memory import MemoryElasticsearch
+    from swh.scheduler.elasticsearch_memory import MemoryElasticsearch
     assert isinstance(es, MemoryElasticsearch)
 
     es = get_elasticsearch('local')
