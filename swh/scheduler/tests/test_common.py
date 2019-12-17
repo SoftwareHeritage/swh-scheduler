@@ -24,27 +24,6 @@ def test_tasks_from_template_no_priority():
         assert len(t['arguments']['kwargs'].keys()) == 1
         assert t['next_run'] == next_run - datetime.timedelta(microseconds=i)
         assert t.get('priority') is None
-        assert t.get('status') is None  # not in template nor as parameter
-
-
-def test_tasks_from_template_disabled():
-    nb_tasks = 2
-    template = TEMPLATES['git']
-    next_run = datetime.datetime.utcnow()
-    tasks = tasks_from_template(template, next_run, nb_tasks,
-                                status='disabled')
-
-    assert len(tasks) == nb_tasks
-
-    for i, t in enumerate(tasks):
-        assert t['type'] == template['type']
-        assert t['arguments'] is not None
-        assert t.get('policy') is None  # not defined in template
-        assert len(t['arguments']['args']) == 1
-        assert len(t['arguments']['kwargs'].keys()) == 1
-        assert t['next_run'] == next_run - datetime.timedelta(microseconds=i)
-        assert t.get('priority') is None
-        assert t['status'] == 'disabled'
 
 
 def test_tasks_from_template_priority():

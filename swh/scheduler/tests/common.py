@@ -57,7 +57,7 @@ TASK_TYPES = {
 
 
 def tasks_from_template(template, max_timestamp, num,
-                        num_priority=0, priorities=None, status=None):
+                        num_priority=0, priorities=None):
     """Build tasks from template
 
     """
@@ -70,8 +70,6 @@ def tasks_from_template(template, max_timestamp, num,
             ret['arguments']['args'] = list(args)
         if kwargs:
             ret['arguments']['kwargs'] = kwargs
-        if status:
-            ret['status'] = status
         return ret
 
     def _pop_priority(priorities):
