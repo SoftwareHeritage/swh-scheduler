@@ -485,8 +485,8 @@ def respawn_tasks(ctx, task_ids, next_run):
               help='Verbose mode')
 @click.option('--cleanup/--no-cleanup', is_flag=True, default=True,
               help='Clean up archived tasks (default)')
-@click.option('--start-from', type=click.INT, default=-1,
-              help='(Optional) default task id to start from. Default is -1.')
+@click.option('--start-from', type=click.STRING, default=None,
+              help='(Optional) default page to start from.')
 @click.pass_context
 def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
                   dry_run, verbose, cleanup, start_from):
@@ -541,7 +541,7 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
         return es_storage.compute_index_name(date.year, date.month)
 
     def index_data(before, page_token, batch_index):
-        while page_token is not None:
+        while True:
             result = scheduler.filter_task_to_archive(
                 after, before, page_token=page_token, limit=batch_index)
             tasks_sorted = sorted(result['tasks'], key=get_index_name)
@@ -558,6 +558,8 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
                     chunk_size=bulk_index)
 
             page_token = result.get('next_page_token')
+            if page_token is None:
+                break
 
     gen = index_data(before, page_token=start_from, batch_index=batch_index)
     if cleanup:
@@ -573,3 +575,5 @@ def archive_tasks(ctx, before, after, batch_index, bulk_index, batch_clean,
             task_ids = list(task_ids)
             logger.info('Indexed %s tasks: [%s, ...]' % (
                 len(task_ids), task_ids[0]))
+
+    logger.debug('Done!')
