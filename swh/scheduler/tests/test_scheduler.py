@@ -16,53 +16,7 @@ from arrow import utcnow
 import psycopg2
 import pytest
 
-
-TASK_TYPES = {
-    'git': {
-        'type': 'update-git',
-        'description': 'Update a git repository',
-        'backend_name': 'swh.loader.git.tasks.UpdateGitRepository',
-        'default_interval': datetime.timedelta(days=64),
-        'min_interval': datetime.timedelta(hours=12),
-        'max_interval': datetime.timedelta(days=64),
-        'backoff_factor': 2,
-        'max_queue_length': None,
-        'num_retries': 7,
-        'retry_delay': datetime.timedelta(hours=2),
-    },
-    'hg': {
-        'type': 'update-hg',
-        'description': 'Update a mercurial repository',
-        'backend_name': 'swh.loader.mercurial.tasks.UpdateHgRepository',
-        'default_interval': datetime.timedelta(days=64),
-        'min_interval': datetime.timedelta(hours=12),
-        'max_interval': datetime.timedelta(days=64),
-        'backoff_factor': 2,
-        'max_queue_length': None,
-        'num_retries': 7,
-        'retry_delay': datetime.timedelta(hours=2),
-    },
-}
-
-TEMPLATES = {
-    'git': {
-        'type': 'update-git',
-        'arguments': {
-            'args': [],
-            'kwargs': {},
-        },
-        'next_run': None,
-    },
-    'hg': {
-        'type': 'update-hg',
-        'arguments': {
-            'args': [],
-            'kwargs': {},
-        },
-        'next_run': None,
-        'policy': 'oneshot',
-    }
-}
+from .common import tasks_from_template, TEMPLATES, TASK_TYPES
 
 
 def subdict(d, keys=None, excl=()):
@@ -105,9 +59,9 @@ class TestScheduler:
         priority_ratio = self._priority_ratio(swh_scheduler)
         self._create_task_types(swh_scheduler)
         num_tasks_priority = 100
-        tasks_1 = self._tasks_from_template(
+        tasks_1 = tasks_from_template(
             TEMPLATES['git'], utcnow(), 100)
-        tasks_2 = self._tasks_from_template(
+        tasks_2 = tasks_from_template(
             TEMPLATES['hg'], utcnow(), 100,
             num_tasks_priority, priorities=priority_ratio)
         tasks = tasks_1 + tasks_2
@@ -159,7 +113,7 @@ class TestScheduler:
         self._create_task_types(swh_scheduler)
         t = utcnow()
         task_type = TEMPLATES['git']['type']
-        tasks = self._tasks_from_template(TEMPLATES['git'], t, 100)
+        tasks = tasks_from_template(TEMPLATES['git'], t, 100)
         random.shuffle(tasks)
         swh_scheduler.create_tasks(tasks)
 
@@ -207,7 +161,7 @@ class TestScheduler:
         num_tasks_priority = 100
         num_tasks_no_priority = 100
         # Create tasks with and without priorities
-        tasks = self._tasks_from_template(
+        tasks = tasks_from_template(
             TEMPLATES['git'], t,
             num=num_tasks_no_priority,
             num_priority=num_tasks_priority,
@@ -264,7 +218,7 @@ class TestScheduler:
         num_tasks_priority = 100
         num_tasks_no_priority = 100
         # Create tasks with and without priorities
-        tasks = self._tasks_from_template(
+        tasks = tasks_from_template(
             TEMPLATES['git'], t,
             num=num_tasks_no_priority,
             num_priority=num_tasks_priority,
@@ -288,7 +242,7 @@ class TestScheduler:
     def test_get_tasks(self, swh_scheduler):
         self._create_task_types(swh_scheduler)
         t = utcnow()
-        tasks = self._tasks_from_template(TEMPLATES['git'], t, 100)
+        tasks = tasks_from_template(TEMPLATES['git'], t, 100)
         tasks = swh_scheduler.create_tasks(tasks)
         random.shuffle(tasks)
         while len(tasks) > 1:
@@ -307,7 +261,7 @@ class TestScheduler:
             return [dict(d.items()) for d in l]
         self._create_task_types(swh_scheduler)
         t = utcnow()
-        tasks = self._tasks_from_template(TEMPLATES['git'], t, 100)
+        tasks = tasks_from_template(TEMPLATES['git'], t, 100)
         tasks = swh_scheduler.create_tasks(tasks)
         assert make_real_dicts(swh_scheduler.search_tasks()) \
             == make_real_dicts(tasks)
@@ -334,8 +288,8 @@ class TestScheduler:
         """
         self._create_task_types(swh_scheduler)
         _time = utcnow()
-        recurring = self._tasks_from_template(TEMPLATES['git'], _time, 12)
-        oneshots = self._tasks_from_template(TEMPLATES['hg'], _time, 12)
+        recurring = tasks_from_template(TEMPLATES['git'], _time, 12)
+        oneshots = tasks_from_template(TEMPLATES['hg'], _time, 12)
         total_tasks = len(recurring) + len(oneshots)
 
         # simulate scheduling tasks
@@ -444,9 +398,9 @@ class TestScheduler:
     def test_delete_archived_tasks(self, swh_scheduler):
         self._create_task_types(swh_scheduler)
         _time = utcnow()
-        recurring = self._tasks_from_template(
+        recurring = tasks_from_template(
             TEMPLATES['git'], _time, 12)
-        oneshots = self._tasks_from_template(
+        oneshots = tasks_from_template(
             TEMPLATES['hg'], _time, 12)
         total_tasks = len(recurring) + len(oneshots)
         pending_tasks = swh_scheduler.create_tasks(recurring + oneshots)
@@ -492,9 +446,9 @@ class TestScheduler:
         '''
         self._create_task_types(swh_scheduler)
         _time = utcnow()
-        recurring = self._tasks_from_template(
+        recurring = tasks_from_template(
             TEMPLATES['git'], _time, 12)
-        oneshots = self._tasks_from_template(
+        oneshots = tasks_from_template(
             TEMPLATES['hg'], _time, 12)
         swh_scheduler.create_tasks(recurring + oneshots)
 
@@ -509,9 +463,9 @@ class TestScheduler:
         '''
         self._create_task_types(swh_scheduler)
         _time = utcnow()
-        recurring = self._tasks_from_template(
+        recurring = tasks_from_template(
             TEMPLATES['git'], _time, 12)
-        oneshots = self._tasks_from_template(
+        oneshots = tasks_from_template(
             TEMPLATES['hg'], _time, 12)
         total_tasks = len(recurring) + len(oneshots)
         pending_tasks = swh_scheduler.create_tasks(recurring + oneshots)
@@ -560,9 +514,9 @@ class TestScheduler:
         '''
         self._create_task_types(swh_scheduler)
         _time = utcnow()
-        recurring = self._tasks_from_template(
+        recurring = tasks_from_template(
             TEMPLATES['git'], _time, 12)
-        oneshots = self._tasks_from_template(
+        oneshots = tasks_from_template(
             TEMPLATES['hg'], _time, 12)
         pending_tasks = swh_scheduler.create_tasks(recurring + oneshots)
         backend_tasks = [{
@@ -605,47 +559,6 @@ class TestScheduler:
             'metadata': {'something': 'stupid', 'other': 'stuff'},
             'status': 'eventful',
             }
-
-    @staticmethod
-    def _task_from_template(template, next_run, priority, *args, **kwargs):
-        ret = copy.deepcopy(template)
-        ret['next_run'] = next_run
-        if priority:
-            ret['priority'] = priority
-        if args:
-            ret['arguments']['args'] = list(args)
-        if kwargs:
-            ret['arguments']['kwargs'] = kwargs
-        return ret
-
-    def _pop_priority(self, priorities):
-        if not priorities:
-            return None
-        for priority, remains in priorities.items():
-            if remains > 0:
-                priorities[priority] = remains - 1
-                return priority
-        return None
-
-    def _tasks_from_template(self, template, max_timestamp, num,
-                             num_priority=0, priorities=None):
-        if num_priority and priorities:
-            priorities = {
-                priority: ratio * num_priority
-                for priority, ratio in priorities.items()
-            }
-
-        tasks = []
-        for i in range(num + num_priority):
-            priority = self._pop_priority(priorities)
-            tasks.append(self._task_from_template(
-                template,
-                max_timestamp - datetime.timedelta(microseconds=i),
-                priority,
-                'argument-%03d' % i,
-                **{'kwarg%03d' % i: 'bogus-kwarg'}
-            ))
-        return tasks
 
     def _create_task_types(self, scheduler):
         for tt in TASK_TYPES.values():
