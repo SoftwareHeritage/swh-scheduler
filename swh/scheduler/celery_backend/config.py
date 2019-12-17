@@ -3,13 +3,16 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import functools
 import logging
 import os
 import pkg_resources
+import traceback
+from typing import Any, Dict
 import urllib.parse
 
 from celery import Celery
-from celery.signals import setup_logging, celeryd_after_setup
+from celery.signals import setup_logging, celeryd_after_setup, worker_init
 from celery.utils.log import ColorFormatter
 from celery.worker.control import Panel
 
@@ -17,8 +20,6 @@ from kombu import Exchange, Queue
 from kombu.five import monotonic as _monotonic
 
 import requests
-
-from typing import Any, Dict
 
 from swh.scheduler import CONFIG as SWH_CONFIG
 
@@ -44,7 +45,27 @@ DEFAULT_CONFIG = {
 logger = logging.getLogger(__name__)
 
 
+# Celery eats tracebacks in signal callbacks, this decorator catches
+# and prints them.
+# Also tries to notify Sentry if possible.
+def _print_errors(f):
+    @functools.wraps(f)
+    def newf(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception as exc:
+            traceback.print_exc()
+            try:
+                import sentry_sdk
+                sentry_sdk.capture_exception(exc)
+            except Exception:
+                traceback.print_exc()
+
+    return newf
+
+
 @setup_logging.connect
+@_print_errors
 def setup_log_handler(loglevel=None, logfile=None, format=None, colorize=None,
                       log_console=None, log_journal=None, **kwargs):
     """Setup logging according to Software Heritage preferences.
@@ -105,6 +126,7 @@ def setup_log_handler(loglevel=None, logfile=None, format=None, colorize=None,
 
 
 @celeryd_after_setup.connect
+@_print_errors
 def setup_queues_and_tasks(sender, instance, **kwargs):
     """Signal called on worker start.
 
@@ -117,6 +139,21 @@ def setup_queues_and_tasks(sender, instance, **kwargs):
     """
     logger.info('Setup Queues & Tasks for %s', sender)
     instance.app.conf['worker_name'] = sender
+
+
+@worker_init.connect
+@_print_errors
+def on_worker_init(*args, **kwargs):
+    sentry_dsn = os.environ.get('SWH_SENTRY_DSN')
+    if sentry_dsn:
+        import sentry_sdk
+        from sentry_sdk.integrations.celery import CeleryIntegration
+
+        sentry_sdk.init(
+            dsn=sentry_dsn,
+            integrations=[CeleryIntegration()],
+            debug=bool(os.environ.get('SWH_SENTRY_DEBUG')),
+        )
 
 
 @Panel.register

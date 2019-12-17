@@ -1,4 +1,4 @@
-# Copyright (C) 2018  The Software Heritage developers
+# Copyright (C) 2018-2019  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -93,13 +93,13 @@ class RemoteScheduler(RPCClient):
             'timestamp': timestamp,
         })
 
-    def filter_task_to_archive(self, after_ts, before_ts, limit=10,
-                               last_id=-1):
+    def filter_task_to_archive(self, after_ts, before_ts,
+                               limit=10, page_token=None):
         return self.post('filter_task_to_archive', {
             'after_ts': after_ts,
             'before_ts': before_ts,
             'limit': limit,
-            'last_id': last_id,
+            'page_token': page_token,
         })
 
     def delete_archived_tasks(self, task_ids):

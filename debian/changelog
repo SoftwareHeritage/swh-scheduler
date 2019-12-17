@@ -1,8 +1,12 @@
-swh-scheduler (0.0.65-1~swh2~bpo10+1) buster-swh; urgency=medium
+swh-scheduler (0.0.66-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 0.0.66     - (tagged by Nicolas Dandrimont
+    <nicolas@dandrimont.eu> on 2019-12-17 12:04:20 +0100)
+  * Upstream changes:     - Release swh.scheduler v0.0.66     -
+    initialize sentry on celery worker startup     - improve task
+    archival endpoints in backend api
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 13 Dec 2019 11:02:14 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 17 Dec 2019 11:08:25 +0000
 
 swh-scheduler (0.0.65-1~swh2) unstable-swh; urgency=medium
 
