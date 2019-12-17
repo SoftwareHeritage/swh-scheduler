@@ -446,14 +446,15 @@ class SchedulerBackend:
             (after_ts, before_ts, last_id, limit + 1)
         )
         for row in cur:
+            task = dict(row)
             # nested type index does not accept bare values
             # transform it as a dict to comply with this
-            row['arguments']['args'] = {
-                i: v for i, v in enumerate(row['arguments']['args'])
+            task['arguments']['args'] = {
+                i: v for i, v in enumerate(task['arguments']['args'])
             }
-            kwargs = row['arguments']['kwargs']
-            row['arguments']['kwargs'] = json.dumps(kwargs)
-            tasks.append(row)
+            kwargs = task['arguments']['kwargs']
+            task['arguments']['kwargs'] = json.dumps(kwargs)
+            tasks.append(task)
 
         if len(tasks) >= limit + 1:  # remains data, add pagination information
             result = {
