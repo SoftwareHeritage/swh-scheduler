@@ -5,10 +5,27 @@
 
 import datetime
 
+import pytest
+
 import elasticsearch
 
+from swh.scheduler.backend_es import get_elasticsearch
 
 from ..common import tasks_from_template, TEMPLATES
+
+
+def test_get_elasticsearch():
+    with pytest.raises(ValueError, match='Unknown elasticsearch class'):
+        get_elasticsearch('unknown')
+
+    es = get_elasticsearch('memory')
+    assert es
+    from swh.scheduler.backend_es_memory import MemoryElasticsearch
+    assert isinstance(es, MemoryElasticsearch)
+
+    es = get_elasticsearch('local')
+    assert es
+    assert isinstance(es, elasticsearch.Elasticsearch)
 
 
 def test_backend_setup_basic(swh_elasticsearch):
