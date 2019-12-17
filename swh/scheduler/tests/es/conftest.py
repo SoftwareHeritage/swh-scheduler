@@ -46,3 +46,8 @@ def swh_elasticsearch(swh_scheduler_config):
     backend = ElasticSearchBackend(**swh_scheduler_config)
     backend.initialize()
     return backend
+
+
+@pytest.fixture
+def swh_memory_elasticsearch(swh_elasticsearch):
+    return swh_elasticsearch.storage

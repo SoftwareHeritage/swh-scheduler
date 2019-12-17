@@ -44,8 +44,7 @@ def get_elasticsearch(cls: str, args: Dict[str, Any] = {}):
     if cls == 'local':
         from elasticsearch import Elasticsearch
     elif cls == 'memory':
-        from .backend_es_memory import MemoryElasticsearch
-        Elasticsearch = MemoryElasticsearch
+        from .backend_es_memory import MemoryElasticsearch as Elasticsearch  # type: ignore  # noqa
     else:
         raise ValueError('Unknown elasticsearch class `%s`' % cls)
 

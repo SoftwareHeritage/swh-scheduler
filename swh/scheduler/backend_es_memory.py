@@ -81,10 +81,12 @@ class MemoryElasticsearch:
         if idx:
             idx['status'] = 'opened'
 
-    def bulk(self, body, doc_type=None, index=None, params=None):
+    def bulk(self, body, **kwargs):
         """Bulk insert document in index"""
         assert isinstance(body, str)
-        all_data = body.split('\n')[:-1]  # drop the empty line
+        all_data = body.split('\n')
+        if all_data[-1] == '':
+            all_data = all_data[:-1]  # drop the empty line if any
         ids = []
         # data is sent as tuple (index, data-to-index)
         for i in range(0, len(all_data), 2):
