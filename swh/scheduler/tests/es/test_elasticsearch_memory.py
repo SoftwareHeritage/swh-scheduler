@@ -37,44 +37,44 @@ def test_basic_transport():
     assert isinstance(b.serializer, BasicSerializer)
 
 
-def test_index_manipulation(swh_memory_elasticsearch):
+def test_index_manipulation(swh_elasticsearch_memory):
     index_name = 'swh-tasks-xxxx'
-    indices = swh_memory_elasticsearch.index
+    indices = swh_elasticsearch_memory.index
 
-    assert not swh_memory_elasticsearch.exists(index_name)
+    assert not swh_elasticsearch_memory.exists(index_name)
     assert index_name not in indices
 
     # so stat raises
     with pytest.raises(Exception):
-        swh_memory_elasticsearch.stats(index_name)
+        swh_elasticsearch_memory.stats(index_name)
 
     # we create the index
-    swh_memory_elasticsearch.create(index_name)
+    swh_elasticsearch_memory.create(index_name)
 
     # now the index exists
-    assert swh_memory_elasticsearch.exists(index_name)
+    assert swh_elasticsearch_memory.exists(index_name)
     assert index_name in indices
     # it's opened
     assert indices[index_name]['status'] == 'opened'
 
     # so stats is happy
-    swh_memory_elasticsearch.stats(index_name)
+    swh_elasticsearch_memory.stats(index_name)
 
     # open the index, nothing changes
-    swh_memory_elasticsearch.open(index_name)
+    swh_elasticsearch_memory.open(index_name)
     assert indices[index_name]['status'] == 'opened'
 
     # close the index
-    swh_memory_elasticsearch.close(index_name)
+    swh_elasticsearch_memory.close(index_name)
 
     assert indices[index_name]['status'] == 'closed'
 
     # reopen the index (fun times)
-    swh_memory_elasticsearch.open(index_name)
+    swh_elasticsearch_memory.open(index_name)
     assert indices[index_name]['status'] == 'opened'
 
 
-def test_bulk_and_mget(swh_memory_elasticsearch):
+def test_bulk_and_mget(swh_elasticsearch_memory):
     # initialize tasks
     template_git = TEMPLATES['git']
     next_run_start = datetime.datetime.utcnow() - datetime.timedelta(days=1)
@@ -90,10 +90,10 @@ def test_bulk_and_mget(swh_memory_elasticsearch):
         date = task['next_run']
         index_name = f'swh-tasks-{date.year}-{date.month}'
         idx = {'index': {'_index': index_name}}
-        sidx = swh_memory_elasticsearch.transport.serializer.dumps(idx)
+        sidx = swh_elasticsearch_memory.transport.serializer.dumps(idx)
         body.append(sidx)
 
-        stask = swh_memory_elasticsearch.transport.serializer.dumps(task)
+        stask = swh_elasticsearch_memory.transport.serializer.dumps(task)
         body.append(stask)
 
         _id = compute_id(stask)
@@ -103,10 +103,10 @@ def test_bulk_and_mget(swh_memory_elasticsearch):
     # store
 
     # create the index first
-    swh_memory_elasticsearch.create(index_name)
+    swh_elasticsearch_memory.create(index_name)
 
     # then bulk insert new data
-    result = swh_memory_elasticsearch.bulk('\n'.join(body))
+    result = swh_elasticsearch_memory.bulk('\n'.join(body))
 
     # no guarantee in the order
     assert result
@@ -146,7 +146,7 @@ def test_bulk_and_mget(swh_memory_elasticsearch):
         noisy_id = f'{i}' * 40
         random_ids.append(noisy_id)
 
-    result = swh_memory_elasticsearch.mget(
+    result = swh_elasticsearch_memory.mget(
         index=index_name, body={'ids': random_ids})
     assert result['docs']
     assert len(result['docs']) == nb_docs, "no random and inexistent id found"

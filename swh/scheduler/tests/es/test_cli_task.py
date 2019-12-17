@@ -22,13 +22,14 @@ from ..common import tasks_from_template, TASK_TYPES, TEMPLATES
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.usefixtures('swh_elasticsearch')
-def test_cli_archive_tasks(swh_scheduler, swh_scheduler_conf_file):
+@pytest.mark.usefixtures('swh_elasticsearch_backend')
+def test_cli_archive_tasks(swh_sched, swh_sched_config_file):
+    scheduler = swh_sched
     template_git = TEMPLATES['git']
     template_hg = TEMPLATES['hg']
     # first initialize scheduler's db (is this still needed?)
     for tt in TASK_TYPES.values():
-        swh_scheduler.create_task_type(tt)
+        scheduler.create_task_type(tt)
 
     next_run_start = arrow.utcnow().datetime - datetime.timedelta(days=1)
 
@@ -40,7 +41,7 @@ def test_cli_archive_tasks(swh_scheduler, swh_scheduler_conf_file):
     past_time = next_run_start - datetime.timedelta(days=7)
 
     all_tasks = recurring + oneshots
-    result = swh_scheduler.create_tasks(all_tasks)
+    result = scheduler.create_tasks(all_tasks)
     assert len(result) == len(all_tasks)
 
     # simulate task run
@@ -51,7 +52,7 @@ def test_cli_archive_tasks(swh_scheduler, swh_scheduler_conf_file):
             'scheduled': next_run_start - datetime.timedelta(minutes=i % 60),
         } for i, task in enumerate(result)
     ]
-    swh_scheduler.mass_schedule_task_runs(backend_tasks)
+    scheduler.mass_schedule_task_runs(backend_tasks)
 
     # Disable some tasks
     tasks_to_disable = set()
@@ -60,14 +61,14 @@ def test_cli_archive_tasks(swh_scheduler, swh_scheduler_conf_file):
         if status == 'disabled':
             tasks_to_disable.add(task['id'])
 
-    swh_scheduler.disable_tasks(tasks_to_disable)
+    scheduler.disable_tasks(tasks_to_disable)
 
-    git_tasks = swh_scheduler.search_tasks(task_type=template_git['type'])
-    hg_tasks = swh_scheduler.search_tasks(task_type=template_hg['type'])
+    git_tasks = scheduler.search_tasks(task_type=template_git['type'])
+    hg_tasks = scheduler.search_tasks(task_type=template_hg['type'])
     assert len(git_tasks) + len(hg_tasks) == len(all_tasks)
 
     # Ensure the task_run are in expected state
-    task_runs = swh_scheduler.get_task_runs([
+    task_runs = scheduler.get_task_runs([
         t['id'] for t in git_tasks + hg_tasks
     ])
 
@@ -83,7 +84,7 @@ def test_cli_archive_tasks(swh_scheduler, swh_scheduler_conf_file):
 
     runner = CliRunner()
     result = runner.invoke(cli, [
-        '--config-file', swh_scheduler_conf_file,
+        '--config-file', swh_sched_config_file,
         'task', 'archive',
         '--after', past_time.isoformat(),
         '--before', future_time.isoformat(),
@@ -95,8 +96,8 @@ def test_cli_archive_tasks(swh_scheduler, swh_scheduler_conf_file):
     assert result.exit_code == 0, result.output
 
     # disabled tasks should no longer be in the scheduler
-    git_tasks = swh_scheduler.search_tasks(task_type=template_git['type'])
-    hg_tasks = swh_scheduler.search_tasks(task_type=template_hg['type'])
+    git_tasks = scheduler.search_tasks(task_type=template_git['type'])
+    hg_tasks = scheduler.search_tasks(task_type=template_hg['type'])
     remaining_tasks = git_tasks + hg_tasks
     count_disabled = 0
     for task in remaining_tasks:
