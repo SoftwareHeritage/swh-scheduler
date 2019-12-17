@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.usefixtures('swh_elasticsearch')
-def test_cli_archive_tasks(swh_scheduler, swh_scheduler_config_file):
+def test_cli_archive_tasks(swh_scheduler, swh_scheduler_conf_file):
     template_git = TEMPLATES['git']
     template_hg = TEMPLATES['hg']
     # first initialize scheduler's db (is this still needed?)
@@ -83,7 +83,7 @@ def test_cli_archive_tasks(swh_scheduler, swh_scheduler_config_file):
 
     runner = CliRunner()
     result = runner.invoke(cli, [
-        '--config-file', swh_scheduler_config_file,
+        '--config-file', swh_scheduler_conf_file,
         'task', 'archive',
         '--after', past_time.isoformat(),
         '--before', future_time.isoformat(),
