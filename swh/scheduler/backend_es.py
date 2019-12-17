@@ -7,49 +7,68 @@
 
 """
 
+import datetime  # noqa
 import logging
 
 from copy import deepcopy
+from typing import Any, Dict
+
+from elasticsearch import helpers
 
 from swh.core import utils
-from elasticsearch import Elasticsearch
-from elasticsearch import helpers
 
 logger = logging.getLogger(__name__)
 
 
 DEFAULT_CONFIG = {
-    'elastic_search': {
-        'storage_nodes': {'host': 'localhost', 'port': 9200},
-        'index_name_prefix': 'swh-tasks',
-        'client_options': {
-            'sniff_on_start': False,
-            'sniff_on_connection_fail': True,
-            'http_compress': False,
+    'elasticsearch': {
+        'cls': 'local',
+        'args': {
+            'index_name_prefix': 'swh-tasks',
+            'storage_nodes': ['localhost:9200'],
+            'client_options': {
+                'sniff_on_start': False,
+                'sniff_on_connection_fail': True,
+                'http_compress': False,
+                'sniffer_timeout': 60
+            },
         },
-    },
+    }
 }
+
+
+def get_elasticsearch(cls: str, args: Dict[str, Any] = {}):
+    """Instantiate an elastic search instance
+
+    """
+    if cls == 'local':
+        from elasticsearch import Elasticsearch
+    else:
+        raise ValueError('Unknown elasticsearch class `%s`' % cls)
+
+    return Elasticsearch(**args)
 
 
 class ElasticSearchBackend:
     """ElasticSearch backend to index tasks
 
+    This uses an elasticsearch client to actually discuss with the
+    elasticsearch instance.
+
     """
     def __init__(self, **config):
         self.config = deepcopy(DEFAULT_CONFIG)
         self.config.update(config)
-        es_conf = self.config['elastic_search']
-        options = es_conf.get('client_options', {})
-        self.storage = Elasticsearch(
-            # nodes to use by default
-            es_conf['storage_nodes'],
-            # auto detect cluster's status
-            sniff_on_start=options['sniff_on_start'],
-            sniff_on_connection_fail=options['sniff_on_connection_fail'],
-            sniffer_timeout=60,
-            # compression or not
-            http_compress=options['http_compress'])
-        self.index_name_prefix = es_conf['index_name_prefix']
+        es_conf = self.config['elasticsearch']
+        args = deepcopy(es_conf['args'])
+        self.index_name_prefix = args.pop('index_name_prefix')
+        self.storage = get_elasticsearch(
+            cls=es_conf['cls'],
+            args={
+                'storage_nodes': args.get('storage_nodes', []),
+                **args.get('client_options', {}),
+            }
+        )
         # document's index type (cf. /data/elastic-template.json)
         self.doc_type = 'task'
 
