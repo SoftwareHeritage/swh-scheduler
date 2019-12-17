@@ -11,7 +11,7 @@ from swh.scheduler import get_scheduler
 
 
 @pytest.fixture
-def swh_scheduler_conf(swh_scheduler_config):
+def swh_sched_config(swh_scheduler_config):
     return {
         'scheduler': {
             'cls': 'local',
@@ -27,27 +27,27 @@ def swh_scheduler_conf(swh_scheduler_config):
 
 
 @pytest.fixture
-def swh_scheduler_conf_file(swh_scheduler_conf, monkeypatch, tmp_path):
+def swh_sched_config_file(swh_sched_config, monkeypatch, tmp_path):
     conffile = str(tmp_path / 'elastic.yml')
     with open(conffile, 'w') as f:
-        f.write(yaml.dump(swh_scheduler_conf))
+        f.write(yaml.dump(swh_sched_config))
     monkeypatch.setenv('SWH_CONFIG_FILENAME', conffile)
     return conffile
 
 
 @pytest.fixture
-def swh_scheduler(swh_scheduler_conf):
-    return get_scheduler(**swh_scheduler_conf['scheduler'])
+def swh_sched(swh_sched_config):
+    return get_scheduler(**swh_sched_config['scheduler'])
 
 
 @pytest.fixture
-def swh_elasticsearch(swh_scheduler_conf):
+def swh_elasticsearch_backend(swh_sched_config):
     from swh.scheduler.backend_es import ElasticSearchBackend
-    backend = ElasticSearchBackend(**swh_scheduler_conf)
+    backend = ElasticSearchBackend(**swh_sched_config)
     backend.initialize()
     return backend
 
 
 @pytest.fixture
-def swh_memory_elasticsearch(swh_elasticsearch):
-    return swh_elasticsearch.storage
+def swh_elasticsearch_memory(swh_elasticsearch_backend):
+    return swh_elasticsearch_backend.storage
