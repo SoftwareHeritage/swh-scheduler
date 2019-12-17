@@ -1,8 +1,35 @@
-swh-scheduler (0.0.66-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-scheduler (0.0.69-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 0.0.69     - (tagged by Antoine R. Dumont
+    (@ardumont) <antoine.romain.dumont@gmail.com> on 2019-12-17 16:00:24
+    +0100)
+  * Upstream changes:     - v0.0.69     - Fix scheduler's archive task
+    cli     - Make the filter task endpoint a paginated endpoint     -
+    Add coverage on the archive task cli
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 17 Dec 2019 11:10:15 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 17 Dec 2019 15:04:48 +0000
+
+swh-scheduler (0.0.68-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.68     - (tagged by Antoine R. Dumont
+    (@ardumont) <antoine.romain.dumont@gmail.com> on 2019-12-17 15:28:13
+    +0100)
+  * Upstream changes:     - v0.0.68     - Fix scheduler's archive task
+    cli     - Make the filter task endpoint a paginated endpoint     -
+    Add coverage on the archive task cli
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 17 Dec 2019 14:33:33 +0000
+
+swh-scheduler (0.0.67-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.67     - (tagged by Antoine R. Dumont
+    (@ardumont) <antoine.romain.dumont@gmail.com> on 2019-12-17 14:33:36
+    +0100)
+  * Upstream changes:     - v0.0.67     - Fix scheduler's archive task
+    cli     - Make the filter task endpoint a paginated endpoint     -
+    Add coverage on the archive task cli
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 17 Dec 2019 13:38:03 +0000
 
 swh-scheduler (0.0.66-1~swh1) unstable-swh; urgency=medium
 
