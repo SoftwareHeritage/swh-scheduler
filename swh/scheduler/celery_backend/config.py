@@ -24,6 +24,7 @@ import requests
 from swh.scheduler import CONFIG as SWH_CONFIG
 
 from swh.core.config import load_named_config, merge_configs
+from swh.core.sentry import init_sentry
 
 try:
     from swh.core.logger import JournalHandler
@@ -144,16 +145,13 @@ def setup_queues_and_tasks(sender, instance, **kwargs):
 @worker_init.connect
 @_print_errors
 def on_worker_init(*args, **kwargs):
-    sentry_dsn = os.environ.get('SWH_SENTRY_DSN')
-    if sentry_dsn:
-        import sentry_sdk
+    try:
         from sentry_sdk.integrations.celery import CeleryIntegration
-
-        sentry_sdk.init(
-            dsn=sentry_dsn,
-            integrations=[CeleryIntegration()],
-            debug=bool(os.environ.get('SWH_SENTRY_DEBUG')),
-        )
+    except ImportError:
+        integrations = []
+    else:
+        integrations = [CeleryIntegration()]
+    init_sentry(integrations=integrations)
 
 
 @Panel.register
