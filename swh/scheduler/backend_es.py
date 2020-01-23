@@ -67,7 +67,7 @@ class ElasticSearchBackend:
         self.storage = get_elasticsearch(
             cls=es_conf['cls'],
             args={
-                'storage_nodes': args.get('storage_nodes', []),
+                'hosts': args.get('storage_nodes', []),
                 **args.get('client_options', {}),
             }
         )
