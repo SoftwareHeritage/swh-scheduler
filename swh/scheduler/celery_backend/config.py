@@ -151,7 +151,8 @@ def on_worker_init(*args, **kwargs):
         integrations = []
     else:
         integrations = [CeleryIntegration()]
-    init_sentry(integrations=integrations)
+    sentry_dsn = None  # will be set in `init_sentry` function
+    init_sentry(sentry_dsn, integrations=integrations)
 
 
 @Panel.register
