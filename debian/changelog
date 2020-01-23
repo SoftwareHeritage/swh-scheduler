@@ -1,8 +1,13 @@
-swh-scheduler (0.0.69-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-scheduler (0.0.70-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 0.0.70     - (tagged by Antoine R. Dumont
+    (@ardumont) <antoine.romain.dumont@gmail.com> on 2020-01-23 13:43:35
+    +0100)
+  * Upstream changes:     - v0.0.70     - Use swh.core.sentry instead of
+    calling sentry_sdk.init directly     - backend_es: Fix configuration
+    mapping
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 17 Dec 2019 15:06:40 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 23 Jan 2020 12:47:43 +0000
 
 swh-scheduler (0.0.69-1~swh1) unstable-swh; urgency=medium
 
