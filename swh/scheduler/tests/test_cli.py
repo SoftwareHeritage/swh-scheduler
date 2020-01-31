@@ -1,4 +1,4 @@
-# Copyright (C) 2019  The Software Heritage developers
+# Copyright (C) 2019-2020  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -12,8 +12,7 @@ import logging
 from click.testing import CliRunner
 import pytest
 
-from swh.storage.in_memory import Storage
-
+from swh.storage import get_storage
 from swh.scheduler.cli import cli
 from swh.scheduler.utils import create_task_dict
 
@@ -578,9 +577,9 @@ def _fill_storage_with_origins(storage, nb_origins):
 
 @pytest.fixture
 def storage():
-    """An instance of swh.storage.in_memory.Storage that gets injected
+    """An instance of in-memory storage that gets injected
     into the CLI functions."""
-    storage = Storage()
+    storage = get_storage('memory')
     with patch('swh.storage.get_storage') as get_storage_mock:
         get_storage_mock.return_value = storage
         yield storage
