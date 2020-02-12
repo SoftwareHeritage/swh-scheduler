@@ -579,7 +579,14 @@ def _fill_storage_with_origins(storage, nb_origins):
 def storage():
     """An instance of in-memory storage that gets injected
     into the CLI functions."""
-    storage = get_storage('memory')
+    storage_config = {
+        'cls': 'pipeline',
+        'steps': [
+            {'cls': 'validate'},
+            {'cls': 'memory'},
+        ]
+    }
+    storage = get_storage(**storage_config)
     with patch('swh.storage.get_storage') as get_storage_mock:
         get_storage_mock.return_value = storage
         yield storage
