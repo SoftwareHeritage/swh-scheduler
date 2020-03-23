@@ -99,7 +99,8 @@ class SchedulerBackend:
         """
         keys = [key for key in self.task_type_keys if key in task_type]
         query = format_query(
-            """insert into task_type ({keys}) values ({placeholders})""",
+            """insert into task_type ({keys}) values ({placeholders})
+            on conflict do nothing""",
             keys)
         cur.execute(query, [task_type[key] for key in keys])
 

@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2019  The Software Heritage developers
+# Copyright (C) 2018-2020  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -239,6 +239,12 @@ class ElasticSearchBackend:
            - source=False ; returns without the original _source field
            - source=['task_id'] ; returns only task_id in the _source field
 
+           Note that:
+           - if the index is closed, it will be opened
+           - if the index does not exist, it will be created and opened
+
+           This keeps the index opened for performance reasons.
+
         Args:
             index_name (str): Name of the concerned index.
             doc_stream (generator): Document generator to index
@@ -246,23 +252,14 @@ class ElasticSearchBackend:
             source (bool, [str]): the information to return
 
         """
-        to_close = False
         # index must exist
         if not self.storage.indices.exists(index_name):
             self.create(index_name)
-            # Close that new index (to avoid too much opened indices)
-            to_close = True
         # index must be opened
         if not self.is_index_opened(index_name):
-            to_close = True
             self.storage.indices.open(index_name)
 
-        try:
-            indexed_ids = self._streaming_bulk(
-                index_name, doc_stream, chunk_size=chunk_size)
-            yield from self.mget(
-                index_name, indexed_ids, chunk_size=chunk_size, source=source)
-        finally:
-            # closing it to stay in the same state as prior to the call
-            if to_close:
-                self.storage.indices.close(index_name)
+        indexed_ids = self._streaming_bulk(
+            index_name, doc_stream, chunk_size=chunk_size)
+        yield from self.mget(
+            index_name, indexed_ids, chunk_size=chunk_size, source=source)
