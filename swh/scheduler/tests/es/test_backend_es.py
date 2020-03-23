@@ -1,4 +1,4 @@
-# Copyright (C) 2019  The Software Heritage developers
+# Copyright (C) 2019-2020  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -73,6 +73,6 @@ def test_backend_setup_index(swh_elasticsearch_backend):
             assert next_run == next_run_date
 
     assert swh_elasticsearch_backend.storage.indices.exists(index_name)
-    assert not swh_elasticsearch_backend.is_index_opened(index_name)
+    assert swh_elasticsearch_backend.is_index_opened(index_name)
     mapping = swh_elasticsearch_backend.storage.indices.get_mapping(index_name)
     assert mapping != {}

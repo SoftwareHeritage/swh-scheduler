@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2019  The Software Heritage developers
+# Copyright (C) 2016-2020  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -312,7 +312,7 @@ def schedule_origin_metadata_index(
     from .utils import parse_options, schedule_origin_batches
 
     scheduler = ctx.obj['scheduler']
-    storage = get_storage('remote', {'url': storage_url})
+    storage = get_storage('remote', url=storage_url)
     if dry_run:
         scheduler = None
 
