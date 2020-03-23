@@ -3,6 +3,7 @@ celery>=4
 Click
 elasticsearch>5.4
 flask
+pika>=1.1.0
 psycopg2
 pyyaml
 vcversioner

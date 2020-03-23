@@ -13,7 +13,6 @@ from typing import Any, Dict
 
 from arrow import utcnow
 
-import psycopg2
 import pytest
 
 from .common import tasks_from_template, TEMPLATES, TASK_TYPES
@@ -38,14 +37,16 @@ class TestScheduler:
         tt = TASK_TYPES['git']
         swh_scheduler.create_task_type(tt)
         assert tt == swh_scheduler.get_task_type(tt['type'])
-        with pytest.raises(psycopg2.IntegrityError,
-                           match=r'\(type\)=\(%s\)' % tt['type']):
-            swh_scheduler.create_task_type(tt)
-
         tt2 = TASK_TYPES['hg']
         swh_scheduler.create_task_type(tt2)
         assert tt == swh_scheduler.get_task_type(tt['type'])
         assert tt2 == swh_scheduler.get_task_type(tt2['type'])
+
+    def test_create_task_type_idempotence(self, swh_scheduler):
+        tt = TASK_TYPES['git']
+        swh_scheduler.create_task_type(tt)
+        swh_scheduler.create_task_type(tt)
+        assert tt == swh_scheduler.get_task_type(tt['type'])
 
     def test_get_task_types(self, swh_scheduler):
         tt, tt2 = TASK_TYPES['git'], TASK_TYPES['hg']

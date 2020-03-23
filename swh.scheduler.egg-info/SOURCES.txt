@@ -28,6 +28,7 @@ swh/scheduler/api/server.py
 swh/scheduler/celery_backend/__init__.py
 swh/scheduler/celery_backend/config.py
 swh/scheduler/celery_backend/listener.py
+swh/scheduler/celery_backend/pika_listener.py
 swh/scheduler/celery_backend/runner.py
 swh/scheduler/cli/__init__.py
 swh/scheduler/cli/admin.py

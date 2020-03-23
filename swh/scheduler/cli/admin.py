@@ -53,16 +53,21 @@ def listener(ctx):
 
     This service is responsible for listening at task lifecycle events and
     handle their workflow status in the database."""
-    scheduler = ctx.obj['scheduler']
-    if not scheduler:
+    scheduler_backend = ctx.obj['scheduler']
+    if not scheduler_backend:
         raise ValueError('Scheduler class (local/remote) must be instantiated')
 
-    from swh.scheduler.celery_backend.config import build_app
-    app = build_app(ctx.obj['config'].get('celery'))
-    app.set_current()
+    broker = ctx.obj['config']\
+                .get('celery', {})\
+                .get('task_broker', 'amqp://guest@localhost/%2f')
 
-    from swh.scheduler.celery_backend.listener import event_monitor
-    event_monitor(app, backend=scheduler)
+    from swh.scheduler.celery_backend.pika_listener import get_listener
+
+    listener = get_listener(broker, 'celeryev.listener', scheduler_backend)
+    try:
+        listener.start_consuming()
+    finally:
+        listener.stop_consuming()
 
 
 @cli.command('rpc-serve')
