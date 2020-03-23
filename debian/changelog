@@ -1,3 +1,13 @@
+swh-scheduler (0.0.72-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.72     - (tagged by Nicolas Dandrimont
+    <nicolas@dandrimont.eu> on 2020-03-23 13:07:38 +0100)
+  * Upstream changes:     - Release swh.scheduler v0.0.72     - Update
+    instantiation of storage in tests     - ensure that create_task_type
+    is idempotent     - introduce new listener based on pika
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 23 Mar 2020 12:12:00 +0000
+
 swh-scheduler (0.0.71-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.0.71     - (tagged by Antoine R. Dumont
