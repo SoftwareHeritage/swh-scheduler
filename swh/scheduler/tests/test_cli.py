@@ -566,7 +566,6 @@ Task 1
 def _fill_storage_with_origins(storage, nb_origins):
     origins = [
         {
-            'type': 'type{}'.format(i),
             'url': 'http://example.com/{}'.format(i),
         }
         for i in range(nb_origins)
