@@ -21,16 +21,16 @@ logger = logging.getLogger(__name__)
 
 
 DEFAULT_CONFIG = {
-    'elasticsearch': {
-        'cls': 'local',
-        'args': {
-            'index_name_prefix': 'swh-tasks',
-            'storage_nodes': ['localhost:9200'],
-            'client_options': {
-                'sniff_on_start': False,
-                'sniff_on_connection_fail': True,
-                'http_compress': False,
-                'sniffer_timeout': 60
+    "elasticsearch": {
+        "cls": "local",
+        "args": {
+            "index_name_prefix": "swh-tasks",
+            "storage_nodes": ["localhost:9200"],
+            "client_options": {
+                "sniff_on_start": False,
+                "sniff_on_connection_fail": True,
+                "http_compress": False,
+                "sniffer_timeout": 60,
             },
         },
     }
@@ -41,12 +41,12 @@ def get_elasticsearch(cls: str, args: Dict[str, Any] = {}):
     """Instantiate an elastic search instance
 
     """
-    if cls == 'local':
+    if cls == "local":
         from elasticsearch import Elasticsearch
-    elif cls == 'memory':
+    elif cls == "memory":
         from .elasticsearch_memory import MemoryElasticsearch as Elasticsearch  # type: ignore  # noqa
     else:
-        raise ValueError('Unknown elasticsearch class `%s`' % cls)
+        raise ValueError("Unknown elasticsearch class `%s`" % cls)
 
     return Elasticsearch(**args)
 
@@ -58,21 +58,22 @@ class ElasticSearchBackend:
     elasticsearch instance.
 
     """
+
     def __init__(self, **config):
         self.config = deepcopy(DEFAULT_CONFIG)
         self.config.update(config)
-        es_conf = self.config['elasticsearch']
-        args = deepcopy(es_conf['args'])
-        self.index_name_prefix = args.pop('index_name_prefix')
+        es_conf = self.config["elasticsearch"]
+        args = deepcopy(es_conf["args"])
+        self.index_name_prefix = args.pop("index_name_prefix")
         self.storage = get_elasticsearch(
-            cls=es_conf['cls'],
+            cls=es_conf["cls"],
             args={
-                'hosts': args.get('storage_nodes', []),
-                **args.get('client_options', {}),
-            }
+                "hosts": args.get("storage_nodes", []),
+                **args.get("client_options", {}),
+            },
         )
         # document's index type (cf. /data/elastic-template.json)
-        self.doc_type = 'task'
+        self.doc_type = "task"
 
     def initialize(self):
         self.storage.indices.put_mapping(
@@ -91,35 +92,28 @@ class ElasticSearchBackend:
                     "arguments": {
                         "type": "object",
                         "properties": {
-                            "args": {
-                                "type": "nested",
-                                "dynamic": False
-                            },
-                            "kwargs": {
-                                "type": "text"
-                            }
-                        }
+                            "args": {"type": "nested", "dynamic": False},
+                            "kwargs": {"type": "text"},
+                        },
                     },
                     "type": {"type": "text"},
                     "backend_id": {"type": "text"},
-                    "metadata": {
-                        "type": "object",
-                        "enabled": False
-                    },
-                    "scheduled":  {
+                    "metadata": {"type": "object", "enabled": False},
+                    "scheduled": {
                         "type": "date",
-                        "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||strict_date_optional_time||epoch_millis"  # noqa
+                        "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||strict_date_optional_time||epoch_millis",  # noqa
                     },
-                    "started":  {
+                    "started": {
                         "type": "date",
-                        "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||strict_date_optional_time||epoch_millis"  # noqa
+                        "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||strict_date_optional_time||epoch_millis",  # noqa
                     },
-                    "ended":  {
+                    "ended": {
                         "type": "date",
-                        "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||strict_date_optional_time||epoch_millis"  # noqa
-                    }
+                        "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||strict_date_optional_time||epoch_millis",  # noqa
+                    },
                 }
-            })
+            },
+        )
 
         self.storage.indices.put_settings(
             index=f"{self.index_name_prefix}-*",
@@ -128,9 +122,10 @@ class ElasticSearchBackend:
                 "index": {
                     "codec": "best_compression",
                     "refresh_interval": "1s",
-                    "number_of_shards": 1
+                    "number_of_shards": 1,
                 }
-            })
+            },
+        )
 
     def create(self, index_name) -> None:
         """Create and initialize index_name with mapping for all indices
@@ -144,11 +139,9 @@ class ElasticSearchBackend:
         """Given a year, month, compute the index's name.
 
         """
-        return '%s-%s-%s' % (
-            self.index_name_prefix, year, '%02d' % month)
+        return "%s-%s-%s" % (self.index_name_prefix, year, "%02d" % month)
 
-    def mget(self, index_name, doc_ids, chunk_size=500,
-             source=True):
+    def mget(self, index_name, doc_ids, chunk_size=500, source=True):
         """Retrieve document's full content according to their ids as per
            source's setup.
 
@@ -168,26 +161,28 @@ class ElasticSearchBackend:
 
         """
         if isinstance(source, list):
-            source = {'_source': ','.join(source)}
+            source = {"_source": ",".join(source)}
         else:
-            source = {'_source': str(source).lower()}
+            source = {"_source": str(source).lower()}
 
         for ids in utils.grouper(doc_ids, n=1000):
-            res = self.storage.mget(body={'ids': list(ids)},
-                                    index=index_name,
-                                    doc_type=self.doc_type,
-                                    params=source)
+            res = self.storage.mget(
+                body={"ids": list(ids)},
+                index=index_name,
+                doc_type=self.doc_type,
+                params=source,
+            )
             if not res:
-                logger.error('Error during retrieval of data, skipping!')
+                logger.error("Error during retrieval of data, skipping!")
                 continue
 
-            for doc in res['docs']:
-                found = doc.get('found')
+            for doc in res["docs"]:
+                found = doc.get("found")
                 if not found:
-                    msg = 'Doc id %s not found, not indexed yet' % doc['_id']
+                    msg = "Doc id %s not found, not indexed yet" % doc["_id"]
                     logger.warning(msg)
                     continue
-                yield doc['_source']
+                yield doc["_source"]
 
     def _streaming_bulk(self, index_name, doc_stream, chunk_size=500):
         """Bulk index data and returns the successful indexed data's
@@ -202,19 +197,26 @@ class ElasticSearchBackend:
             document id indexed
 
         """
-        actions = ({'_index': index_name,
-                    '_op_type': 'index',
-                    '_type': self.doc_type,
-                    '_source': data} for data in doc_stream)
-        for ok, result in helpers.streaming_bulk(client=self.storage,
-                                                 actions=actions,
-                                                 chunk_size=chunk_size,
-                                                 raise_on_error=False,
-                                                 raise_on_exception=False):
+        actions = (
+            {
+                "_index": index_name,
+                "_op_type": "index",
+                "_type": self.doc_type,
+                "_source": data,
+            }
+            for data in doc_stream
+        )
+        for ok, result in helpers.streaming_bulk(
+            client=self.storage,
+            actions=actions,
+            chunk_size=chunk_size,
+            raise_on_error=False,
+            raise_on_exception=False,
+        ):
             if not ok:
-                logger.error('Error during %s indexation. Skipping.', result)
+                logger.error("Error during %s indexation. Skipping.", result)
                 continue
-            yield result['index']['_id']
+            yield result["index"]["_id"]
 
     def is_index_opened(self, index_name: str) -> bool:
         """Determine if an index is opened or not
@@ -227,8 +229,7 @@ class ElasticSearchBackend:
             # fails when indice is closed (no other api call found)
             return False
 
-    def streaming_bulk(self, index_name, doc_stream, chunk_size=500,
-                       source=True):
+    def streaming_bulk(self, index_name, doc_stream, chunk_size=500, source=True):
         """Bulk index data and returns the successful indexed data as per
            source's setup.
 
@@ -260,6 +261,8 @@ class ElasticSearchBackend:
             self.storage.indices.open(index_name)
 
         indexed_ids = self._streaming_bulk(
-            index_name, doc_stream, chunk_size=chunk_size)
+            index_name, doc_stream, chunk_size=chunk_size
+        )
         yield from self.mget(
-            index_name, indexed_ids, chunk_size=chunk_size, source=source)
+            index_name, indexed_ids, chunk_size=chunk_size, source=source
+        )

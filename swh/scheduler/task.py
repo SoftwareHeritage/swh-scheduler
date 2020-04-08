@@ -32,46 +32,41 @@ class SWHTask(celery.app.task.Task):
     def statsd(self):
         if self._statsd:
             return self._statsd
-        worker_name = current_app.conf.get('worker_name')
+        worker_name = current_app.conf.get("worker_name")
         if worker_name:
-            self._statsd = Statsd(constant_tags={
-                'task': self.name,
-                'worker': worker_name,
-            })
+            self._statsd = Statsd(
+                constant_tags={"task": self.name, "worker": worker_name,}
+            )
             return self._statsd
         else:
-            statsd = Statsd(constant_tags={
-                'task': self.name,
-                'worker': 'unknown worker',
-            })
+            statsd = Statsd(
+                constant_tags={"task": self.name, "worker": "unknown worker",}
+            )
             return statsd
 
     def __call__(self, *args, **kwargs):
-        self.statsd.increment('swh_task_called_count')
-        self.statsd.gauge('swh_task_start_ts', ts())
-        with self.statsd.timed('swh_task_duration_seconds'):
+        self.statsd.increment("swh_task_called_count")
+        self.statsd.gauge("swh_task_start_ts", ts())
+        with self.statsd.timed("swh_task_duration_seconds"):
             result = super().__call__(*args, **kwargs)
             try:
-                status = result['status']
-                if status == 'success':
-                    status = 'eventful' if result.get('eventful') \
-                        else 'uneventful'
+                status = result["status"]
+                if status == "success":
+                    status = "eventful" if result.get("eventful") else "uneventful"
             except Exception:
-                status = 'eventful' if result else 'uneventful'
+                status = "eventful" if result else "uneventful"
 
-            self.statsd.gauge(
-                'swh_task_end_ts', ts(),
-                tags={'status': status})
+            self.statsd.gauge("swh_task_end_ts", ts(), tags={"status": status})
             return result
 
     def on_failure(self, exc, task_id, args, kwargs, einfo):
-        self.statsd.increment('swh_task_failure_count')
+        self.statsd.increment("swh_task_failure_count")
 
     def on_success(self, retval, task_id, args, kwargs):
-        self.statsd.increment('swh_task_success_count')
+        self.statsd.increment("swh_task_success_count")
         # this is a swh specific event. Used to attach the retval to the
         # task_run
-        self.send_event('task-result', result=retval)
+        self.send_event("task-result", result=retval)
 
     @property
     def log(self):
@@ -80,7 +75,7 @@ class SWHTask(celery.app.task.Task):
         return self._log
 
     def run(self, *args, **kwargs):
-        self.log.debug('%s: args=%s, kwargs=%s', self.name, args, kwargs)
+        self.log.debug("%s: args=%s, kwargs=%s", self.name, args, kwargs)
         ret = super().run(*args, **kwargs)
-        self.log.debug('%s: OK => %s', self.name, ret)
+        self.log.debug("%s: OK => %s", self.name, ret)
         return ret
