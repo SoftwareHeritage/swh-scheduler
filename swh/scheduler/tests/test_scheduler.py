@@ -264,9 +264,9 @@ class TestScheduler:
             assert ret == cur_tasks
 
     def test_search_tasks(self, swh_scheduler):
-        def make_real_dicts(l):
+        def make_real_dicts(lst):
             """RealDictRow is not a real dict."""
-            return [dict(d.items()) for d in l]
+            return [dict(d.items()) for d in lst]
 
         self._create_task_types(swh_scheduler)
         t = utcnow()
