@@ -13,8 +13,7 @@ from swh.scheduler.utils import create_task_dict
 TASK_BATCH_SIZE = 1000  # Number of tasks per query to the scheduler
 
 
-def schedule_origin_batches(
-        scheduler, task_type, origins, origin_batch_size, kwargs):
+def schedule_origin_batches(scheduler, task_type, origins, origin_batch_size, kwargs):
     nb_origins = 0
     nb_tasks = 0
 
@@ -31,7 +30,7 @@ def schedule_origin_batches(
 
             # Create a task for these origins
             args = [origin_batch]
-            task_dict = create_task_dict(task_type, 'oneshot', *args, **kwargs)
+            task_dict = create_task_dict(task_type, "oneshot", *args, **kwargs)
             task_batch.append(task_dict)
 
         # Schedule a batch of tasks
@@ -40,20 +39,20 @@ def schedule_origin_batches(
         nb_tasks += len(task_batch)
         if scheduler:
             scheduler.create_tasks(task_batch)
-        click.echo('Scheduled %d tasks (%d origins).' % (nb_tasks, nb_origins))
+        click.echo("Scheduled %d tasks (%d origins)." % (nb_tasks, nb_origins))
 
     # Print final status.
     if nb_tasks:
-        click.echo('Done.')
+        click.echo("Done.")
     else:
-        click.echo('Nothing to do (no origin metadata matched the criteria).')
+        click.echo("Nothing to do (no origin metadata matched the criteria).")
 
 
 def parse_argument(option):
     try:
         return yaml.safe_load(option)
     except Exception:
-        raise click.ClickException('Invalid argument: {}'.format(option))
+        raise click.ClickException("Invalid argument: {}".format(option))
 
 
 def parse_options(options):
@@ -81,7 +80,7 @@ def parse_options(options):
       ...
     click.exceptions.ClickException: Invalid argument: "foo
     """
-    kw_pairs = [x.split('=', 1) for x in options if '=' in x]
-    args = [parse_argument(x) for x in options if '=' not in x]
+    kw_pairs = [x.split("=", 1) for x in options if "=" in x]
+    args = [parse_argument(x) for x in options if "=" not in x]
     kw = {k: parse_argument(v) for (k, v) in kw_pairs}
     return (args, kw)

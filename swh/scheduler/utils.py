@@ -20,6 +20,7 @@ def get_task(task_name):
 
     """
     from swh.scheduler.celery_backend.config import app
+
     for module in app.conf.CELERY_IMPORTS:
         __import__(module)
     return app.tasks[task_name]
@@ -41,18 +42,18 @@ def create_task_dict(type, policy, *args, **kwargs):
 
     """
     task_extra = {}
-    for extra_key in ['priority', 'retries_left']:
+    for extra_key in ["priority", "retries_left"]:
         if extra_key in kwargs:
             extra_val = kwargs.pop(extra_key)
             task_extra[extra_key] = extra_val
 
     task = {
-        'policy': policy,
-        'type': type,
-        'next_run': datetime.now(tz=timezone.utc),
-        'arguments': {
-            'args': args if args else [],
-            'kwargs': kwargs if kwargs else {},
+        "policy": policy,
+        "type": type,
+        "next_run": datetime.now(tz=timezone.utc),
+        "arguments": {
+            "args": args if args else [],
+            "kwargs": kwargs if kwargs else {},
         },
     }
     task.update(task_extra)
@@ -72,4 +73,4 @@ def create_oneshot_task_dict(type, *args, **kwargs):
         (swh.scheduler.backend.create_tasks)
 
     """
-    return create_task_dict(type, 'oneshot', *args, **kwargs)
+    return create_task_dict(type, "oneshot", *args, **kwargs)

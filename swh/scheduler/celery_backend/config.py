@@ -32,15 +32,15 @@ except ImportError:
     JournalHandler = None  # type: ignore
 
 
-DEFAULT_CONFIG_NAME = 'worker'
-CONFIG_NAME_ENVVAR = 'SWH_WORKER_INSTANCE'
-CONFIG_NAME_TEMPLATE = 'worker/%s'
+DEFAULT_CONFIG_NAME = "worker"
+CONFIG_NAME_ENVVAR = "SWH_WORKER_INSTANCE"
+CONFIG_NAME_TEMPLATE = "worker/%s"
 
 DEFAULT_CONFIG = {
-    'task_broker': ('str', 'amqp://guest@localhost//'),
-    'task_modules': ('list[str]', []),
-    'task_queues': ('list[str]', []),
-    'task_soft_time_limit': ('int', 0),
+    "task_broker": ("str", "amqp://guest@localhost//"),
+    "task_modules": ("list[str]", []),
+    "task_queues": ("list[str]", []),
+    "task_soft_time_limit": ("int", 0),
 }
 
 logger = logging.getLogger(__name__)
@@ -58,6 +58,7 @@ def _print_errors(f):
             traceback.print_exc()
             try:
                 import sentry_sdk
+
                 sentry_sdk.capture_exception(exc)
             except Exception:
                 traceback.print_exc()
@@ -67,8 +68,15 @@ def _print_errors(f):
 
 @setup_logging.connect
 @_print_errors
-def setup_log_handler(loglevel=None, logfile=None, format=None, colorize=None,
-                      log_console=None, log_journal=None, **kwargs):
+def setup_log_handler(
+    loglevel=None,
+    logfile=None,
+    format=None,
+    colorize=None,
+    log_console=None,
+    log_journal=None,
+    **kwargs,
+):
     """Setup logging according to Software Heritage preferences.
 
     We use the command-line loglevel for tasks only, as we never
@@ -81,13 +89,13 @@ def setup_log_handler(loglevel=None, logfile=None, format=None, colorize=None,
 
     formatter = logging.Formatter(format)
 
-    root_logger = logging.getLogger('')
+    root_logger = logging.getLogger("")
     root_logger.setLevel(logging.INFO)
 
-    log_target = os.environ.get('SWH_LOG_TARGET', 'console')
-    if log_target == 'console':
+    log_target = os.environ.get("SWH_LOG_TARGET", "console")
+    if log_target == "console":
         log_console = True
-    elif log_target == 'journal':
+    elif log_target == "journal":
         log_journal = True
 
     # this looks for log levels *higher* than DEBUG
@@ -103,26 +111,33 @@ def setup_log_handler(loglevel=None, logfile=None, format=None, colorize=None,
 
     if log_journal:
         if not JournalHandler:
-            root_logger.warning('JournalHandler is not available, skipping. '
-                                'Please install swh-core[logging].')
+            root_logger.warning(
+                "JournalHandler is not available, skipping. "
+                "Please install swh-core[logging]."
+            )
         else:
             systemd_journal = JournalHandler()
             systemd_journal.setLevel(logging.DEBUG)
             systemd_journal.setFormatter(formatter)
             root_logger.addHandler(systemd_journal)
 
-    logging.getLogger('celery').setLevel(logging.INFO)
-    # Silence amqp heartbeat_tick messages
-    logger = logging.getLogger('amqp')
-    logger.addFilter(lambda record: not record.msg.startswith(
-        'heartbeat_tick'))
-    logger.setLevel(loglevel)
-    # Silence useless "Starting new HTTP connection" messages
-    logging.getLogger('urllib3').setLevel(logging.WARNING)
+    logging.getLogger("celery").setLevel(logging.INFO)
 
-    logging.getLogger('swh').setLevel(loglevel)
+    # Silence amqp heartbeat_tick messages
+    logger = logging.getLogger("amqp")
+    logger.addFilter(lambda record: not record.msg.startswith("heartbeat_tick"))
+    logger.setLevel(loglevel)
+
+    # Silence useless "Starting new HTTP connection" messages
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+    # Completely disable azure logspam
+    azure_logger = logging.getLogger("azure.core.pipeline.policies.http_logging_policy")
+    azure_logger.setLevel(logging.WARNING)
+
+    logging.getLogger("swh").setLevel(loglevel)
     # get_task_logger makes the swh tasks loggers children of celery.task
-    logging.getLogger('celery.task').setLevel(loglevel)
+    logging.getLogger("celery.task").setLevel(loglevel)
     return loglevel
 
 
@@ -138,8 +153,8 @@ def setup_queues_and_tasks(sender, instance, **kwargs):
     for these task classes.
 
     """
-    logger.info('Setup Queues & Tasks for %s', sender)
-    instance.app.conf['worker_name'] = sender
+    logger.info("Setup Queues & Tasks for %s", sender)
+    instance.app.conf["worker_name"] = sender
 
 
 @worker_init.connect
@@ -158,13 +173,13 @@ def on_worker_init(*args, **kwargs):
 @Panel.register
 def monotonic(state):
     """Get the current value for the monotonic clock"""
-    return {'monotonic': _monotonic()}
+    return {"monotonic": _monotonic()}
 
 
 def route_for_task(name, args, kwargs, options, task=None, **kw):
     """Route tasks according to the task_queue attribute in the task class"""
-    if name is not None and name.startswith('swh.'):
-        return {'queue': name}
+    if name is not None and name.startswith("swh."):
+        return {"queue": name}
 
 
 def get_queue_stats(app, queue_name):
@@ -186,22 +201,23 @@ def get_queue_stats(app, queue_name):
     """
 
     conn_info = app.connection().info()
-    if conn_info['transport'] == 'memory':
+    if conn_info["transport"] == "memory":
         # We're running in a test environment, without RabbitMQ.
         return None
-    url = 'http://{hostname}:{port}/api/queues/{vhost}/{queue}'.format(
-        hostname=conn_info['hostname'],
-        port=conn_info['port'] + 10000,
-        vhost=urllib.parse.quote(conn_info['virtual_host'], safe=''),
-        queue=urllib.parse.quote(queue_name, safe=''),
+    url = "http://{hostname}:{port}/api/queues/{vhost}/{queue}".format(
+        hostname=conn_info["hostname"],
+        port=conn_info["port"] + 10000,
+        vhost=urllib.parse.quote(conn_info["virtual_host"], safe=""),
+        queue=urllib.parse.quote(queue_name, safe=""),
     )
-    credentials = (conn_info['userid'], conn_info['password'])
+    credentials = (conn_info["userid"], conn_info["password"])
     r = requests.get(url, auth=credentials)
     if r.status_code == 404:
         return {}
     if r.status_code != 200:
-        raise ValueError('Got error %s when reading queue stats: %s' % (
-            r.status_code, r.json()))
+        raise ValueError(
+            "Got error %s when reading queue stats: %s" % (r.status_code, r.json())
+        )
     return r.json()
 
 
@@ -209,7 +225,7 @@ def get_queue_length(app, queue_name):
     """Shortcut to get a queue's length"""
     stats = get_queue_stats(app, queue_name)
     if stats:
-        return stats.get('messages')
+        return stats.get("messages")
 
 
 def register_task_class(app, name, cls):
@@ -223,7 +239,7 @@ def register_task_class(app, name, cls):
 
 
 INSTANCE_NAME = os.environ.get(CONFIG_NAME_ENVVAR)
-CONFIG_NAME = os.environ.get('SWH_CONFIG_FILENAME')
+CONFIG_NAME = os.environ.get("SWH_CONFIG_FILENAME")
 CONFIG = {}  # type: Dict[str, Any]
 
 if CONFIG_NAME:
@@ -233,7 +249,7 @@ if CONFIG_NAME:
     # celery specific configuration.
     SWH_CONFIG.clear()
     SWH_CONFIG.update(load_named_config(CONFIG_NAME))
-    CONFIG = SWH_CONFIG.get('celery', {})
+    CONFIG = SWH_CONFIG.get("celery", {})
 
 if not CONFIG:
     # otherwise, back to compat config loading mechanism
@@ -245,41 +261,41 @@ if not CONFIG:
     # Load the Celery config
     CONFIG = load_named_config(CONFIG_NAME, DEFAULT_CONFIG)
 
-CONFIG.setdefault('task_modules', [])
+CONFIG.setdefault("task_modules", [])
 # load tasks modules declared as plugin entry points
-for entrypoint in pkg_resources.iter_entry_points('swh.workers'):
+for entrypoint in pkg_resources.iter_entry_points("swh.workers"):
     worker_registrer_fn = entrypoint.load()
     # The registry function is expected to return a dict which the 'tasks' key
     # is a string (or a list of strings) with the name of the python module in
     # which celery tasks are defined.
-    task_modules = worker_registrer_fn().get('task_modules', [])
-    CONFIG['task_modules'].extend(task_modules)
+    task_modules = worker_registrer_fn().get("task_modules", [])
+    CONFIG["task_modules"].extend(task_modules)
 
 # Celery Queues
-CELERY_QUEUES = [Queue('celery', Exchange('celery'), routing_key='celery')]
+CELERY_QUEUES = [Queue("celery", Exchange("celery"), routing_key="celery")]
 
 CELERY_DEFAULT_CONFIG = dict(
     # Timezone configuration: all in UTC
     enable_utc=True,
-    timezone='UTC',
+    timezone="UTC",
     # Imported modules
-    imports=CONFIG.get('task_modules', []),
+    imports=CONFIG.get("task_modules", []),
     # Time (in seconds, or a timedelta object) for when after stored task
     # tombstones will be deleted. None means to never expire results.
     result_expires=None,
     # A string identifying the default serialization method to use. Can
     # be json (default), pickle, yaml, msgpack, or any custom
     # serialization methods that have been registered with
-    task_serializer='msgpack',
+    task_serializer="msgpack",
     # Result serialization format
-    result_serializer='msgpack',
+    result_serializer="msgpack",
     # Late ack means the task messages will be acknowledged after the task has
     # been executed, not just before, which is the default behavior.
     task_acks_late=True,
     # A string identifying the default serialization method to use.
     # Can be pickle (default), json, yaml, msgpack or any custom serialization
     # methods that have been registered with kombu.serialization.registry
-    accept_content=['msgpack', 'json'],
+    accept_content=["msgpack", "json"],
     # If True the task will report its status as “started”
     # when the task is executed by a worker.
     task_track_started=True,
@@ -302,22 +318,22 @@ CELERY_DEFAULT_CONFIG = dict(
     worker_send_task_events=True,
     # Do not send useless task_sent events
     task_send_sent_event=False,
-    )
+)
 
 
 def build_app(config=None):
     config = merge_configs(
-        {k: v for (k, (_, v)) in DEFAULT_CONFIG.items()},
-        config or {})
+        {k: v for (k, (_, v)) in DEFAULT_CONFIG.items()}, config or {}
+    )
 
-    config['task_queues'] = CELERY_QUEUES + [
+    config["task_queues"] = CELERY_QUEUES + [
         Queue(queue, Exchange(queue), routing_key=queue)
-        for queue in config.get('task_queues', ())]
-    logger.debug('Creating a Celery app with %s', config)
+        for queue in config.get("task_queues", ())
+    ]
+    logger.debug("Creating a Celery app with %s", config)
 
     # Instantiate the Celery app
-    app = Celery(broker=config['task_broker'],
-                 task_cls='swh.scheduler.task:SWHTask')
+    app = Celery(broker=config["task_broker"], task_cls="swh.scheduler.task:SWHTask")
     app.add_defaults(CELERY_DEFAULT_CONFIG)
     app.add_defaults(config)
     return app
