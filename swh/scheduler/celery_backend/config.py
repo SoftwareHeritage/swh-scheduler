@@ -122,12 +122,18 @@ def setup_log_handler(
             root_logger.addHandler(systemd_journal)
 
     logging.getLogger("celery").setLevel(logging.INFO)
+
     # Silence amqp heartbeat_tick messages
     logger = logging.getLogger("amqp")
     logger.addFilter(lambda record: not record.msg.startswith("heartbeat_tick"))
     logger.setLevel(loglevel)
+
     # Silence useless "Starting new HTTP connection" messages
     logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+    # Completely disable azure logspam
+    azure_logger = logging.getLogger("azure.core.pipeline.policies.http_logging_policy")
+    azure_logger.setLevel(logging.WARNING)
 
     logging.getLogger("swh").setLevel(loglevel)
     # get_task_logger makes the swh tasks loggers children of celery.task
