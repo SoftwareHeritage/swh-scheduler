@@ -10,12 +10,10 @@ from typing import Any, Dict
 PRIORITY_SLOT = 0.6
 
 DEFAULT_CONFIG = {
-    'scheduler': ('dict', {
-        'cls': 'local',
-        'args': {
-            'db': 'dbname=softwareheritage-scheduler-dev',
-        },
-    })
+    "scheduler": (
+        "dict",
+        {"cls": "local", "args": {"db": "dbname=softwareheritage-scheduler-dev",},},
+    )
 }
 # current configuration. To be set by the config loading mechanism
 CONFIG = {}  # type: Dict[str, Any]
@@ -35,8 +33,7 @@ def compute_nb_tasks_from(num_tasks):
     """
     if not num_tasks:
         return None, None
-    return (int((1 - PRIORITY_SLOT) * num_tasks),
-            int(PRIORITY_SLOT * num_tasks))
+    return (int((1 - PRIORITY_SLOT) * num_tasks), int(PRIORITY_SLOT * num_tasks))
 
 
 def get_scheduler(cls, args={}):
@@ -61,11 +58,11 @@ def get_scheduler(cls, args={}):
 
     """
 
-    if cls == 'remote':
+    if cls == "remote":
         from .api.client import RemoteScheduler as SchedulerBackend
-    elif cls == 'local':
+    elif cls == "local":
         from .backend import SchedulerBackend
     else:
-        raise ValueError('Unknown swh.scheduler class `%s`' % cls)
+        raise ValueError("Unknown swh.scheduler class `%s`" % cls)
 
     return SchedulerBackend(**args)

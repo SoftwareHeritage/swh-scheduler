@@ -31,8 +31,8 @@ psycopg2.extensions.register_adapter(Arrow, adapt_arrow)
 def format_query(query, keys):
     """Format a query with the given keys"""
 
-    query_keys = ', '.join(keys)
-    placeholders = ', '.join(['%s'] * len(keys))
+    query_keys = ", ".join(keys)
+    placeholders = ", ".join(["%s"] * len(keys))
 
     return query.format(keys=query_keys, placeholders=placeholders)
 
@@ -53,7 +53,9 @@ class SchedulerBackend:
             self._db = BaseDb(db)
         else:
             self._pool = psycopg2.pool.ThreadedConnectionPool(
-                min_pool_conns, max_pool_conns, db,
+                min_pool_conns,
+                max_pool_conns,
+                db,
                 cursor_factory=psycopg2.extras.RealDictCursor,
             )
             self._db = None
@@ -68,9 +70,16 @@ class SchedulerBackend:
             db.put_conn()
 
     task_type_keys = [
-        'type', 'description', 'backend_name', 'default_interval',
-        'min_interval', 'max_interval', 'backoff_factor', 'max_queue_length',
-        'num_retries', 'retry_delay',
+        "type",
+        "description",
+        "backend_name",
+        "default_interval",
+        "min_interval",
+        "max_interval",
+        "backoff_factor",
+        "max_queue_length",
+        "num_retries",
+        "retry_delay",
     ]
 
     @db_transaction()
@@ -101,15 +110,15 @@ class SchedulerBackend:
         query = format_query(
             """insert into task_type ({keys}) values ({placeholders})
             on conflict do nothing""",
-            keys)
+            keys,
+        )
         cur.execute(query, [task_type[key] for key in keys])
 
     @db_transaction()
     def get_task_type(self, task_type_name, db=None, cur=None):
         """Retrieve the task type with id task_type_name"""
         query = format_query(
-            "select {keys} from task_type where type=%s",
-            self.task_type_keys,
+            "select {keys} from task_type where type=%s", self.task_type_keys,
         )
         cur.execute(query, (task_type_name,))
         return cur.fetchone()
@@ -117,21 +126,23 @@ class SchedulerBackend:
     @db_transaction()
     def get_task_types(self, db=None, cur=None):
         """Retrieve all registered task types"""
-        query = format_query(
-            "select {keys} from task_type",
-            self.task_type_keys,
-        )
+        query = format_query("select {keys} from task_type", self.task_type_keys,)
         cur.execute(query)
         return cur.fetchall()
 
     task_create_keys = [
-        'type', 'arguments', 'next_run', 'policy', 'status', 'retries_left',
-        'priority'
+        "type",
+        "arguments",
+        "next_run",
+        "policy",
+        "status",
+        "retries_left",
+        "priority",
     ]
-    task_keys = task_create_keys + ['id', 'current_interval']
+    task_keys = task_create_keys + ["id", "current_interval"]
 
     @db_transaction()
-    def create_tasks(self, tasks, policy='recurring', db=None, cur=None):
+    def create_tasks(self, tasks, policy="recurring", db=None, cur=None):
         """Create new tasks.
 
         Args:
@@ -150,23 +161,24 @@ class SchedulerBackend:
             a list of created tasks.
 
         """
-        cur.execute('select swh_scheduler_mktemp_task()')
-        db.copy_to(tasks, 'tmp_task', self.task_create_keys,
-                   default_values={
-                       'policy': policy,
-                       'status': 'next_run_not_scheduled'
-                   },
-                   cur=cur)
+        cur.execute("select swh_scheduler_mktemp_task()")
+        db.copy_to(
+            tasks,
+            "tmp_task",
+            self.task_create_keys,
+            default_values={"policy": policy, "status": "next_run_not_scheduled"},
+            cur=cur,
+        )
         query = format_query(
-            'select {keys} from swh_scheduler_create_tasks_from_temp()',
-            self.task_keys,
+            "select {keys} from swh_scheduler_create_tasks_from_temp()", self.task_keys,
         )
         cur.execute(query)
         return cur.fetchall()
 
     @db_transaction()
-    def set_status_tasks(self, task_ids, status='disabled', next_run=None,
-                         db=None, cur=None):
+    def set_status_tasks(
+        self, task_ids, status="disabled", next_run=None, db=None, cur=None
+    ):
         """Set the tasks' status whose ids are listed.
 
         If given, also set the next_run date.
@@ -176,12 +188,12 @@ class SchedulerBackend:
         query = ["UPDATE task SET status = %s"]
         args = [status]
         if next_run:
-            query.append(', next_run = %s')
+            query.append(", next_run = %s")
             args.append(next_run)
         query.append(" WHERE id IN %s")
         args.append(tuple(task_ids))
 
-        cur.execute(''.join(query), args)
+        cur.execute("".join(query), args)
 
     @db_transaction()
     def disable_tasks(self, task_ids, db=None, cur=None):
@@ -189,56 +201,66 @@ class SchedulerBackend:
         return self.set_status_tasks(task_ids, db=db, cur=cur)
 
     @db_transaction()
-    def search_tasks(self, task_id=None, task_type=None, status=None,
-                     priority=None, policy=None, before=None, after=None,
-                     limit=None, db=None, cur=None):
+    def search_tasks(
+        self,
+        task_id=None,
+        task_type=None,
+        status=None,
+        priority=None,
+        policy=None,
+        before=None,
+        after=None,
+        limit=None,
+        db=None,
+        cur=None,
+    ):
         """Search tasks from selected criterions"""
         where = []
         args = []
 
         if task_id:
             if isinstance(task_id, (str, int)):
-                where.append('id = %s')
+                where.append("id = %s")
             else:
-                where.append('id in %s')
+                where.append("id in %s")
                 task_id = tuple(task_id)
             args.append(task_id)
         if task_type:
             if isinstance(task_type, str):
-                where.append('type = %s')
+                where.append("type = %s")
             else:
-                where.append('type in %s')
+                where.append("type in %s")
                 task_type = tuple(task_type)
             args.append(task_type)
         if status:
             if isinstance(status, str):
-                where.append('status = %s')
+                where.append("status = %s")
             else:
-                where.append('status in %s')
+                where.append("status in %s")
                 status = tuple(status)
             args.append(status)
         if priority:
             if isinstance(priority, str):
-                where.append('priority = %s')
+                where.append("priority = %s")
             else:
                 priority = tuple(priority)
-                where.append('priority in %s')
+                where.append("priority in %s")
             args.append(priority)
         if policy:
-            where.append('policy = %s')
+            where.append("policy = %s")
             args.append(policy)
         if before:
-            where.append('next_run <= %s')
+            where.append("next_run <= %s")
             args.append(before)
         if after:
-            where.append('next_run >= %s')
+            where.append("next_run >= %s")
             args.append(after)
 
-        query = 'select * from task'
+        query = "select * from task"
         if where:
-            query += ' where ' + ' and '.join(where)
+            query += " where " + " and ".join(where)
         if limit:
-            query += ' limit %s :: bigint'
+            query += " limit %s :: bigint"
             args.append(limit)
         cur.execute(query, args)
         return cur.fetchall()
@@ -246,15 +268,20 @@ class SchedulerBackend:
     @db_transaction()
     def get_tasks(self, task_ids, db=None, cur=None):
         """Retrieve the info of tasks whose ids are listed."""
-        query = format_query('select {keys} from task where id in %s',
-                             self.task_keys)
+        query = format_query("select {keys} from task where id in %s", self.task_keys)
         cur.execute(query, (tuple(task_ids),))
         return cur.fetchall()
 
     @db_transaction()
-    def peek_ready_tasks(self, task_type, timestamp=None, num_tasks=None,
-                         num_tasks_priority=None,
-                         db=None, cur=None):
+    def peek_ready_tasks(
+        self,
+        task_type,
+        timestamp=None,
+        num_tasks=None,
+        num_tasks_priority=None,
+        db=None,
+        cur=None,
+    ):
         """Fetch the list of ready tasks
 
         Args:
@@ -273,16 +300,23 @@ class SchedulerBackend:
             timestamp = utcnow()
 
         cur.execute(
-            '''select * from swh_scheduler_peek_ready_tasks(
-                %s, %s, %s :: bigint, %s :: bigint)''',
-            (task_type, timestamp, num_tasks, num_tasks_priority)
+            """select * from swh_scheduler_peek_ready_tasks(
+                %s, %s, %s :: bigint, %s :: bigint)""",
+            (task_type, timestamp, num_tasks, num_tasks_priority),
         )
-        logger.debug('PEEK %s => %s' % (task_type, cur.rowcount))
+        logger.debug("PEEK %s => %s" % (task_type, cur.rowcount))
         return cur.fetchall()
 
     @db_transaction()
-    def grab_ready_tasks(self, task_type, timestamp=None, num_tasks=None,
-                         num_tasks_priority=None, db=None, cur=None):
+    def grab_ready_tasks(
+        self,
+        task_type,
+        timestamp=None,
+        num_tasks=None,
+        num_tasks_priority=None,
+        db=None,
+        cur=None,
+    ):
         """Fetch the list of ready tasks, and mark them as scheduled
 
         Args:
@@ -300,18 +334,19 @@ class SchedulerBackend:
         if timestamp is None:
             timestamp = utcnow()
         cur.execute(
-            '''select * from swh_scheduler_grab_ready_tasks(
-                 %s, %s, %s :: bigint, %s :: bigint)''',
-            (task_type, timestamp, num_tasks, num_tasks_priority)
+            """select * from swh_scheduler_grab_ready_tasks(
+                 %s, %s, %s :: bigint, %s :: bigint)""",
+            (task_type, timestamp, num_tasks, num_tasks_priority),
         )
-        logger.debug('GRAB %s => %s' % (task_type, cur.rowcount))
+        logger.debug("GRAB %s => %s" % (task_type, cur.rowcount))
         return cur.fetchall()
 
-    task_run_create_keys = ['task', 'backend_id', 'scheduled', 'metadata']
+    task_run_create_keys = ["task", "backend_id", "scheduled", "metadata"]
 
     @db_transaction()
-    def schedule_task_run(self, task_id, backend_id, metadata=None,
-                          timestamp=None, db=None, cur=None):
+    def schedule_task_run(
+        self, task_id, backend_id, metadata=None, timestamp=None, db=None, cur=None
+    ):
         """Mark a given task as scheduled, adding a task_run entry in the database.
 
         Args:
@@ -332,8 +367,8 @@ class SchedulerBackend:
             timestamp = utcnow()
 
         cur.execute(
-            'select * from swh_scheduler_schedule_task_run(%s, %s, %s, %s)',
-            (task_id, backend_id, metadata, timestamp)
+            "select * from swh_scheduler_schedule_task_run(%s, %s, %s, %s)",
+            (task_id, backend_id, metadata, timestamp),
         )
 
         return cur.fetchone()
@@ -353,14 +388,14 @@ class SchedulerBackend:
         Returns:
             None
         """
-        cur.execute('select swh_scheduler_mktemp_task_run()')
-        db.copy_to(task_runs, 'tmp_task_run', self.task_run_create_keys,
-                   cur=cur)
-        cur.execute('select swh_scheduler_schedule_task_run_from_temp()')
+        cur.execute("select swh_scheduler_mktemp_task_run()")
+        db.copy_to(task_runs, "tmp_task_run", self.task_run_create_keys, cur=cur)
+        cur.execute("select swh_scheduler_schedule_task_run_from_temp()")
 
     @db_transaction()
-    def start_task_run(self, backend_id, metadata=None, timestamp=None,
-                       db=None, cur=None):
+    def start_task_run(
+        self, backend_id, metadata=None, timestamp=None, db=None, cur=None
+    ):
         """Mark a given task as started, updating the corresponding task_run
            entry in the database.
 
@@ -381,15 +416,23 @@ class SchedulerBackend:
             timestamp = utcnow()
 
         cur.execute(
-            'select * from swh_scheduler_start_task_run(%s, %s, %s)',
-            (backend_id, metadata, timestamp)
+            "select * from swh_scheduler_start_task_run(%s, %s, %s)",
+            (backend_id, metadata, timestamp),
         )
 
         return cur.fetchone()
 
     @db_transaction()
-    def end_task_run(self, backend_id, status, metadata=None, timestamp=None,
-                     result=None, db=None, cur=None):
+    def end_task_run(
+        self,
+        backend_id,
+        status,
+        metadata=None,
+        timestamp=None,
+        result=None,
+        db=None,
+        cur=None,
+    ):
         """Mark a given task as ended, updating the corresponding task_run entry in the
         database.
 
@@ -412,16 +455,21 @@ class SchedulerBackend:
             timestamp = utcnow()
 
         cur.execute(
-            'select * from swh_scheduler_end_task_run(%s, %s, %s, %s)',
-            (backend_id, status, metadata, timestamp)
+            "select * from swh_scheduler_end_task_run(%s, %s, %s, %s)",
+            (backend_id, status, metadata, timestamp),
         )
         return cur.fetchone()
 
     @db_transaction()
     def filter_task_to_archive(
-            self, after_ts: str, before_ts: str,
-            limit: int = 10, page_token: Optional[str] = None,
-            db=None, cur=None) -> Dict[str, Any]:
+        self,
+        after_ts: str,
+        before_ts: str,
+        limit: int = 10,
+        page_token: Optional[str] = None,
+        db=None,
+        cur=None,
+    ) -> Dict[str, Any]:
         """Compute the tasks to archive within the datetime interval
         [after_ts, before_ts[. The method returns a paginated result.
 
@@ -444,28 +492,26 @@ class SchedulerBackend:
         tasks = []
         cur.execute(
             "select * from swh_scheduler_task_to_archive(%s, %s, %s, %s)",
-            (after_ts, before_ts, last_id, limit + 1)
+            (after_ts, before_ts, last_id, limit + 1),
         )
         for row in cur:
             task = dict(row)
             # nested type index does not accept bare values
             # transform it as a dict to comply with this
-            task['arguments']['args'] = {
-                i: v for i, v in enumerate(task['arguments']['args'])
+            task["arguments"]["args"] = {
+                i: v for i, v in enumerate(task["arguments"]["args"])
             }
-            kwargs = task['arguments']['kwargs']
-            task['arguments']['kwargs'] = json.dumps(kwargs)
+            kwargs = task["arguments"]["kwargs"]
+            task["arguments"]["kwargs"] = json.dumps(kwargs)
             tasks.append(task)
 
         if len(tasks) >= limit + 1:  # remains data, add pagination information
             result = {
-                'tasks': tasks[:limit],
-                'next_page_token': str(tasks[-1]['task_id']),
+                "tasks": tasks[:limit],
+                "next_page_token": str(tasks[-1]["task_id"]),
             }
         else:
-            result = {
-                'tasks': tasks
-            }
+            result = {"tasks": tasks}
 
         return result
 
@@ -477,15 +523,24 @@ class SchedulerBackend:
         """
         _task_ids = _task_run_ids = []
         for task_id in task_ids:
-            _task_ids.append(task_id['task_id'])
-            _task_run_ids.append(task_id['task_run_id'])
+            _task_ids.append(task_id["task_id"])
+            _task_run_ids.append(task_id["task_run_id"])
 
         cur.execute(
             "select * from swh_scheduler_delete_archived_tasks(%s, %s)",
-            (_task_ids, _task_run_ids))
+            (_task_ids, _task_run_ids),
+        )
 
-    task_run_keys = ['id', 'task', 'backend_id', 'scheduled',
-                     'started', 'ended', 'metadata', 'status', ]
+    task_run_keys = [
+        "id",
+        "task",
+        "backend_id",
+        "scheduled",
+        "started",
+        "ended",
+        "metadata",
+        "status",
+    ]
 
     @db_transaction()
     def get_task_runs(self, task_ids, limit=None, db=None, cur=None):
@@ -495,22 +550,22 @@ class SchedulerBackend:
 
         if task_ids:
             if isinstance(task_ids, (str, int)):
-                where.append('task = %s')
+                where.append("task = %s")
             else:
-                where.append('task in %s')
+                where.append("task in %s")
                 task_ids = tuple(task_ids)
             args.append(task_ids)
         else:
             return ()
 
-        query = 'select * from task_run where ' + ' and '.join(where)
+        query = "select * from task_run where " + " and ".join(where)
         if limit:
-            query += ' limit %s :: bigint'
+            query += " limit %s :: bigint"
             args.append(limit)
         cur.execute(query, args)
         return cur.fetchall()
 
     @db_transaction()
     def get_priority_ratios(self, db=None, cur=None):
-        cur.execute('select id, ratio from priority_ratio')
-        return {row['id']: row['ratio'] for row in cur.fetchall()}
+        cur.execute("select id, ratio from priority_ratio")
+        return {row["id"]: row["ratio"] for row in cur.fetchall()}

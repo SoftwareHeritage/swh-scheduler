@@ -1,8 +1,12 @@
-swh-scheduler (0.0.72-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-scheduler (0.1.0-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 0.1.0     - (tagged by Nicolas Dandrimont
+    <nicolas@dandrimont.eu> on 2020-05-19 11:48:34 +0200)
+  * Upstream changes:     - Release swh.scheduler v0.1.0     - Blacken
+    source code     - Disable azure http logspam     - Only schedule
+    tasks when the buffer is somewhat empty
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 23 Mar 2020 12:14:05 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 19 May 2020 09:52:31 +0000
 
 swh-scheduler (0.0.72-1~swh1) unstable-swh; urgency=medium
 
