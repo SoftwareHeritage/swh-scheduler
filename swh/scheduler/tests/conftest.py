@@ -16,57 +16,58 @@ from swh.scheduler.tests import SQL_DIR
 
 
 # make sure we are not fooled by CELERY_ config environment vars
-for var in [x for x in os.environ.keys() if x.startswith('CELERY')]:
+for var in [x for x in os.environ.keys() if x.startswith("CELERY")]:
     os.environ.pop(var)
 
 
 # test_cli tests depends on a en/C locale, so ensure it
-os.environ['LC_ALL'] = 'C.UTF-8'
+os.environ["LC_ALL"] = "C.UTF-8"
 
-DUMP_FILES = os.path.join(SQL_DIR, '*.sql')
+DUMP_FILES = os.path.join(SQL_DIR, "*.sql")
 
 # celery tasks for testing purpose; tasks themselves should be
 # in swh/scheduler/tests/tasks.py
-TASK_NAMES = ['ping', 'multiping', 'add', 'error', 'echo']
+TASK_NAMES = ["ping", "multiping", "add", "error", "echo"]
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def celery_enable_logging():
     return True
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def celery_includes():
     task_modules = [
-        'swh.scheduler.tests.tasks',
+        "swh.scheduler.tests.tasks",
     ]
-    for entrypoint in pkg_resources.iter_entry_points('swh.workers'):
-        task_modules.extend(entrypoint.load()().get('task_modules', []))
+    for entrypoint in pkg_resources.iter_entry_points("swh.workers"):
+        task_modules.extend(entrypoint.load()().get("task_modules", []))
     return task_modules
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def celery_parameters():
     return {
-        'task_cls': 'swh.scheduler.task:SWHTask',
-        }
+        "task_cls": "swh.scheduler.task:SWHTask",
+    }
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def celery_config():
     return {
-        'accept_content': ['application/x-msgpack', 'application/json'],
-        'task_serializer': 'msgpack',
-        'result_serializer': 'json',
-        }
+        "accept_content": ["application/x-msgpack", "application/json"],
+        "task_serializer": "msgpack",
+        "result_serializer": "json",
+    }
 
 
 # use the celery_session_app fixture to monkeypatch the 'main'
 # swh.scheduler.celery_backend.config.app Celery application
 # with the test application
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def swh_app(celery_session_app):
     from swh.scheduler.celery_backend import config
+
     config.app = celery_session_app
     yield celery_session_app
 
@@ -74,7 +75,7 @@ def swh_app(celery_session_app):
 @pytest.fixture
 def swh_scheduler_config(request, postgresql):
     scheduler_config = {
-        'db': postgresql.dsn,
+        "db": postgresql.dsn,
     }
 
     all_dump_files = sorted(glob.glob(DUMP_FILES), key=sortkey)
@@ -90,16 +91,18 @@ def swh_scheduler_config(request, postgresql):
 
 @pytest.fixture
 def swh_scheduler(swh_scheduler_config):
-    scheduler = get_scheduler('local', swh_scheduler_config)
+    scheduler = get_scheduler("local", swh_scheduler_config)
     for taskname in TASK_NAMES:
-        scheduler.create_task_type({
-            'type': 'swh-test-{}'.format(taskname),
-            'description': 'The {} testing task'.format(taskname),
-            'backend_name': 'swh.scheduler.tests.tasks.{}'.format(taskname),
-            'default_interval': timedelta(days=1),
-            'min_interval': timedelta(hours=6),
-            'max_interval': timedelta(days=12),
-        })
+        scheduler.create_task_type(
+            {
+                "type": "swh-test-{}".format(taskname),
+                "description": "The {} testing task".format(taskname),
+                "backend_name": "swh.scheduler.tests.tasks.{}".format(taskname),
+                "default_interval": timedelta(days=1),
+                "min_interval": timedelta(hours=6),
+                "max_interval": timedelta(days=12),
+            }
+        )
 
     return scheduler
 
