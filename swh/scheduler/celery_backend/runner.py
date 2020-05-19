@@ -47,6 +47,8 @@ def run_ready_tasks(backend, app):
             task_type_name = task_type["type"]
             task_types[task_type_name] = task_type
             max_queue_length = task_type["max_queue_length"]
+            if max_queue_length is None:
+                max_queue_length = 0
             backend_name = task_type["backend_name"]
             if max_queue_length:
                 try:
@@ -61,7 +63,9 @@ def run_ready_tasks(backend, app):
                     num_tasks = min(max_queue_length - queue_length, MAX_NUM_TASKS)
             else:
                 num_tasks = MAX_NUM_TASKS
-            if num_tasks > 0:
+            # only pull tasks if the buffer is at least 1/5th empty (= 80%
+            # full), to help postgresql use properly indexed queries.
+            if num_tasks > min(MAX_NUM_TASKS, max_queue_length) // 5:
                 num_tasks, num_tasks_priority = compute_nb_tasks_from(num_tasks)
 
                 grabbed_tasks = backend.grab_ready_tasks(
