@@ -75,7 +75,7 @@ def setup_log_handler(
     colorize=None,
     log_console=None,
     log_journal=None,
-    **kwargs
+    **kwargs,
 ):
     """Setup logging according to Software Heritage preferences.
 
