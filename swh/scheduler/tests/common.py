@@ -89,7 +89,7 @@ def tasks_from_template(template, max_timestamp, num, num_priority=0, priorities
                 max_timestamp - datetime.timedelta(microseconds=i),
                 priority,
                 "argument-%03d" % i,
-                **{"kwarg%03d" % i: "bogus-kwarg"}
+                **{"kwarg%03d" % i: "bogus-kwarg"},
             )
         )
     return tasks
