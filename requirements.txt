@@ -4,6 +4,8 @@
 
 arrow
 celery >= 4
+# Not a direct dependency: missing from celery 4.4.4
+future >= 0.18.0
 Click
 elasticsearch > 5.4
 flask
