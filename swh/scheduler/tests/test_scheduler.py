@@ -13,8 +13,6 @@ from typing import Any, Dict
 
 from arrow import utcnow
 
-import pytest
-
 from .common import tasks_from_template, TEMPLATES, TASK_TYPES
 
 
@@ -24,7 +22,6 @@ def subdict(d, keys=None, excl=()):
     return {k: d[k] for k in keys if k not in excl}
 
 
-@pytest.mark.db
 class TestScheduler:
     def test_get_priority_ratios(self, swh_scheduler):
         assert swh_scheduler.get_priority_ratios() == {
