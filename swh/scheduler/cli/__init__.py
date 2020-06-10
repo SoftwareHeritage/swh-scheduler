@@ -37,6 +37,13 @@ def cli(ctx, config_file, database, url, no_stdout):
     Use a local scheduler instance by default (plugged to the
     main scheduler db).
     """
+    try:
+        from psycopg2 import OperationalError
+    except ImportError:
+
+        class OperationalError(Exception):
+            pass
+
     from swh.core import config
     from swh.scheduler.celery_backend.config import setup_log_handler
     from swh.scheduler import get_scheduler, DEFAULT_CONFIG
@@ -67,7 +74,7 @@ def cli(ctx, config_file, database, url, no_stdout):
     try:
         logger.debug("Instantiating scheduler with %s" % (sched_conf))
         scheduler = get_scheduler(**sched_conf)
-    except ValueError:
+    except (ValueError, OperationalError):
         # it's the subcommand to decide whether not having a proper
         # scheduler instance is a problem.
         pass
