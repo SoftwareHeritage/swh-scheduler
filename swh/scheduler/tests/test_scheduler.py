@@ -9,9 +9,12 @@ import random
 import uuid
 
 from collections import defaultdict
+import inspect
 from typing import Any, Dict
 
 from arrow import utcnow
+
+from swh.scheduler.interface import SchedulerInterface
 
 from .common import tasks_from_template, TEMPLATES, TASK_TYPES
 
@@ -23,6 +26,36 @@ def subdict(d, keys=None, excl=()):
 
 
 class TestScheduler:
+    def test_interface(self, swh_scheduler):
+        """Checks all methods of SchedulerInterface are implemented by this
+        backend, and that they have the same signature."""
+        # Create an instance of the protocol (which cannot be instantiated
+        # directly, so this creates a subclass, then instantiates it)
+        interface = type("_", (SchedulerInterface,), {})()
+
+        assert "create_task_type" in dir(interface)
+
+        missing_methods = []
+
+        for meth_name in dir(interface):
+            if meth_name.startswith("_"):
+                continue
+            interface_meth = getattr(interface, meth_name)
+            try:
+                concrete_meth = getattr(swh_scheduler, meth_name)
+            except AttributeError:
+                if not getattr(interface_meth, "deprecated_endpoint", False):
+                    # The backend is missing a (non-deprecated) endpoint
+                    missing_methods.append(meth_name)
+                continue
+
+            expected_signature = inspect.signature(interface_meth)
+            actual_signature = inspect.signature(concrete_meth)
+
+            assert expected_signature == actual_signature, meth_name
+
+        assert missing_methods == []
+
     def test_get_priority_ratios(self, swh_scheduler):
         assert swh_scheduler.get_priority_ratios() == {
             "high": 0.5,
