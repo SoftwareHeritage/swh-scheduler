@@ -45,7 +45,6 @@ setup(
     author_email="swh-devel@inria.fr",
     url="https://forge.softwareheritage.org/diffusion/DSCH/",
     packages=find_packages(),
-    scripts=["bin/swh-worker-control"],
     setup_requires=["setuptools-scm"],
     use_scm_version=True,
     install_requires=parse_requirements() + parse_requirements("swh"),

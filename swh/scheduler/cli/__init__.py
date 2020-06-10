@@ -74,7 +74,7 @@ def cli(ctx, config_file, database, url, no_stdout):
     ctx.obj["config"] = conf
 
 
-from . import admin, task, task_type  # noqa
+from . import admin, celery_monitor, task, task_type  # noqa
 
 
 def main():
