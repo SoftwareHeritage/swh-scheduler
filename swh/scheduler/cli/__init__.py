@@ -45,18 +45,9 @@ def cli(ctx, config_file, database, url, no_stdout):
             pass
 
     from swh.core import config
-    from swh.scheduler.celery_backend.config import setup_log_handler
     from swh.scheduler import get_scheduler, DEFAULT_CONFIG
 
     ctx.ensure_object(dict)
-    log_level = ctx.obj.get("log_level", logging.INFO)
-
-    setup_log_handler(
-        loglevel=log_level,
-        colorize=False,
-        format="[%(levelname)s] %(name)s -- %(message)s",
-        log_console=not no_stdout,
-    )
 
     logger = logging.getLogger(__name__)
     scheduler = None
