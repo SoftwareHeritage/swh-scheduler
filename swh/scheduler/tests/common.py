@@ -93,3 +93,12 @@ def tasks_from_template(template, max_timestamp, num, num_priority=0, priorities
             )
         )
     return tasks
+
+
+LISTERS = (
+    {"name": "github"},
+    {"name": "gitlab", "instance_name": "gitlab"},
+    {"name": "gitlab", "instance_name": "freedesktop"},
+    {"name": "npm"},
+    {"name": "pypi"},
+)

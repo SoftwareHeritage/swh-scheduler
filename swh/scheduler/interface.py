@@ -7,6 +7,8 @@ from typing import Any, Dict, Optional
 
 from swh.core.api import remote_api_endpoint
 
+from swh.scheduler.model import Lister
+
 
 class SchedulerInterface:
     @remote_api_endpoint("task_type/create")
@@ -247,6 +249,28 @@ class SchedulerInterface:
     @remote_api_endpoint("task_run/get")
     def get_task_runs(self, task_ids, limit=None):
         """Search task run for a task id"""
+        ...
+
+    @remote_api_endpoint("lister/get_or_create")
+    def get_or_create_lister(
+        self, name: str, instance_name: Optional[str] = None
+    ) -> Lister:
+        """Retrieve information about the given instance of the lister from the
+        database, or create the entry if it did not exist.
+        """
+        ...
+
+    @remote_api_endpoint("lister/update")
+    def update_lister(self, lister: Lister) -> Lister:
+        """Update the state for the given lister instance in the database.
+
+        Returns:
+            a new Lister object, with all fields updated from the database
+
+        Raises:
+            StaleData if the `updated` timestamp for the lister instance in
+        database doesn't match the one passed by the user.
+        """
         ...
 
     @remote_api_endpoint("priority_ratios/get")

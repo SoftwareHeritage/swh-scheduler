@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2019  The Software Heritage developers
+# Copyright (C) 2015-2020  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -7,6 +7,7 @@ import json
 import logging
 
 from arrow import Arrow, utcnow
+import attr
 import psycopg2.pool
 import psycopg2.extras
 
@@ -16,6 +17,8 @@ from psycopg2.extensions import AsIs
 from swh.core.db import BaseDb
 from swh.core.db.common import db_transaction
 
+from .exc import StaleData
+from .model import Lister
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +29,7 @@ def adapt_arrow(arrow):
 
 psycopg2.extensions.register_adapter(dict, psycopg2.extras.Json)
 psycopg2.extensions.register_adapter(Arrow, adapt_arrow)
+psycopg2.extras.register_uuid()
 
 
 def format_query(query, keys):
@@ -129,6 +133,69 @@ class SchedulerBackend:
         query = format_query("select {keys} from task_type", self.task_type_keys,)
         cur.execute(query)
         return cur.fetchall()
+
+    @db_transaction()
+    def get_or_create_lister(
+        self, name: str, instance_name: Optional[str] = None, db=None, cur=None
+    ) -> Lister:
+        """Retrieve information about the given instance of the lister from the
+        database, or create the entry if it did not exist.
+        """
+
+        if instance_name is None:
+            instance_name = ""
+
+        select_cols = ", ".join(Lister.select_columns())
+        insert_cols, insert_meta = (
+            ", ".join(tup) for tup in Lister.insert_columns_and_metavars()
+        )
+
+        query = f"""
+            with added as (
+              insert into listers ({insert_cols}) values ({insert_meta})
+                on conflict do nothing
+                returning {select_cols}
+            )
+            select {select_cols} from added
+          union all
+            select {select_cols} from listers
+              where (name, instance_name) = (%(name)s, %(instance_name)s);
+        """
+
+        cur.execute(query, attr.asdict(Lister(name=name, instance_name=instance_name)))
+
+        return Lister(**cur.fetchone())
+
+    @db_transaction()
+    def update_lister(self, lister: Lister, db=None, cur=None) -> Lister:
+        """Update the state for the given lister instance in the database.
+
+        Returns:
+            a new Lister object, with all fields updated from the database
+
+        Raises:
+            StaleData if the `updated` timestamp for the lister instance in
+        database doesn't match the one passed by the user.
+        """
+
+        select_cols = ", ".join(Lister.select_columns())
+        set_vars = ", ".join(
+            f"{col} = {meta}"
+            for col, meta in zip(*Lister.insert_columns_and_metavars())
+        )
+
+        query = f"""update listers
+                      set {set_vars}
+                      where id=%(id)s and updated=%(updated)s
+                      returning {select_cols}"""
+
+        cur.execute(query, attr.asdict(lister))
+        updated = cur.fetchone()
+
+        if not updated:
+            raise StaleData("Stale data; Lister state not updated")
+
+        return Lister(**updated)
 
     task_create_keys = [
         "type",

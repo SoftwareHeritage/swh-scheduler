@@ -3,10 +3,13 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-from typing import List, Optional, Tuple
+import datetime
+from uuid import UUID
+from typing import Any, Dict, List, Optional, Tuple
 
 import attr
 import attr.converters
+from attrs_strict import type_validator
 
 
 @attr.s
@@ -55,3 +58,33 @@ class BaseSchedulerModel:
             cls._insert_cols_and_metavars = cols, metavars
 
         return cls._insert_cols_and_metavars
+
+
+@attr.s
+class Lister(BaseSchedulerModel):
+    name = attr.ib(type=str, validator=[type_validator()])
+    instance_name = attr.ib(type=str, validator=[type_validator()], factory=str)
+
+    # Populated by database
+    id = attr.ib(
+        type=Optional[UUID],
+        validator=type_validator(),
+        default=None,
+        metadata={"primary_key": True},
+    )
+
+    current_state = attr.ib(
+        type=Dict[str, Any], validator=[type_validator()], factory=dict
+    )
+    created = attr.ib(
+        type=Optional[datetime.datetime],
+        validator=[type_validator()],
+        default=None,
+        metadata={"auto_now_add": True},
+    )
+    updated = attr.ib(
+        type=Optional[datetime.datetime],
+        validator=[type_validator()],
+        default=None,
+        metadata={"auto_now": True},
+    )

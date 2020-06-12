@@ -110,3 +110,19 @@ comment on column task_run.task is 'References task table';
 comment on column task_run.scheduled is 'Scheduled run time for task';
 comment on column task_run.started is 'Task starting time';
 comment on column task_run.ended is 'Task ending time';
+
+create table if not exists listers (
+  id uuid primary key default uuid_generate_v4(),
+  name text not null,
+  instance_name text not null,
+  created timestamptz not null default now(),  -- auto_now_add in the model
+  current_state jsonb not null,
+  updated timestamptz not null
+);
+
+comment on table listers is 'Lister instances known to the origin visit scheduler';
+comment on column listers.name is 'Name of the lister (e.g. github, gitlab, debian, ...)';
+comment on column listers.instance_name is 'Name of the current instance of this lister (e.g. framagit, bitbucket, ...)';
+comment on column listers.created is 'Timestamp at which the lister was originally created';
+comment on column listers.current_state is 'Known current state of this lister';
+comment on column listers.updated is 'Timestamp at which the lister state was last updated';

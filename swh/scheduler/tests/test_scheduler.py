@@ -13,10 +13,13 @@ import inspect
 from typing import Any, Dict
 
 from arrow import utcnow
+import attr
+import pytest
 
+from swh.scheduler.exc import StaleData
 from swh.scheduler.interface import SchedulerInterface
 
-from .common import tasks_from_template, TEMPLATES, TASK_TYPES
+from .common import tasks_from_template, TEMPLATES, TASK_TYPES, LISTERS
 
 
 def subdict(d, keys=None, excl=()):
@@ -611,6 +614,40 @@ class TestScheduler:
             "metadata": {"something": "stupid", "other": "stuff"},
             "status": "eventful",
         }
+
+    def test_get_or_create_lister(self, swh_scheduler):
+        db_listers = []
+        for lister_args in LISTERS:
+            db_listers.append(swh_scheduler.get_or_create_lister(**lister_args))
+
+        for lister, lister_args in zip(db_listers, LISTERS):
+            assert lister.name == lister_args["name"]
+            assert lister.instance_name == lister_args.get("instance_name", "")
+
+            lister_get_again = swh_scheduler.get_or_create_lister(
+                lister.name, lister.instance_name
+            )
+
+            assert lister == lister_get_again
+
+    def test_update_lister(self, swh_scheduler):
+        lister = swh_scheduler.get_or_create_lister(**LISTERS[0])
+
+        lister.current_state = {"updated": "now"}
+
+        updated_lister = swh_scheduler.update_lister(lister)
+
+        assert updated_lister.updated > lister.updated
+        assert updated_lister == attr.evolve(lister, updated=updated_lister.updated)
+
+    def test_update_lister_stale(self, swh_scheduler):
+        lister = swh_scheduler.get_or_create_lister(**LISTERS[0])
+
+        swh_scheduler.update_lister(lister)
+
+        with pytest.raises(StaleData) as exc:
+            swh_scheduler.update_lister(lister)
+        assert "state not updated" in exc.value.args[0]
 
     def _create_task_types(self, scheduler):
         for tt in TASK_TYPES.values():

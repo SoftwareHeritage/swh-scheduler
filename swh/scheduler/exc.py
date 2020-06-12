@@ -5,8 +5,13 @@
 
 __all__ = [
     "SchedulerException",
+    "StaleData",
 ]
 
 
 class SchedulerException(Exception):
+    pass
+
+
+class StaleData(SchedulerException):
     pass
