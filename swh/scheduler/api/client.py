@@ -6,6 +6,7 @@
 
 from swh.core.api import RPCClient
 
+from .serializers import ENCODERS, DECODERS
 from ..interface import SchedulerInterface
 
 
@@ -15,3 +16,6 @@ class RemoteScheduler(RPCClient):
     """
 
     backend_class = SchedulerInterface
+
+    extra_type_decoders = DECODERS
+    extra_type_encoders = ENCODERS

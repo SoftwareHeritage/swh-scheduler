@@ -3,6 +3,7 @@
 # dependency lines, see https://pip.readthedocs.org/en/1.1/requirements.html
 
 arrow
+attrs
 celery >= 4
 # Not a direct dependency: missing from celery 4.4.4
 future >= 0.18.0

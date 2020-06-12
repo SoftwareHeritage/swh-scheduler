@@ -13,6 +13,7 @@ from swh.core.api import error_handler, negotiate
 
 from swh.scheduler import get_scheduler
 from swh.scheduler.interface import SchedulerInterface
+from .serializers import ENCODERS, DECODERS
 
 
 scheduler = None
@@ -26,7 +27,8 @@ def get_global_scheduler():
 
 
 class SchedulerServerApp(RPCServerApp):
-    pass
+    extra_type_decoders = DECODERS
+    extra_type_encoders = ENCODERS
 
 
 app = SchedulerServerApp(
