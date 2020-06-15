@@ -7,6 +7,7 @@
 from swh.core.api import RPCClient
 
 from .serializers import ENCODERS, DECODERS
+from .. import exc
 from ..interface import SchedulerInterface
 
 
@@ -16,6 +17,8 @@ class RemoteScheduler(RPCClient):
     """
 
     backend_class = SchedulerInterface
+
+    reraise_exceptions = [getattr(exc, a) for a in exc.__all__]
 
     extra_type_decoders = DECODERS
     extra_type_encoders = ENCODERS

@@ -12,6 +12,7 @@ from swh.core.api import encode_data_server as encode_data
 from swh.core.api import error_handler, negotiate
 
 from swh.scheduler import get_scheduler
+from swh.scheduler.exc import SchedulerException
 from swh.scheduler.interface import SchedulerInterface
 from .serializers import ENCODERS, DECODERS
 
@@ -34,6 +35,11 @@ class SchedulerServerApp(RPCServerApp):
 app = SchedulerServerApp(
     __name__, backend_class=SchedulerInterface, backend_factory=get_global_scheduler
 )
+
+
+@app.errorhandler(SchedulerException)
+def argument_error_handler(exception):
+    return error_handler(exception, encode_data, status_code=400)
 
 
 @app.errorhandler(Exception)
