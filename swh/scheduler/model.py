@@ -14,8 +14,46 @@ from attrs_strict import type_validator
 
 @attr.s
 class BaseSchedulerModel:
+    """Base class for database-backed objects.
+
+    These database-backed objects are defined through attrs-based attributes
+    that match the columns of the database 1:1. This is a (very) lightweight
+    ORM.
+
+    These attrs-based attributes have metadata specific to the functionality
+    expected from these fields in the database:
+
+     - `primary_key`: the column is a primary key; it should be filtered out
+       when doing an `update` of the object
+     - `auto_primary_key`: the column is a primary key, which is automatically handled
+       by the database. It will not be inserted to. This must be matched with a
+       database-side default value.
+     - `auto_now_add`: the column is a timestamp that is set to the current time when
+       the object is inserted, and never updated afterwards. This must be matched with
+       a database-side default value.
+     - `auto_now`: the column is a timestamp that is set to the current time when
+       the object is inserted or updated.
+
+    """
+
+    _pk_cols: Optional[Tuple[str, ...]] = None
     _select_cols: Optional[Tuple[str, ...]] = None
     _insert_cols_and_metavars: Optional[Tuple[Tuple[str, ...], Tuple[str, ...]]] = None
+
+    @classmethod
+    def primary_key_columns(cls) -> Tuple[str, ...]:
+        """Get the primary key columns for this object type"""
+        if cls._pk_cols is None:
+            columns: List[str] = []
+            for field in attr.fields(cls):
+                if any(
+                    field.metadata.get(flag)
+                    for flag in ("auto_primary_key", "primary_key")
+                ):
+                    columns.append(field.name)
+            cls._pk_cols = tuple(sorted(columns))
+
+        return cls._pk_cols
 
     @classmethod
     def select_columns(cls) -> Tuple[str, ...]:
@@ -33,18 +71,15 @@ class BaseSchedulerModel:
         """Get the database columns and metavars needed for an `insert` or `update` on
            this object type.
 
-        This supports the following attributes as booleans in the field's metadata:
-          - primary_key: handled by the database; never inserted or updated
-          - auto_now_add: handled by the database; set to now() on insertion, never
-            updated
-          - auto_now: handled by the client; set to now() on every insertion and update
+        This implements support for the `auto_*` field metadata attributes.
         """
         if cls._insert_cols_and_metavars is None:
             zipped_cols_and_metavars: List[Tuple[str, str]] = []
 
             for field in attr.fields(cls):
                 if any(
-                    field.metadata.get(flag) for flag in ("auto_now_add", "primary_key")
+                    field.metadata.get(flag)
+                    for flag in ("auto_now_add", "auto_primary_key")
                 ):
                     continue
                 elif field.metadata.get("auto_now"):
@@ -70,7 +105,7 @@ class Lister(BaseSchedulerModel):
         type=Optional[UUID],
         validator=type_validator(),
         default=None,
-        metadata={"primary_key": True},
+        metadata={"auto_primary_key": True},
     )
 
     current_state = attr.ib(

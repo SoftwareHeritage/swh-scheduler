@@ -71,7 +71,24 @@ def test_insert_columns_auto_now():
 def test_insert_columns_primary_key():
     @attr.s
     class TestModel(model.BaseSchedulerModel):
-        id = attr.ib(type=str, metadata={"primary_key": True})
+        id = attr.ib(type=str, metadata={"auto_primary_key": True})
         test1 = attr.ib(type=str)
 
     assert TestModel.insert_columns_and_metavars() == (("test1",), ("%(test1)s",))
+
+
+def test_insert_primary_key():
+    @attr.s
+    class TestModel(model.BaseSchedulerModel):
+        id = attr.ib(type=str, metadata={"auto_primary_key": True})
+        test1 = attr.ib(type=str)
+
+    assert TestModel.primary_key_columns() == ("id",)
+
+    @attr.s
+    class TestModel2(model.BaseSchedulerModel):
+        col1 = attr.ib(type=str, metadata={"primary_key": True})
+        col2 = attr.ib(type=str, metadata={"primary_key": True})
+        test1 = attr.ib(type=str)
+
+    assert TestModel2.primary_key_columns() == ("col1", "col2")
