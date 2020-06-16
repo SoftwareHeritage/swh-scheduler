@@ -98,7 +98,7 @@ class BaseSchedulerModel:
 @attr.s
 class Lister(BaseSchedulerModel):
     name = attr.ib(type=str, validator=[type_validator()])
-    instance_name = attr.ib(type=str, validator=[type_validator()], factory=str)
+    instance_name = attr.ib(type=str, validator=[type_validator()])
 
     # Populated by database
     id = attr.ib(
