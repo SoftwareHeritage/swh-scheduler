@@ -630,23 +630,19 @@ class TestScheduler:
 
             assert lister == lister_get_again
 
-    def test_update_lister(self, swh_scheduler):
-        lister = swh_scheduler.get_or_create_lister(**LISTERS[0])
-
-        lister.current_state = {"updated": "now"}
+    def test_update_lister(self, swh_scheduler, stored_lister):
+        lister = attr.evolve(stored_lister, current_state={"updated": "now"})
 
         updated_lister = swh_scheduler.update_lister(lister)
 
         assert updated_lister.updated > lister.updated
         assert updated_lister == attr.evolve(lister, updated=updated_lister.updated)
 
-    def test_update_lister_stale(self, swh_scheduler):
-        lister = swh_scheduler.get_or_create_lister(**LISTERS[0])
-
-        swh_scheduler.update_lister(lister)
+    def test_update_lister_stale(self, swh_scheduler, stored_lister):
+        swh_scheduler.update_lister(stored_lister)
 
         with pytest.raises(StaleData) as exc:
-            swh_scheduler.update_lister(lister)
+            swh_scheduler.update_lister(stored_lister)
         assert "state not updated" in exc.value.args[0]
 
     def _create_task_types(self, scheduler):

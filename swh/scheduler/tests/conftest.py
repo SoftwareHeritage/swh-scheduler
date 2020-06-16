@@ -13,6 +13,8 @@ import pkg_resources
 from swh.core.utils import numfile_sortkey as sortkey
 from swh.scheduler import get_scheduler
 from swh.scheduler.tests import SQL_DIR
+from swh.scheduler.model import Lister
+from swh.scheduler.tests.common import LISTERS
 
 
 # make sure we are not fooled by CELERY_ config environment vars
@@ -110,3 +112,9 @@ def swh_scheduler(swh_scheduler_config):
 # this alias is used to be able to easily instantiate a db-backed Scheduler
 # eg. for the RPC client/server test suite.
 swh_db_scheduler = swh_scheduler
+
+
+@pytest.fixture
+def stored_lister(swh_scheduler) -> Lister:
+    """Store a lister in the scheduler and return its information"""
+    return swh_scheduler.get_or_create_lister(**LISTERS[0])
