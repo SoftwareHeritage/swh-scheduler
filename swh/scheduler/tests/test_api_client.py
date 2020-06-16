@@ -44,6 +44,7 @@ def test_site_map(flask_app_client):
         for rule in (
             "lister/get_or_create",
             "lister/update",
+            "origins/record",
             "priority_ratios/get",
             "task/create",
             "task/delete_archived",

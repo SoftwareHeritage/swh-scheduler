@@ -3,11 +3,11 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 from swh.core.api import remote_api_endpoint
 
-from swh.scheduler.model import Lister
+from swh.scheduler.model import ListedOrigin, Lister
 
 
 class SchedulerInterface:
@@ -270,6 +270,18 @@ class SchedulerInterface:
         Raises:
             StaleData if the `updated` timestamp for the lister instance in
         database doesn't match the one passed by the user.
+        """
+        ...
+
+    @remote_api_endpoint("origins/record")
+    def record_listed_origins(
+        self, listed_origins: Iterable[ListedOrigin]
+    ) -> List[ListedOrigin]:
+        """Record a set of origins that a lister has listed.
+
+        This performs an "upsert": origins with the same (lister_id, url,
+        visit_type) values are updated with new values for
+        extra_loader_arguments, last_update and last_seen.
         """
         ...
 

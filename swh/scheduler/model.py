@@ -123,3 +123,40 @@ class Lister(BaseSchedulerModel):
         default=None,
         metadata={"auto_now": True},
     )
+
+
+@attr.s
+class ListedOrigin(BaseSchedulerModel):
+    """Basic information about a listed origin, output by a lister"""
+
+    lister_id = attr.ib(
+        type=UUID, validator=[type_validator()], metadata={"primary_key": True}
+    )
+    url = attr.ib(
+        type=str, validator=[type_validator()], metadata={"primary_key": True}
+    )
+    visit_type = attr.ib(
+        type=str, validator=[type_validator()], metadata={"primary_key": True}
+    )
+    extra_loader_arguments = attr.ib(
+        type=Dict[str, str], validator=[type_validator()], factory=dict
+    )
+
+    last_update = attr.ib(
+        type=Optional[datetime.datetime], validator=[type_validator()], default=None,
+    )
+
+    enabled = attr.ib(type=bool, validator=[type_validator()], default=True)
+
+    first_seen = attr.ib(
+        type=Optional[datetime.datetime],
+        validator=[type_validator()],
+        default=None,
+        metadata={"auto_now_add": True},
+    )
+    last_seen = attr.ib(
+        type=Optional[datetime.datetime],
+        validator=[type_validator()],
+        default=None,
+        metadata={"auto_now": True},
+    )

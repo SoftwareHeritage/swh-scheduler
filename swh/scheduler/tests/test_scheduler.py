@@ -645,6 +645,34 @@ class TestScheduler:
             swh_scheduler.update_lister(stored_lister)
         assert "state not updated" in exc.value.args[0]
 
+    def test_record_listed_origins(self, swh_scheduler, listed_origins):
+        ret = swh_scheduler.record_listed_origins(listed_origins)
+
+        assert set(returned.url for returned in ret) == set(
+            origin.url for origin in listed_origins
+        )
+
+        assert all(origin.first_seen == origin.last_seen for origin in ret)
+
+    def test_record_listed_origins_upsert(self, swh_scheduler, listed_origins):
+        # First, insert `cutoff` origins
+        cutoff = 100
+        assert cutoff < len(listed_origins)
+
+        ret = swh_scheduler.record_listed_origins(listed_origins[:cutoff])
+        assert len(ret) == cutoff
+
+        # Then, insert all origins, including the `cutoff` first.
+        ret = swh_scheduler.record_listed_origins(listed_origins)
+
+        assert len(ret) == len(listed_origins)
+
+        # Two different "first seen" values
+        assert len(set(origin.first_seen for origin in ret)) == 2
+
+        # But a single "last seen" value
+        assert len(set(origin.last_seen for origin in ret)) == 1
+
     def _create_task_types(self, scheduler):
         for tt in TASK_TYPES.values():
             scheduler.create_task_type(tt)
