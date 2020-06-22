@@ -5,7 +5,7 @@
 arrow
 attrs
 attrs-strict
-celery >= 4
+celery >= 4.3
 # Not a direct dependency: missing from celery 4.4.4
 future >= 0.18.0
 Click
