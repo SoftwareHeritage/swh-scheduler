@@ -1,4 +1,6 @@
 arrow
+attrs
+attrs-strict
 celery>=4
 future>=0.18.0
 Click
