@@ -1,3 +1,12 @@
+swh-scheduler (0.2.2-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.2.2     - (tagged by Nicolas Dandrimont
+    <nicolas@dandrimont.eu> on 2020-06-22 14:03:34 +0200)
+  * Upstream changes:     - Release swh.scheduler 0.2.2     - Re-
+    introduce root endpoint for the RPC server
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 22 Jun 2020 12:07:05 +0000
+
 swh-scheduler (0.2.1-1~swh1) unstable-swh; urgency=medium
 
   [ Nicolas Dandrimont ]
