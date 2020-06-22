@@ -1,3 +1,9 @@
+swh-scheduler (0.2.0-1~swh2) UNRELEASED; urgency=medium
+
+  * Force celery >= 4.3
+
+ -- Nicolas Dandrimont <olasd@debian.org>  Mon, 22 Jun 2020 12:08:24 +0200
+
 swh-scheduler (0.2.0-1~swh1) unstable-swh; urgency=medium
 
   [ Nicolas Dandrimont ]
@@ -672,7 +678,7 @@ swh-scheduler (0.0.7-1~swh1) unstable-swh; urgency=medium
 swh-scheduler (0.0.6-1~swh1) unstable-swh; urgency=medium
 
   * Release swh-scheduler v0.0.6
-  * More reliability and efficiency when scheduling a lot ot tasks
+  * More reliability and efficiency when scheduling a lot of tasks
 
  -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Wed, 24 Feb 2016 18:46:57 +0100
 
