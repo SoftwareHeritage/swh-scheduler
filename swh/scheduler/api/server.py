@@ -51,6 +51,21 @@ def has_no_empty_params(rule):
     return len(rule.defaults or ()) >= len(rule.arguments or ())
 
 
+@app.route("/")
+def index():
+    return """<html>
+<head><title>Software Heritage scheduler RPC server</title></head>
+<body>
+<p>You have reached the
+<a href="https://www.softwareheritage.org/">Software Heritage</a>
+scheduler RPC server.<br />
+See its
+<a href="https://docs.softwareheritage.org/devel/swh-scheduler/">documentation
+and API</a> for more information</p>
+</body>
+</html>"""
+
+
 @app.route("/site-map")
 @negotiate(MsgpackFormatter)
 @negotiate(JSONFormatter)
