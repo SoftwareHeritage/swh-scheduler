@@ -66,3 +66,9 @@ def test_site_map(flask_app_client):
         )
     )
     assert rules == expected_rules
+
+
+def test_root(flask_app_client):
+    root = flask_app_client.get("/")
+    assert root.status_code == 200
+    assert b"Software Heritage scheduler RPC server" in root.data
