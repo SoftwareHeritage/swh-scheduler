@@ -1,0 +1,53 @@
+{
+    "order": 0,
+    "index_patterns": ["swh-tasks-*"],
+    "settings": {
+        "index": {
+            "codec": "best_compression",
+            "refresh_interval": "1s",
+            "number_of_shards": 1
+        }
+    },
+    "mappings" : {
+        "task" : {
+            "_source" : { "enabled": true},
+            "properties": {
+                "task_id": {"type": "double"},
+                "task_policy": {"type": "text"},
+                "task_status": {"type": "text"},
+                "task_run_id": {"type": "double"},
+                "arguments": {
+                    "type": "object",
+                    "properties" : {
+                        "args": {
+                            "type": "nested",
+                            "dynamic": false
+                        },
+                        "kwargs": {
+                            "type": "text"
+                        }
+                    }
+                },
+                "type": {"type": "text"},
+                "backend_id": {"type": "text"},
+                "metadata": {
+                    "type": "object",
+                    "enabled" : false
+                },
+                "scheduled":  {
+                    "type": "date",
+                    "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||strict_date_optional_time||epoch_millis"
+                },
+                "started":  {
+                    "type": "date",
+                    "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||strict_date_optional_time||epoch_millis"
+                },
+                "ended":  {
+                    "type": "date",
+                    "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||strict_date_optional_time||epoch_millis"
+                }
+            }
+        }
+    },
+    "aliases": {}
+}

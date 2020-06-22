@@ -1,8 +1,18 @@
-swh-scheduler (0.1.1-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-scheduler (0.2.0-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  [ Nicolas Dandrimont ]
+  * Switch from vcversioner to setuptools-scm
+  * wrap-and-sort
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 03 Jun 2020 09:41:08 +0000
+  [ Software Heritage autobuilder (on jenkins-debian1) ]
+  * New upstream release 0.2.0     - (tagged by Nicolas Dandrimont
+    <nicolas@dandrimont.eu> on 2020-06-22 10:33:11 +0200)
+  * Upstream changes:     - Release swh.scheduler 0.2.0     - Implement
+    storage of lister and listed origin information     - Add swh
+    scheduler celery-monitor command     - Overhaul RPC to use automatic
+    generation
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 22 Jun 2020 08:36:49 +0000
 
 swh-scheduler (0.1.1-1~swh1) unstable-swh; urgency=medium
 

@@ -45,11 +45,10 @@ setup(
     author_email="swh-devel@inria.fr",
     url="https://forge.softwareheritage.org/diffusion/DSCH/",
     packages=find_packages(),
-    scripts=["bin/swh-worker-control"],
-    setup_requires=["vcversioner"],
+    setup_requires=["setuptools-scm"],
+    use_scm_version=True,
     install_requires=parse_requirements() + parse_requirements("swh"),
     extras_require={"testing": parse_requirements("test")},
-    vcversioner={},
     include_package_data=True,
     entry_points="""
         [console_scripts]
