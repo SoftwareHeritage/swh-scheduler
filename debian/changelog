@@ -1,8 +1,15 @@
-swh-scheduler (0.2.0-1~swh2) UNRELEASED; urgency=medium
+swh-scheduler (0.2.1-1~swh1) unstable-swh; urgency=medium
 
+  [ Nicolas Dandrimont ]
   * Force celery >= 4.3
 
- -- Nicolas Dandrimont <olasd@debian.org>  Mon, 22 Jun 2020 12:08:24 +0200
+  [ Software Heritage autobuilder (on jenkins-debian1) ]
+  * New upstream release 0.2.1     - (tagged by Nicolas Dandrimont
+    <nicolas@dandrimont.eu> on 2020-06-22 12:09:32 +0200)
+  * Upstream changes:     - Release swh.scheduler 0.2.1     - Bump
+    celery requirement to 4.3+
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 22 Jun 2020 10:12:50 +0000
 
 swh-scheduler (0.2.0-1~swh1) unstable-swh; urgency=medium
 
