@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2019  The Software Heritage developers
+# Copyright (C) 2015-2020  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -7,15 +7,18 @@ import json
 import logging
 
 from arrow import Arrow, utcnow
+import attr
 import psycopg2.pool
 import psycopg2.extras
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Iterable, List, Optional
 from psycopg2.extensions import AsIs
 
 from swh.core.db import BaseDb
 from swh.core.db.common import db_transaction
 
+from .exc import StaleData
+from .model import Lister, ListedOrigin
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +29,7 @@ def adapt_arrow(arrow):
 
 psycopg2.extensions.register_adapter(dict, psycopg2.extras.Json)
 psycopg2.extensions.register_adapter(Arrow, adapt_arrow)
+psycopg2.extras.register_uuid()
 
 
 def format_query(query, keys):
@@ -129,6 +133,105 @@ class SchedulerBackend:
         query = format_query("select {keys} from task_type", self.task_type_keys,)
         cur.execute(query)
         return cur.fetchall()
+
+    @db_transaction()
+    def get_or_create_lister(
+        self, name: str, instance_name: Optional[str] = None, db=None, cur=None
+    ) -> Lister:
+        """Retrieve information about the given instance of the lister from the
+        database, or create the entry if it did not exist.
+        """
+
+        if instance_name is None:
+            instance_name = ""
+
+        select_cols = ", ".join(Lister.select_columns())
+        insert_cols, insert_meta = (
+            ", ".join(tup) for tup in Lister.insert_columns_and_metavars()
+        )
+
+        query = f"""
+            with added as (
+              insert into listers ({insert_cols}) values ({insert_meta})
+                on conflict do nothing
+                returning {select_cols}
+            )
+            select {select_cols} from added
+          union all
+            select {select_cols} from listers
+              where (name, instance_name) = (%(name)s, %(instance_name)s);
+        """
+
+        cur.execute(query, attr.asdict(Lister(name=name, instance_name=instance_name)))
+
+        return Lister(**cur.fetchone())
+
+    @db_transaction()
+    def update_lister(self, lister: Lister, db=None, cur=None) -> Lister:
+        """Update the state for the given lister instance in the database.
+
+        Returns:
+            a new Lister object, with all fields updated from the database
+
+        Raises:
+            StaleData if the `updated` timestamp for the lister instance in
+        database doesn't match the one passed by the user.
+        """
+
+        select_cols = ", ".join(Lister.select_columns())
+        set_vars = ", ".join(
+            f"{col} = {meta}"
+            for col, meta in zip(*Lister.insert_columns_and_metavars())
+        )
+
+        query = f"""update listers
+                      set {set_vars}
+                      where id=%(id)s and updated=%(updated)s
+                      returning {select_cols}"""
+
+        cur.execute(query, attr.asdict(lister))
+        updated = cur.fetchone()
+
+        if not updated:
+            raise StaleData("Stale data; Lister state not updated")
+
+        return Lister(**updated)
+
+    @db_transaction()
+    def record_listed_origins(
+        self, listed_origins: Iterable[ListedOrigin], db=None, cur=None
+    ) -> List[ListedOrigin]:
+        """Record a set of origins that a lister has listed.
+
+        This performs an "upsert": origins with the same (lister_id, url,
+        visit_type) values are updated with new values for
+        extra_loader_arguments, last_update and last_seen.
+        """
+
+        pk_cols = ListedOrigin.primary_key_columns()
+        select_cols = ListedOrigin.select_columns()
+        insert_cols, insert_meta = ListedOrigin.insert_columns_and_metavars()
+
+        upsert_cols = [col for col in insert_cols if col not in pk_cols]
+        upsert_set = ", ".join(f"{col} = EXCLUDED.{col}" for col in upsert_cols)
+
+        query = f"""INSERT into listed_origins ({", ".join(insert_cols)})
+                       VALUES %s
+                    ON CONFLICT ({", ".join(pk_cols)}) DO UPDATE
+                       SET {upsert_set}
+                    RETURNING {", ".join(select_cols)}
+        """
+
+        ret = psycopg2.extras.execute_values(
+            cur=cur,
+            sql=query,
+            argslist=(attr.asdict(origin) for origin in listed_origins),
+            template=f"({', '.join(insert_meta)})",
+            page_size=1000,
+            fetch=True,
+        )
+
+        return [ListedOrigin(**d) for d in ret]
 
     task_create_keys = [
         "type",

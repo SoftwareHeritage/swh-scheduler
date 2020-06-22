@@ -3,16 +3,18 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-
 import os
 import pytest
 import glob
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 import pkg_resources
+from typing import List
 
 from swh.core.utils import numfile_sortkey as sortkey
 from swh.scheduler import get_scheduler
 from swh.scheduler.tests import SQL_DIR
+from swh.scheduler.model import ListedOrigin, Lister
+from swh.scheduler.tests.common import LISTERS
 
 
 # make sure we are not fooled by CELERY_ config environment vars
@@ -110,3 +112,23 @@ def swh_scheduler(swh_scheduler_config):
 # this alias is used to be able to easily instantiate a db-backed Scheduler
 # eg. for the RPC client/server test suite.
 swh_db_scheduler = swh_scheduler
+
+
+@pytest.fixture
+def stored_lister(swh_scheduler) -> Lister:
+    """Store a lister in the scheduler and return its information"""
+    return swh_scheduler.get_or_create_lister(**LISTERS[0])
+
+
+@pytest.fixture
+def listed_origins(stored_lister) -> List[ListedOrigin]:
+    """Return a (fixed) set of 1000 listed origins"""
+    return [
+        ListedOrigin(
+            lister_id=stored_lister.id,
+            url=f"https://example.com/{i:04d}.git",
+            visit_type="git",
+            last_update=datetime(2020, 6, 15, 16, 0, 0, i, tzinfo=timezone.utc),
+        )
+        for i in range(1000)
+    ]

@@ -9,13 +9,17 @@ import random
 import uuid
 
 from collections import defaultdict
+import inspect
 from typing import Any, Dict
 
 from arrow import utcnow
-
+import attr
 import pytest
 
-from .common import tasks_from_template, TEMPLATES, TASK_TYPES
+from swh.scheduler.exc import StaleData
+from swh.scheduler.interface import SchedulerInterface
+
+from .common import tasks_from_template, TEMPLATES, TASK_TYPES, LISTERS
 
 
 def subdict(d, keys=None, excl=()):
@@ -24,8 +28,37 @@ def subdict(d, keys=None, excl=()):
     return {k: d[k] for k in keys if k not in excl}
 
 
-@pytest.mark.db
 class TestScheduler:
+    def test_interface(self, swh_scheduler):
+        """Checks all methods of SchedulerInterface are implemented by this
+        backend, and that they have the same signature."""
+        # Create an instance of the protocol (which cannot be instantiated
+        # directly, so this creates a subclass, then instantiates it)
+        interface = type("_", (SchedulerInterface,), {})()
+
+        assert "create_task_type" in dir(interface)
+
+        missing_methods = []
+
+        for meth_name in dir(interface):
+            if meth_name.startswith("_"):
+                continue
+            interface_meth = getattr(interface, meth_name)
+            try:
+                concrete_meth = getattr(swh_scheduler, meth_name)
+            except AttributeError:
+                if not getattr(interface_meth, "deprecated_endpoint", False):
+                    # The backend is missing a (non-deprecated) endpoint
+                    missing_methods.append(meth_name)
+                continue
+
+            expected_signature = inspect.signature(interface_meth)
+            actual_signature = inspect.signature(concrete_meth)
+
+            assert expected_signature == actual_signature, meth_name
+
+        assert missing_methods == []
+
     def test_get_priority_ratios(self, swh_scheduler):
         assert swh_scheduler.get_priority_ratios() == {
             "high": 0.5,
@@ -581,6 +614,64 @@ class TestScheduler:
             "metadata": {"something": "stupid", "other": "stuff"},
             "status": "eventful",
         }
+
+    def test_get_or_create_lister(self, swh_scheduler):
+        db_listers = []
+        for lister_args in LISTERS:
+            db_listers.append(swh_scheduler.get_or_create_lister(**lister_args))
+
+        for lister, lister_args in zip(db_listers, LISTERS):
+            assert lister.name == lister_args["name"]
+            assert lister.instance_name == lister_args.get("instance_name", "")
+
+            lister_get_again = swh_scheduler.get_or_create_lister(
+                lister.name, lister.instance_name
+            )
+
+            assert lister == lister_get_again
+
+    def test_update_lister(self, swh_scheduler, stored_lister):
+        lister = attr.evolve(stored_lister, current_state={"updated": "now"})
+
+        updated_lister = swh_scheduler.update_lister(lister)
+
+        assert updated_lister.updated > lister.updated
+        assert updated_lister == attr.evolve(lister, updated=updated_lister.updated)
+
+    def test_update_lister_stale(self, swh_scheduler, stored_lister):
+        swh_scheduler.update_lister(stored_lister)
+
+        with pytest.raises(StaleData) as exc:
+            swh_scheduler.update_lister(stored_lister)
+        assert "state not updated" in exc.value.args[0]
+
+    def test_record_listed_origins(self, swh_scheduler, listed_origins):
+        ret = swh_scheduler.record_listed_origins(listed_origins)
+
+        assert set(returned.url for returned in ret) == set(
+            origin.url for origin in listed_origins
+        )
+
+        assert all(origin.first_seen == origin.last_seen for origin in ret)
+
+    def test_record_listed_origins_upsert(self, swh_scheduler, listed_origins):
+        # First, insert `cutoff` origins
+        cutoff = 100
+        assert cutoff < len(listed_origins)
+
+        ret = swh_scheduler.record_listed_origins(listed_origins[:cutoff])
+        assert len(ret) == cutoff
+
+        # Then, insert all origins, including the `cutoff` first.
+        ret = swh_scheduler.record_listed_origins(listed_origins)
+
+        assert len(ret) == len(listed_origins)
+
+        # Two different "first seen" values
+        assert len(set(origin.first_seen for origin in ret)) == 2
+
+        # But a single "last seen" value
+        assert len(set(origin.last_seen for origin in ret)) == 1
 
     def _create_task_types(self, scheduler):
         for tt in TASK_TYPES.values():
