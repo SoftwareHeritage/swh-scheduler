@@ -1,3 +1,12 @@
+swh-scheduler (0.3.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.3.0     - (tagged by Nicolas Dandrimont
+    <nicolas@dandrimont.eu> on 2020-07-06 12:18:28 +0200)
+  * Upstream changes:     - Release swh.scheduler 0.3.0     - Add
+    get_listed_origins endpoint
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 06 Jul 2020 10:23:31 +0000
+
 swh-scheduler (0.2.2-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.2.2     - (tagged by Nicolas Dandrimont
