@@ -5,7 +5,7 @@
 
 import datetime
 from uuid import UUID
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import attr
 import attr.converters
@@ -159,4 +159,35 @@ class ListedOrigin(BaseSchedulerModel):
         validator=[type_validator()],
         default=None,
         metadata={"auto_now": True},
+    )
+
+
+ListedOriginPageToken = Tuple[UUID, str]
+
+
+def convert_listed_origin_page_token(
+    input: Union[None, ListedOriginPageToken, List[Union[UUID, str]]]
+) -> Optional[ListedOriginPageToken]:
+    if input is None:
+        return None
+
+    if isinstance(input, tuple):
+        return input
+
+    x, y = input
+    assert isinstance(x, UUID)
+    assert isinstance(y, str)
+    return (x, y)
+
+
+@attr.s
+class PaginatedListedOriginList(BaseSchedulerModel):
+    """A list of listed origins, with a continuation token"""
+
+    origins = attr.ib(type=List[ListedOrigin], validator=[type_validator()])
+    next_page_token = attr.ib(
+        type=Optional[ListedOriginPageToken],
+        validator=[type_validator()],
+        converter=convert_listed_origin_page_token,
+        default=None,
     )
