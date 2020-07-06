@@ -1,3 +1,12 @@
+swh-scheduler (0.4.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.4.0     - (tagged by Nicolas Dandrimont
+    <nicolas@dandrimont.eu> on 2020-07-06 16:47:28 +0200)
+  * Upstream changes:     - Release swh.scheduler 0.4.0     - Extract
+    pytest fixtures to a pytest plugin
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 06 Jul 2020 14:52:42 +0000
+
 swh-scheduler (0.3.0-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.3.0     - (tagged by Nicolas Dandrimont
