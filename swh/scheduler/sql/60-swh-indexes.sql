@@ -14,3 +14,6 @@ create index task_run_id_asc_idx on task_run(task asc, started asc);
 
 -- lister schema
 create unique index on listers (name, instance_name);
+
+-- listed origins
+create index on listed_origins (url);

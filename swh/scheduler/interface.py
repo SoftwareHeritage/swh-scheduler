@@ -4,10 +4,16 @@
 # See top-level LICENSE file for more information
 
 from typing import Any, Dict, Iterable, List, Optional
+from uuid import UUID
 
 from swh.core.api import remote_api_endpoint
 
-from swh.scheduler.model import ListedOrigin, Lister
+from swh.scheduler.model import (
+    ListedOrigin,
+    ListedOriginPageToken,
+    Lister,
+    PaginatedListedOriginList,
+)
 
 
 class SchedulerInterface:
@@ -282,6 +288,22 @@ class SchedulerInterface:
         This performs an "upsert": origins with the same (lister_id, url,
         visit_type) values are updated with new values for
         extra_loader_arguments, last_update and last_seen.
+        """
+        ...
+
+    @remote_api_endpoint("origins/get")
+    def get_listed_origins(
+        self,
+        lister_id: Optional[UUID] = None,
+        url: Optional[str] = None,
+        limit: int = 1000,
+        page_token: Optional[ListedOriginPageToken] = None,
+    ) -> PaginatedListedOriginList:
+        """Get information on the listed origins matching either the `url` or
+        `lister_id`, or both arguments.
+
+        Use the `limit` and `page_token` arguments for continuation. The next
+        page token, if any, is returned in the PaginatedListedOriginList object.
         """
         ...
 
