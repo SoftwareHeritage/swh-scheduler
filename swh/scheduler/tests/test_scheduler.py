@@ -10,7 +10,7 @@ import uuid
 
 from collections import defaultdict
 import inspect
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 
 from arrow import utcnow
 import attr
@@ -18,6 +18,7 @@ import pytest
 
 from swh.scheduler.exc import StaleData
 from swh.scheduler.interface import SchedulerInterface
+from swh.scheduler.model import ListedOrigin, ListedOriginPageToken
 
 from .common import tasks_from_template, TEMPLATES, TASK_TYPES, LISTERS
 
@@ -672,6 +673,57 @@ class TestScheduler:
 
         # But a single "last seen" value
         assert len(set(origin.last_seen for origin in ret)) == 1
+
+    def test_get_listed_origins_exact(self, swh_scheduler, listed_origins):
+        swh_scheduler.record_listed_origins(listed_origins)
+
+        for i, origin in enumerate(listed_origins):
+            ret = swh_scheduler.get_listed_origins(
+                lister_id=origin.lister_id, url=origin.url
+            )
+
+            assert ret.next_page_token is None
+            assert len(ret.origins) == 1
+            assert ret.origins[0].lister_id == origin.lister_id
+            assert ret.origins[0].url == origin.url
+
+    @pytest.mark.parametrize("num_origins,limit", [(20, 6), (5, 42), (20, 20)])
+    def test_get_listed_origins_limit(
+        self, swh_scheduler, listed_origins, num_origins, limit
+    ) -> None:
+        added_origins = sorted(
+            listed_origins[:num_origins], key=lambda o: (o.lister_id, o.url)
+        )
+        swh_scheduler.record_listed_origins(added_origins)
+
+        returned_origins: List[ListedOrigin] = []
+        call_count = 0
+        next_page_token: Optional[ListedOriginPageToken] = None
+        while True:
+            call_count += 1
+            ret = swh_scheduler.get_listed_origins(
+                lister_id=listed_origins[0].lister_id,
+                limit=limit,
+                page_token=next_page_token,
+            )
+            returned_origins.extend(ret.origins)
+            next_page_token = ret.next_page_token
+            if next_page_token is None:
+                break
+
+        assert call_count == (num_origins // limit) + 1
+
+        assert len(returned_origins) == num_origins
+        assert [(origin.lister_id, origin.url) for origin in returned_origins] == [
+            (origin.lister_id, origin.url) for origin in added_origins
+        ]
+
+    def test_get_listed_origins_all(self, swh_scheduler, listed_origins) -> None:
+        swh_scheduler.record_listed_origins(listed_origins)
+
+        ret = swh_scheduler.get_listed_origins(limit=len(listed_origins) + 1)
+        assert ret.next_page_token is None
+        assert len(ret.origins) == len(listed_origins)
 
     def _create_task_types(self, scheduler):
         for tt in TASK_TYPES.values():
