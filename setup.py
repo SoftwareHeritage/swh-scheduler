@@ -55,6 +55,8 @@ setup(
         swh-scheduler=swh.scheduler.cli:main
         [swh.cli.subcommands]
         scheduler=swh.scheduler.cli:cli
+        [pytest11]
+        pytest_swh_scheduler=swh.scheduler.pytest_plugin
     """,
     classifiers=[
         "Programming Language :: Python :: 3",

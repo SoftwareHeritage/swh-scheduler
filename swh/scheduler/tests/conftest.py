@@ -5,14 +5,10 @@
 
 import os
 import pytest
-import glob
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 import pkg_resources
 from typing import List
 
-from swh.core.utils import numfile_sortkey as sortkey
-from swh.scheduler import get_scheduler
-from swh.scheduler.tests import SQL_DIR
 from swh.scheduler.model import ListedOrigin, Lister
 from swh.scheduler.tests.common import LISTERS
 
@@ -24,12 +20,6 @@ for var in [x for x in os.environ.keys() if x.startswith("CELERY")]:
 
 # test_cli tests depends on a en/C locale, so ensure it
 os.environ["LC_ALL"] = "C.UTF-8"
-
-DUMP_FILES = os.path.join(SQL_DIR, "*.sql")
-
-# celery tasks for testing purpose; tasks themselves should be
-# in swh/scheduler/tests/tasks.py
-TASK_NAMES = ["ping", "multiping", "add", "error", "echo"]
 
 
 @pytest.fixture(scope="session")
@@ -72,46 +62,6 @@ def swh_app(celery_session_app):
 
     config.app = celery_session_app
     yield celery_session_app
-
-
-@pytest.fixture
-def swh_scheduler_config(request, postgresql):
-    scheduler_config = {
-        "db": postgresql.dsn,
-    }
-
-    all_dump_files = sorted(glob.glob(DUMP_FILES), key=sortkey)
-
-    cursor = postgresql.cursor()
-    for fname in all_dump_files:
-        with open(fname) as fobj:
-            cursor.execute(fobj.read())
-    postgresql.commit()
-
-    return scheduler_config
-
-
-@pytest.fixture
-def swh_scheduler(swh_scheduler_config):
-    scheduler = get_scheduler("local", swh_scheduler_config)
-    for taskname in TASK_NAMES:
-        scheduler.create_task_type(
-            {
-                "type": "swh-test-{}".format(taskname),
-                "description": "The {} testing task".format(taskname),
-                "backend_name": "swh.scheduler.tests.tasks.{}".format(taskname),
-                "default_interval": timedelta(days=1),
-                "min_interval": timedelta(hours=6),
-                "max_interval": timedelta(days=12),
-            }
-        )
-
-    return scheduler
-
-
-# this alias is used to be able to easily instantiate a db-backed Scheduler
-# eg. for the RPC client/server test suite.
-swh_db_scheduler = swh_scheduler
 
 
 @pytest.fixture
