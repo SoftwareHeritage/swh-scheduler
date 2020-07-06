@@ -5,20 +5,26 @@
 
 import json
 import logging
+from uuid import UUID
 
 from arrow import Arrow, utcnow
 import attr
 import psycopg2.pool
 import psycopg2.extras
 
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 from psycopg2.extensions import AsIs
 
 from swh.core.db import BaseDb
 from swh.core.db.common import db_transaction
 
 from .exc import StaleData
-from .model import Lister, ListedOrigin
+from .model import (
+    Lister,
+    ListedOrigin,
+    ListedOriginPageToken,
+    PaginatedListedOriginList,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -232,6 +238,60 @@ class SchedulerBackend:
         )
 
         return [ListedOrigin(**d) for d in ret]
+
+    @db_transaction()
+    def get_listed_origins(
+        self,
+        lister_id: Optional[UUID] = None,
+        url: Optional[str] = None,
+        limit: int = 1000,
+        page_token: Optional[ListedOriginPageToken] = None,
+        db=None,
+        cur=None,
+    ) -> PaginatedListedOriginList:
+        """Get information on the listed origins matching either the `url` or
+        `lister_id`, or both arguments.
+        """
+
+        query_filters: List[str] = []
+        query_params: List[Union[int, str, UUID, Tuple[UUID, str]]] = []
+
+        if lister_id:
+            query_filters.append("lister_id = %s")
+            query_params.append(lister_id)
+
+        if url is not None:
+            query_filters.append("url = %s")
+            query_params.append(url)
+
+        if page_token is not None:
+            query_filters.append("(lister_id, url) > %s")
+            # the typeshed annotation for tuple() is too strict.
+            query_params.append(tuple(page_token))  # type: ignore
+
+        query_params.append(limit)
+
+        select_cols = ", ".join(ListedOrigin.select_columns())
+        if query_filters:
+            where_clause = "where %s" % (" and ".join(query_filters))
+        else:
+            where_clause = ""
+
+        query = f"""SELECT {select_cols}
+                    from listed_origins
+                    {where_clause}
+                    ORDER BY lister_id, url
+                    LIMIT %s"""
+
+        cur.execute(query, tuple(query_params))
+        origins = [ListedOrigin(**d) for d in cur]
+
+        if len(origins) == limit:
+            page_token = (origins[-1].lister_id, origins[-1].url)
+        else:
+            page_token = None
+
+        return PaginatedListedOriginList(origins, page_token)
 
     task_create_keys = [
         "type",
