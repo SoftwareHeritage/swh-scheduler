@@ -4,14 +4,18 @@
 # See top-level LICENSE file for more information
 
 import os
-import pytest
 from datetime import datetime, timezone
-import pkg_resources
 from typing import List
+
+import pytest
 
 from swh.scheduler.model import ListedOrigin, Lister
 from swh.scheduler.tests.common import LISTERS
 
+from swh.scheduler.pytest_plugin import (  # noqa: F401 (backwards-compat imports)
+    swh_scheduler_celery_app as swh_app,
+    swh_scheduler_celery_worker as celery_session_worker,
+)
 
 # make sure we are not fooled by CELERY_ config environment vars
 for var in [x for x in os.environ.keys() if x.startswith("CELERY")]:
@@ -20,48 +24,6 @@ for var in [x for x in os.environ.keys() if x.startswith("CELERY")]:
 
 # test_cli tests depends on a en/C locale, so ensure it
 os.environ["LC_ALL"] = "C.UTF-8"
-
-
-@pytest.fixture(scope="session")
-def celery_enable_logging():
-    return True
-
-
-@pytest.fixture(scope="session")
-def celery_includes():
-    task_modules = [
-        "swh.scheduler.tests.tasks",
-    ]
-    for entrypoint in pkg_resources.iter_entry_points("swh.workers"):
-        task_modules.extend(entrypoint.load()().get("task_modules", []))
-    return task_modules
-
-
-@pytest.fixture(scope="session")
-def celery_parameters():
-    return {
-        "task_cls": "swh.scheduler.task:SWHTask",
-    }
-
-
-@pytest.fixture(scope="session")
-def celery_config():
-    return {
-        "accept_content": ["application/x-msgpack", "application/json"],
-        "task_serializer": "msgpack",
-        "result_serializer": "json",
-    }
-
-
-# use the celery_session_app fixture to monkeypatch the 'main'
-# swh.scheduler.celery_backend.config.app Celery application
-# with the test application
-@pytest.fixture(scope="session")
-def swh_app(celery_session_app):
-    from swh.scheduler.celery_backend import config
-
-    config.app = celery_session_app
-    yield celery_session_app
 
 
 @pytest.fixture
