@@ -28,10 +28,12 @@ def test_celery_monitor():
     assert "Options:" in result.stdout
 
 
-def test_celery_monitor_ping(caplog, swh_app, celery_session_worker):
+def test_celery_monitor_ping(
+    caplog, swh_scheduler_celery_app, swh_scheduler_celery_worker
+):
     caplog.set_level(logging.INFO, "swh.scheduler.cli.celery_monitor")
 
-    result = invoke("--pattern", celery_session_worker.hostname, "ping-workers")
+    result = invoke("--pattern", swh_scheduler_celery_worker.hostname, "ping-workers")
 
     assert result.exit_code == 0
 
@@ -40,7 +42,7 @@ def test_celery_monitor_ping(caplog, swh_app, celery_session_worker):
     (record,) = caplog.records
 
     assert record.levelname == "INFO"
-    assert f"response from {celery_session_worker.hostname}" in record.message
+    assert f"response from {swh_scheduler_celery_worker.hostname}" in record.message
 
 
 @pytest.mark.parametrize(
@@ -68,7 +70,12 @@ def test_celery_monitor_ping(caplog, swh_app, celery_session_worker):
     ],
 )
 def test_celery_monitor_ping_filter(
-    caplog, swh_app, celery_session_worker, filter_args, filter_message, exit_code
+    caplog,
+    swh_scheduler_celery_app,
+    swh_scheduler_celery_worker,
+    filter_args,
+    filter_message,
+    exit_code,
 ):
     caplog.set_level(logging.DEBUG, "swh.scheduler.cli.celery_monitor")
 
@@ -95,27 +102,35 @@ def test_celery_monitor_ping_filter(
         assert got_no_response_message
 
 
-def test_celery_monitor_list_running(caplog, swh_app, celery_session_worker):
+def test_celery_monitor_list_running(
+    caplog, swh_scheduler_celery_app, swh_scheduler_celery_worker
+):
     caplog.set_level(logging.DEBUG, "swh.scheduler.cli.celery_monitor")
 
-    result = invoke("--pattern", celery_session_worker.hostname, "list-running")
+    result = invoke("--pattern", swh_scheduler_celery_worker.hostname, "list-running")
 
     assert result.exit_code == 0, result.stdout
 
     for record in caplog.records:
         if record.levelname != "INFO":
             continue
-        assert f"{celery_session_worker.hostname}: no active tasks" in record.message
+        assert (
+            f"{swh_scheduler_celery_worker.hostname}: no active tasks" in record.message
+        )
 
 
 @pytest.mark.parametrize("format", ["csv", "pretty"])
 def test_celery_monitor_list_running_format(
-    caplog, swh_app, celery_session_worker, format
+    caplog, swh_scheduler_celery_app, swh_scheduler_celery_worker, format
 ):
     caplog.set_level(logging.DEBUG, "swh.scheduler.cli.celery_monitor")
 
     result = invoke(
-        "--pattern", celery_session_worker.hostname, "list-running", "--format", format
+        "--pattern",
+        swh_scheduler_celery_worker.hostname,
+        "list-running",
+        "--format",
+        format,
     )
 
     assert result.exit_code == 0, result.stdout
@@ -123,7 +138,9 @@ def test_celery_monitor_list_running_format(
     for record in caplog.records:
         if record.levelname != "INFO":
             continue
-        assert f"{celery_session_worker.hostname}: no active tasks" in record.message
+        assert (
+            f"{swh_scheduler_celery_worker.hostname}: no active tasks" in record.message
+        )
 
     if format == "csv":
         lines = result.stdout.splitlines()
