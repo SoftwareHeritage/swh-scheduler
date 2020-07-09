@@ -62,6 +62,7 @@ swh/scheduler/exc.py
 swh/scheduler/interface.py
 swh/scheduler/model.py
 swh/scheduler/py.typed
+swh/scheduler/pytest_plugin.py
 swh/scheduler/task.py
 swh/scheduler/utils.py
 swh/scheduler/api/__init__.py
