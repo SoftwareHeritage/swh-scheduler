@@ -2,7 +2,6 @@ arrow
 attrs
 attrs-strict
 celery>=4.3
-future>=0.18.0
 Click
 elasticsearch>5.4
 flask
