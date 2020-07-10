@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2019  The Software Heritage developers
+# Copyright (C) 2016-2020  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -12,10 +12,6 @@ import pytest
 from swh.scheduler.model import ListedOrigin, Lister
 from swh.scheduler.tests.common import LISTERS
 
-from swh.scheduler.pytest_plugin import (  # noqa: F401 (backwards-compat imports)
-    swh_scheduler_celery_app as swh_app,
-    swh_scheduler_celery_worker as celery_session_worker,
-)
 
 # make sure we are not fooled by CELERY_ config environment vars
 for var in [x for x in os.environ.keys() if x.startswith("CELERY")]:
