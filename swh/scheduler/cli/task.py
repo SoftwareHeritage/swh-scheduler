@@ -346,7 +346,7 @@ def schedule_origin_metadata_index(
         raise click.ClickException("Only keywords arguments are allowed.")
 
     origins = iter_origins(storage, origin_from=min_id, origin_to=max_id)
-    origin_urls = (origin["url"] for origin in origins)
+    origin_urls = (origin.url for origin in origins)
 
     schedule_origin_batches(scheduler, type, origin_urls, origin_batch_size, kw)
 
