@@ -12,6 +12,7 @@ import logging
 from click.testing import CliRunner
 import pytest
 
+from swh.model.model import Origin
 from swh.storage import get_storage
 from swh.scheduler.cli import cli
 from swh.scheduler.utils import create_task_dict
@@ -588,7 +589,7 @@ Task 1
 
 
 def _fill_storage_with_origins(storage, nb_origins):
-    origins = [{"url": "http://example.com/{}".format(i),} for i in range(nb_origins)]
+    origins = [Origin(url=f"http://example.com/{i}") for i in range(nb_origins)]
     storage.origin_add(origins)
     return origins
 
@@ -597,11 +598,7 @@ def _fill_storage_with_origins(storage, nb_origins):
 def storage():
     """An instance of in-memory storage that gets injected
     into the CLI functions."""
-    storage_config = {
-        "cls": "pipeline",
-        "steps": [{"cls": "validate"}, {"cls": "memory"},],
-    }
-    storage = get_storage(**storage_config)
+    storage = get_storage(cls="memory")
     with patch("swh.storage.get_storage") as get_storage_mock:
         get_storage_mock.return_value = storage
         yield storage
@@ -646,7 +643,7 @@ def _assert_origin_tasks_contraints(tasks, max_tasks, max_task_size, expected_or
         expected_origins
     )
     assert set.union(*(set(task["arguments"]["args"][0]) for task in tasks)) == {
-        origin["url"] for origin in expected_origins
+        origin.url for origin in expected_origins
     }
 
 
