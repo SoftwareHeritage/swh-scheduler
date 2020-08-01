@@ -13,7 +13,11 @@ import arrow
 import csv
 import click
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional, Iterator
+from itertools import islice
+
+from swh.model.model import Origin
+from swh.storage.interface import StorageInterface
 
 from . import cli
 
@@ -285,6 +289,27 @@ def schedule_task(ctx, type, options, policy, priority, next_run):
     click.echo("\n".join(output))
 
 
+def iter_origins(
+    storage: StorageInterface, page_token: Optional[str] = None
+) -> Iterator[Origin]:
+    """Iterate over origins in the storage. Optionally starting from page_token.
+
+    This logs regularly an info message during pagination with the page_token. This, in
+    order to feed it back to the cli if the process interrupted.
+
+    Yields
+        origin model objects from the storage
+
+    """
+    while True:
+        page_result = storage.origin_list(page_token=page_token)
+        page_token = page_result.next_page_token
+        yield from page_result.results
+        if not page_token:
+            break
+        click.echo(f"page_token: {page_token}\n")
+
+
 @task.command("schedule_origins")
 @click.argument("type", nargs=1, required=True)
 @click.argument("options", nargs=-1)
@@ -298,17 +323,17 @@ def schedule_task(ctx, type, options, policy, priority, next_run):
     help="Number of origins per task",
 )
 @click.option(
-    "--min-id",
+    "--page-token",
     default=0,
     show_default=True,
-    type=int,
+    type=str,
     help="Only schedule tasks for origins whose ID is greater",
 )
 @click.option(
-    "--max-id",
+    "--limit",
     default=None,
     type=int,
-    help="Only schedule tasks for origins whose ID is lower",
+    help="Limit the tasks scheduling up to this number of tasks",
 )
 @click.option("--storage-url", "-g", help="URL of the (graph) storage API")
 @click.option(
@@ -319,7 +344,7 @@ def schedule_task(ctx, type, options, policy, priority, next_run):
 )
 @click.pass_context
 def schedule_origin_metadata_index(
-    ctx, type, options, storage_url, origin_batch_size, min_id, max_id, dry_run
+    ctx, type, options, storage_url, origin_batch_size, page_token, limit, dry_run
 ):
     """Schedules tasks for origins that are already known.
 
@@ -333,7 +358,6 @@ def schedule_origin_metadata_index(
         task schedule_origins index-origin-metadata
     """
     from swh.storage import get_storage
-    from swh.storage.algos.origin import iter_origins
     from .utils import parse_options, schedule_origin_batches
 
     scheduler = ctx.obj["scheduler"]
@@ -345,9 +369,11 @@ def schedule_origin_metadata_index(
     if args:
         raise click.ClickException("Only keywords arguments are allowed.")
 
-    origins = iter_origins(storage, origin_from=min_id, origin_to=max_id)
-    origin_urls = (origin.url for origin in origins)
+    origins = iter_origins(storage, page_token=page_token)
+    if limit:
+        origins = islice(origins, limit)
 
+    origin_urls = (origin.url for origin in origins)
     schedule_origin_batches(scheduler, type, origin_urls, origin_batch_size, kw)
 
 
