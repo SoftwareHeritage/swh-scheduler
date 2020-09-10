@@ -3,8 +3,8 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-from ast import literal_eval
-import csv
+# WARNING: do not import unnecessary things here to keep cli startup time under
+# control
 import logging
 import sys
 import time
@@ -89,6 +89,9 @@ def ping_workers(ctx: click.Context) -> None:
 @click.pass_context
 def list_running(ctx: click.Context, format: str):
     """List running tasks on the lister workers"""
+    from ast import literal_eval
+    import csv
+
     response_times = {}
 
     def active_callback(response):

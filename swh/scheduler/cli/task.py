@@ -3,23 +3,21 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import datetime
-import json
-import itertools
+# WARNING: do not import unnecessary things here to keep cli startup time under
+# control
 import locale
 import logging
 
-import arrow
-import csv
 import click
 
-from typing import Any, Dict, Optional, Iterator
-from itertools import islice
-
-from swh.model.model import Origin
-from swh.storage.interface import StorageInterface
+from typing import Any, Dict, Optional, Iterator, TYPE_CHECKING
 
 from . import cli
+
+if TYPE_CHECKING:
+    # importing swh.storage.interface triggers the load of 300+ modules, so...
+    from swh.model.model import Origin
+    from swh.storage.interface import StorageInterface
 
 
 locale.setlocale(locale.LC_ALL, "")
@@ -30,6 +28,8 @@ class DateTimeType(click.ParamType):
     name = "time and date"
 
     def convert(self, value, param, ctx):
+        import arrow
+
         if not isinstance(value, arrow.Arrow):
             value = arrow.get(value)
 
@@ -41,6 +41,9 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
 
 def format_dict(d):
+    import datetime
+    import arrow
+
     ret = {}
     for k, v in d.items():
         if isinstance(v, (arrow.Arrow, datetime.date, datetime.datetime)):
@@ -77,6 +80,7 @@ def pretty_print_task(task, full=False):
 
     If 'full' is True, also print the status and priority fields.
 
+    >>> import datetime
     >>> task = {
     ...     'id': 1234,
     ...     'arguments': {
@@ -121,6 +125,8 @@ def pretty_print_task(task, full=False):
         key2: 42
     <BLANKLINE>
     """
+    import arrow
+
     next_run = arrow.get(task["next_run"])
     lines = [
         "%s %s\n" % (click.style("Task", bold=True), task["id"]),
@@ -204,6 +210,10 @@ def schedule_tasks(ctx, columns, delimiter, file):
                 --delimiter ';' -
 
     """
+    import csv
+    import json
+    import arrow
+
     tasks = []
     now = arrow.utcnow()
     scheduler = ctx.obj["scheduler"]
@@ -262,6 +272,8 @@ def schedule_task(ctx, type, options, policy, priority, next_run):
     Note: if the priority is not given, the task won't have the priority set,
     which is considered as the lowest priority level.
     """
+    import arrow
+
     from .utils import parse_options
 
     scheduler = ctx.obj["scheduler"]
@@ -289,9 +301,9 @@ def schedule_task(ctx, type, options, policy, priority, next_run):
     click.echo("\n".join(output))
 
 
-def iter_origins(
-    storage: StorageInterface, page_token: Optional[str] = None
-) -> Iterator[Origin]:
+def iter_origins(  # use string annotations to prevent some pkg loading
+    storage: "StorageInterface", page_token: "Optional[str]" = None,
+) -> "Iterator[Origin]":
     """Iterate over origins in the storage. Optionally starting from page_token.
 
     This logs regularly an info message during pagination with the page_token. This, in
@@ -357,6 +369,7 @@ def schedule_origin_metadata_index(
     swh-scheduler --database 'service=swh-scheduler' \
         task schedule_origins index-origin-metadata
     """
+    from itertools import islice
     from swh.storage import get_storage
     from .utils import parse_options, schedule_origin_batches
 
@@ -571,6 +584,8 @@ def respawn_tasks(ctx, task_ids, next_run):
 
        swh-scheduler task respawn 1 3 12
     """
+    import arrow
+
     scheduler = ctx.obj["scheduler"]
     if not scheduler:
         raise ValueError("Scheduler class (local/remote) must be instantiated")
@@ -658,6 +673,8 @@ def archive_tasks(
        With --dry-run flag set (default), only list those.
 
     """
+    import arrow
+    from itertools import groupby
     from swh.core.utils import grouper
     from swh.scheduler.backend_es import ElasticSearchBackend
 
@@ -711,7 +728,7 @@ def archive_tasks(
                 after, before, page_token=page_token, limit=batch_index
             )
             tasks_sorted = sorted(result["tasks"], key=get_index_name)
-            groups = itertools.groupby(tasks_sorted, key=get_index_name)
+            groups = groupby(tasks_sorted, key=get_index_name)
             for index_name, tasks_group in groups:
                 logger.debug("Index tasks to %s" % index_name)
                 if dry_run:
