@@ -7,10 +7,9 @@
 # control
 import locale
 import logging
+from typing import TYPE_CHECKING, Any, Dict, Iterator, Optional
 
 import click
-
-from typing import Any, Dict, Optional, Iterator, TYPE_CHECKING
 
 from . import cli
 
@@ -42,6 +41,7 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
 def format_dict(d):
     import datetime
+
     import arrow
 
     ret = {}
@@ -212,6 +212,7 @@ def schedule_tasks(ctx, columns, delimiter, file):
     """
     import csv
     import json
+
     import arrow
 
     tasks = []
@@ -370,7 +371,9 @@ def schedule_origin_metadata_index(
         task schedule_origins index-origin-metadata
     """
     from itertools import islice
+
     from swh.storage import get_storage
+
     from .utils import parse_options, schedule_origin_batches
 
     scheduler = ctx.obj["scheduler"]
@@ -673,8 +676,10 @@ def archive_tasks(
        With --dry-run flag set (default), only list those.
 
     """
-    import arrow
     from itertools import groupby
+
+    import arrow
+
     from swh.core.utils import grouper
     from swh.scheduler.backend_es import ElasticSearchBackend
 

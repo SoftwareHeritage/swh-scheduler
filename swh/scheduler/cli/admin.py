@@ -29,8 +29,8 @@ def runner(ctx, period):
 
     This process is responsible for checking for ready-to-run tasks and
     schedule them."""
-    from swh.scheduler.celery_backend.runner import run_ready_tasks
     from swh.scheduler.celery_backend.config import build_app
+    from swh.scheduler.celery_backend.runner import run_ready_tasks
 
     app = build_app(ctx.obj["config"].get("celery"))
     app.set_current()

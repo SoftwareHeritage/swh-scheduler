@@ -3,13 +3,13 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import arrow
 import logging
+
+import arrow
 from kombu.utils.uuid import uuid
 
 from swh.core.statsd import statsd
-from swh.scheduler import get_scheduler, compute_nb_tasks_from
-
+from swh.scheduler import compute_nb_tasks_from, get_scheduler
 
 logger = logging.getLogger(__name__)
 # Max batch size for tasks

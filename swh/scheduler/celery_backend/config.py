@@ -6,25 +6,22 @@
 import functools
 import logging
 import os
-import pkg_resources
 import traceback
 from typing import Any, Dict
 import urllib.parse
 
 from celery import Celery
-from celery.signals import setup_logging, celeryd_after_setup, worker_init
+from celery.signals import celeryd_after_setup, setup_logging, worker_init
 from celery.utils.log import ColorFormatter
 from celery.worker.control import Panel
-
 from kombu import Exchange, Queue
 from kombu.five import monotonic as _monotonic
-
+import pkg_resources
 import requests
-
-from swh.scheduler import CONFIG as SWH_CONFIG
 
 from swh.core.config import load_named_config, merge_configs
 from swh.core.sentry import init_sentry
+from swh.scheduler import CONFIG as SWH_CONFIG
 
 try:
     from swh.core.logger import JournalHandler

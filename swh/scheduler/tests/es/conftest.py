@@ -3,9 +3,8 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import yaml
-
 import pytest
+import yaml
 
 from swh.scheduler import get_scheduler
 

@@ -47,7 +47,7 @@ def cli(ctx, config_file, database, url, no_stdout):
             pass
 
     from swh.core import config
-    from swh.scheduler import get_scheduler, DEFAULT_CONFIG
+    from swh.scheduler import DEFAULT_CONFIG, get_scheduler
 
     ctx.ensure_object(dict)
 

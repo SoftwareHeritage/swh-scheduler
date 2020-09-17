@@ -3,15 +3,14 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import os
 from datetime import datetime, timezone
+import os
 from typing import List
 
 import pytest
 
 from swh.scheduler.model import ListedOrigin, Lister
 from swh.scheduler.tests.common import LISTERS
-
 
 # make sure we are not fooled by CELERY_ config environment vars
 for var in [x for x in os.environ.keys() if x.startswith("CELERY")]:

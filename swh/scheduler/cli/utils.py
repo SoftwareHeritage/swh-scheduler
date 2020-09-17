@@ -8,12 +8,12 @@
 
 import click
 
-
 TASK_BATCH_SIZE = 1000  # Number of tasks per query to the scheduler
 
 
 def schedule_origin_batches(scheduler, task_type, origins, origin_batch_size, kwargs):
     from itertools import islice
+
     from swh.scheduler.utils import create_task_dict
 
     nb_origins = 0

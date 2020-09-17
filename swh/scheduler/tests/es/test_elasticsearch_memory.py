@@ -7,14 +7,13 @@ import datetime
 import hashlib
 import logging
 import random
+from typing import Any, Dict
 
 import pytest
 
 from swh.scheduler.elasticsearch_memory import BasicSerializer, BasicTransport
 
-from ..common import tasks_from_template, TEMPLATES
-from typing import Any, Dict
-
+from ..common import TEMPLATES, tasks_from_template
 
 logger = logging.getLogger(__name__)
 

@@ -6,7 +6,6 @@
 import copy
 import datetime
 
-
 TEMPLATES = {
     "git": {
         "type": "update-git",

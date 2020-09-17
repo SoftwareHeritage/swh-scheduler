@@ -4,22 +4,20 @@
 # See top-level LICENSE file for more information
 
 import datetime
+from itertools import islice
+import logging
 import re
 import tempfile
-import logging
-
-from itertools import islice
-
 from unittest.mock import patch
-from click.testing import CliRunner
 
+from click.testing import CliRunner
 import pytest
 
+from swh.core.api.classes import stream_results
 from swh.model.model import Origin
-from swh.storage import get_storage
 from swh.scheduler.cli import cli
 from swh.scheduler.utils import create_task_dict
-from swh.core.api.classes import stream_results
+from swh.storage import get_storage
 
 CLI_CONFIG = """
 scheduler:
