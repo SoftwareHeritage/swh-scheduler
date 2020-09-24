@@ -6,6 +6,7 @@
 import functools
 import logging
 import os
+from time import monotonic as _monotonic
 import traceback
 from typing import Any, Dict
 import urllib.parse
@@ -15,7 +16,6 @@ from celery.signals import celeryd_after_setup, setup_logging, worker_init
 from celery.utils.log import ColorFormatter
 from celery.worker.control import Panel
 from kombu import Exchange, Queue
-from kombu.five import monotonic as _monotonic
 import pkg_resources
 import requests
 
