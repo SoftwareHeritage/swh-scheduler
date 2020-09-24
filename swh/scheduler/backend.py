@@ -5,24 +5,23 @@
 
 import json
 import logging
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 from uuid import UUID
 
 from arrow import Arrow, utcnow
 import attr
-import psycopg2.pool
-import psycopg2.extras
-
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 from psycopg2.extensions import AsIs
+import psycopg2.extras
+import psycopg2.pool
 
 from swh.core.db import BaseDb
 from swh.core.db.common import db_transaction
 
 from .exc import StaleData
 from .model import (
-    Lister,
     ListedOrigin,
     ListedOriginPageToken,
+    Lister,
     PaginatedListedOriginList,
 )
 

@@ -5,7 +5,6 @@
 
 from typing import Any, Dict
 
-
 # Percentage of tasks with priority to schedule
 PRIORITY_SLOT = 0.6
 

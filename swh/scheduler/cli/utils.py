@@ -3,17 +3,19 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import itertools
+# WARNING: do not import unnecessary things here to keep cli startup time under
+# control
 
 import click
-import yaml
-
-from swh.scheduler.utils import create_task_dict
 
 TASK_BATCH_SIZE = 1000  # Number of tasks per query to the scheduler
 
 
 def schedule_origin_batches(scheduler, task_type, origins, origin_batch_size, kwargs):
+    from itertools import islice
+
+    from swh.scheduler.utils import create_task_dict
+
     nb_origins = 0
     nb_tasks = 0
 
@@ -22,7 +24,7 @@ def schedule_origin_batches(scheduler, task_type, origins, origin_batch_size, kw
         for _ in range(TASK_BATCH_SIZE):
             # Group origins
             origin_batch = []
-            for origin in itertools.islice(origins, origin_batch_size):
+            for origin in islice(origins, origin_batch_size):
                 origin_batch.append(origin)
             nb_origins += len(origin_batch)
             if not origin_batch:
@@ -49,6 +51,8 @@ def schedule_origin_batches(scheduler, task_type, origins, origin_batch_size, kw
 
 
 def parse_argument(option):
+    import yaml
+
     try:
         return yaml.safe_load(option)
     except Exception:

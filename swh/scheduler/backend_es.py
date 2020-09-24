@@ -7,10 +7,9 @@
 
 """
 
+from copy import deepcopy
 import datetime  # noqa
 import logging
-
-from copy import deepcopy
 from typing import Any, Dict
 
 from elasticsearch import helpers
@@ -44,7 +43,9 @@ def get_elasticsearch(cls: str, args: Dict[str, Any] = {}):
     if cls == "local":
         from elasticsearch import Elasticsearch
     elif cls == "memory":
-        from .elasticsearch_memory import MemoryElasticsearch as Elasticsearch  # type: ignore  # noqa
+        from .elasticsearch_memory import (  # type: ignore  # noqa
+            MemoryElasticsearch as Elasticsearch,
+        )
     else:
         raise ValueError("Unknown elasticsearch class `%s`" % cls)
 

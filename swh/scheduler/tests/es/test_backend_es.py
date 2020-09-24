@@ -5,13 +5,12 @@
 
 import datetime
 
-import pytest
-
 import elasticsearch
+import pytest
 
 from swh.scheduler.backend_es import get_elasticsearch
 
-from ..common import tasks_from_template, TEMPLATES
+from ..common import TEMPLATES, tasks_from_template
 
 
 def test_get_elasticsearch():

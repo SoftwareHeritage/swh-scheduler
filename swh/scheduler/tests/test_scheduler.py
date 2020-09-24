@@ -3,14 +3,13 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+from collections import defaultdict
 import copy
 import datetime
-import random
-import uuid
-
-from collections import defaultdict
 import inspect
+import random
 from typing import Any, Dict, List, Optional
+import uuid
 
 from arrow import utcnow
 import attr
@@ -20,7 +19,7 @@ from swh.scheduler.exc import StaleData
 from swh.scheduler.interface import SchedulerInterface
 from swh.scheduler.model import ListedOrigin, ListedOriginPageToken
 
-from .common import tasks_from_template, TEMPLATES, TASK_TYPES, LISTERS
+from .common import LISTERS, TASK_TYPES, TEMPLATES, tasks_from_template
 
 
 def subdict(d, keys=None, excl=()):
