@@ -7,15 +7,13 @@
 
 """
 
+from ast import literal_eval
 import datetime  # noqa serialization purposes
 import hashlib
 import logging
-
-from ast import literal_eval
 from typing import Optional
 
 import psycopg2  # noqa serialization purposes
-
 
 logger = logging.getLogger(__name__)
 

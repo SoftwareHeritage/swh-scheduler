@@ -3,16 +3,15 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import pytest
 import traceback
-import yaml
-import pkg_resources
 
 from click.testing import CliRunner
+import pkg_resources
+import pytest
+import yaml
 
 from swh.scheduler import get_scheduler
 from swh.scheduler.cli import cli
-
 
 FAKE_MODULE_ENTRY_POINTS = {
     "lister.gnu=swh.lister.gnu:register",
@@ -30,7 +29,7 @@ def mock_pkg_resources(monkeypatch):
         """Substitute fake function to return a fixed set of entrypoints
 
         """
-        from pkg_resources import EntryPoint, Distribution
+        from pkg_resources import Distribution, EntryPoint
 
         d = Distribution()
         return [EntryPoint.parse(entry, dist=d) for entry in FAKE_MODULE_ENTRY_POINTS]

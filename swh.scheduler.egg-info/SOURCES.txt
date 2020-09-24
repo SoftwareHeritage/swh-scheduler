@@ -18,7 +18,6 @@ requirements.txt
 setup.cfg
 setup.py
 tox.ini
-version.txt
 data/README.md
 data/elastic-template.json
 data/update-index-settings.json

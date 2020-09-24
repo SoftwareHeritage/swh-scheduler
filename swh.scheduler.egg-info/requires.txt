@@ -11,7 +11,7 @@ pyyaml
 vcversioner
 setuptools
 swh.core[db,http]>=0.0.65
-swh.storage>=0.0.182
+swh.storage>=0.11.1
 
 [testing]
 pytest

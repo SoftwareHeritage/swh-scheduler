@@ -5,7 +5,7 @@
 
 import datetime
 
-from .common import tasks_from_template, TEMPLATES
+from .common import TEMPLATES, tasks_from_template
 
 
 def test_tasks_from_template_no_priority():

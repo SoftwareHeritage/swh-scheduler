@@ -10,12 +10,11 @@ from swh.core import config
 from swh.core.api import JSONFormatter, MsgpackFormatter, RPCServerApp
 from swh.core.api import encode_data_server as encode_data
 from swh.core.api import error_handler, negotiate
-
 from swh.scheduler import get_scheduler
 from swh.scheduler.exc import SchedulerException
 from swh.scheduler.interface import SchedulerInterface
-from .serializers import ENCODERS, DECODERS
 
+from .serializers import DECODERS, ENCODERS
 
 scheduler = None
 

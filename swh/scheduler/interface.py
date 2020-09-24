@@ -7,7 +7,6 @@ from typing import Any, Dict, Iterable, List, Optional
 from uuid import UUID
 
 from swh.core.api import remote_api_endpoint
-
 from swh.scheduler.model import (
     ListedOrigin,
     ListedOriginPageToken,

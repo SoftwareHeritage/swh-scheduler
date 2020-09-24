@@ -3,21 +3,18 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import arrow
 import datetime
 import logging
-import uuid
 import random
+import uuid
 
-import pytest
-
+import arrow
 from click.testing import CliRunner
+import pytest
 
 from swh.scheduler.cli import cli
 
-
-from ..common import tasks_from_template, TASK_TYPES, TEMPLATES
-
+from ..common import TASK_TYPES, TEMPLATES, tasks_from_template
 
 logger = logging.getLogger(__name__)
 

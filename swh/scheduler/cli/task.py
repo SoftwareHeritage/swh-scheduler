@@ -3,19 +3,20 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import datetime
-import json
-import itertools
+# WARNING: do not import unnecessary things here to keep cli startup time under
+# control
 import locale
 import logging
+from typing import TYPE_CHECKING, Any, Dict, Iterator, Optional
 
-import arrow
-import csv
 import click
 
-from typing import Any, Dict
-
 from . import cli
+
+if TYPE_CHECKING:
+    # importing swh.storage.interface triggers the load of 300+ modules, so...
+    from swh.model.model import Origin
+    from swh.storage.interface import StorageInterface
 
 
 locale.setlocale(locale.LC_ALL, "")
@@ -26,6 +27,8 @@ class DateTimeType(click.ParamType):
     name = "time and date"
 
     def convert(self, value, param, ctx):
+        import arrow
+
         if not isinstance(value, arrow.Arrow):
             value = arrow.get(value)
 
@@ -37,6 +40,10 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
 
 def format_dict(d):
+    import datetime
+
+    import arrow
+
     ret = {}
     for k, v in d.items():
         if isinstance(v, (arrow.Arrow, datetime.date, datetime.datetime)):
@@ -73,6 +80,7 @@ def pretty_print_task(task, full=False):
 
     If 'full' is True, also print the status and priority fields.
 
+    >>> import datetime
     >>> task = {
     ...     'id': 1234,
     ...     'arguments': {
@@ -117,6 +125,8 @@ def pretty_print_task(task, full=False):
         key2: 42
     <BLANKLINE>
     """
+    import arrow
+
     next_run = arrow.get(task["next_run"])
     lines = [
         "%s %s\n" % (click.style("Task", bold=True), task["id"]),
@@ -200,6 +210,11 @@ def schedule_tasks(ctx, columns, delimiter, file):
                 --delimiter ';' -
 
     """
+    import csv
+    import json
+
+    import arrow
+
     tasks = []
     now = arrow.utcnow()
     scheduler = ctx.obj["scheduler"]
@@ -258,6 +273,8 @@ def schedule_task(ctx, type, options, policy, priority, next_run):
     Note: if the priority is not given, the task won't have the priority set,
     which is considered as the lowest priority level.
     """
+    import arrow
+
     from .utils import parse_options
 
     scheduler = ctx.obj["scheduler"]
@@ -285,6 +302,27 @@ def schedule_task(ctx, type, options, policy, priority, next_run):
     click.echo("\n".join(output))
 
 
+def iter_origins(  # use string annotations to prevent some pkg loading
+    storage: "StorageInterface", page_token: "Optional[str]" = None,
+) -> "Iterator[Origin]":
+    """Iterate over origins in the storage. Optionally starting from page_token.
+
+    This logs regularly an info message during pagination with the page_token. This, in
+    order to feed it back to the cli if the process interrupted.
+
+    Yields
+        origin model objects from the storage
+
+    """
+    while True:
+        page_result = storage.origin_list(page_token=page_token)
+        page_token = page_result.next_page_token
+        yield from page_result.results
+        if not page_token:
+            break
+        click.echo(f"page_token: {page_token}\n")
+
+
 @task.command("schedule_origins")
 @click.argument("type", nargs=1, required=True)
 @click.argument("options", nargs=-1)
@@ -298,17 +336,17 @@ def schedule_task(ctx, type, options, policy, priority, next_run):
     help="Number of origins per task",
 )
 @click.option(
-    "--min-id",
+    "--page-token",
     default=0,
     show_default=True,
-    type=int,
+    type=str,
     help="Only schedule tasks for origins whose ID is greater",
 )
 @click.option(
-    "--max-id",
+    "--limit",
     default=None,
     type=int,
-    help="Only schedule tasks for origins whose ID is lower",
+    help="Limit the tasks scheduling up to this number of tasks",
 )
 @click.option("--storage-url", "-g", help="URL of the (graph) storage API")
 @click.option(
@@ -319,7 +357,7 @@ def schedule_task(ctx, type, options, policy, priority, next_run):
 )
 @click.pass_context
 def schedule_origin_metadata_index(
-    ctx, type, options, storage_url, origin_batch_size, min_id, max_id, dry_run
+    ctx, type, options, storage_url, origin_batch_size, page_token, limit, dry_run
 ):
     """Schedules tasks for origins that are already known.
 
@@ -332,8 +370,10 @@ def schedule_origin_metadata_index(
     swh-scheduler --database 'service=swh-scheduler' \
         task schedule_origins index-origin-metadata
     """
+    from itertools import islice
+
     from swh.storage import get_storage
-    from swh.storage.algos.origin import iter_origins
+
     from .utils import parse_options, schedule_origin_batches
 
     scheduler = ctx.obj["scheduler"]
@@ -345,9 +385,11 @@ def schedule_origin_metadata_index(
     if args:
         raise click.ClickException("Only keywords arguments are allowed.")
 
-    origins = iter_origins(storage, origin_from=min_id, origin_to=max_id)
-    origin_urls = (origin["url"] for origin in origins)
+    origins = iter_origins(storage, page_token=page_token)
+    if limit:
+        origins = islice(origins, limit)
 
+    origin_urls = (origin.url for origin in origins)
     schedule_origin_batches(scheduler, type, origin_urls, origin_batch_size, kw)
 
 
@@ -545,6 +587,8 @@ def respawn_tasks(ctx, task_ids, next_run):
 
        swh-scheduler task respawn 1 3 12
     """
+    import arrow
+
     scheduler = ctx.obj["scheduler"]
     if not scheduler:
         raise ValueError("Scheduler class (local/remote) must be instantiated")
@@ -632,6 +676,10 @@ def archive_tasks(
        With --dry-run flag set (default), only list those.
 
     """
+    from itertools import groupby
+
+    import arrow
+
     from swh.core.utils import grouper
     from swh.scheduler.backend_es import ElasticSearchBackend
 
@@ -685,7 +733,7 @@ def archive_tasks(
                 after, before, page_token=page_token, limit=batch_index
             )
             tasks_sorted = sorted(result["tasks"], key=get_index_name)
-            groups = itertools.groupby(tasks_sorted, key=get_index_name)
+            groups = groupby(tasks_sorted, key=get_index_name)
             for index_name, tasks_group in groups:
                 logger.debug("Index tasks to %s" % index_name)
                 if dry_run:
