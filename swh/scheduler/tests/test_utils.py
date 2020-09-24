@@ -3,8 +3,8 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import unittest
 from datetime import timezone
+import unittest
 from unittest.mock import patch
 
 from swh.scheduler import utils

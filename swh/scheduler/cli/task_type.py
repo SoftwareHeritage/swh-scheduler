@@ -3,16 +3,16 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import celery.app.task
-import click
-import logging
-
 from importlib import import_module
+import logging
 from typing import Mapping
 
+# WARNING: do not import unnecessary things here to keep cli startup time under
+# control
+import click
 from pkg_resources import iter_entry_points
-from . import cli
 
+from . import cli
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +106,8 @@ def register_task_types(ctx, plugins):
     ...) plugins.
 
     """
+    import celery.app.task
+
     scheduler = ctx.obj["scheduler"]
 
     if plugins == ("all",):

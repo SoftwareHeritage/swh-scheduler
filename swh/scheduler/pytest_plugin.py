@@ -9,15 +9,12 @@ import os
 
 from celery.contrib.testing import worker
 from celery.contrib.testing.app import TestApp, setup_default_app
-
 import pkg_resources
 import pytest
 
 from swh.core.utils import numfile_sortkey as sortkey
-
 import swh.scheduler
 from swh.scheduler import get_scheduler
-
 
 SQL_DIR = os.path.join(os.path.dirname(swh.scheduler.__file__), "sql")
 DUMP_FILES = os.path.join(SQL_DIR, "*.sql")

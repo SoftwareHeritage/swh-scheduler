@@ -1,13 +1,11 @@
-from time import sleep
 from itertools import count
+from time import sleep
 
-from celery.result import GroupResult
-from celery.result import AsyncResult
-
+from celery.result import AsyncResult, GroupResult
 import pytest
 
-from swh.scheduler.utils import create_task_dict
 from swh.scheduler.celery_backend.runner import run_ready_tasks
+from swh.scheduler.utils import create_task_dict
 
 
 def test_ping(swh_scheduler_celery_app, swh_scheduler_celery_worker):

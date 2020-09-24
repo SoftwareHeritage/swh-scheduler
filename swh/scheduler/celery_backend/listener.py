@@ -5,16 +5,14 @@
 
 import datetime
 import logging
-import time
 import sys
-
-import click
+import time
 
 from arrow import utcnow
-from kombu import Queue
-
 import celery
 from celery.events import EventReceiver
+import click
+from kombu import Queue
 
 from swh.core.statsd import statsd
 

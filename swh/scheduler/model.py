@@ -4,8 +4,8 @@
 # See top-level LICENSE file for more information
 
 import datetime
-from uuid import UUID
 from typing import Any, Dict, List, Optional, Tuple, Union
+from uuid import UUID
 
 import attr
 import attr.converters

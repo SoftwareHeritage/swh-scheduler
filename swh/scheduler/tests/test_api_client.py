@@ -3,11 +3,11 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import pytest
 from flask import url_for
+import pytest
 
-import swh.scheduler.api.server as server
 from swh.scheduler.api.client import RemoteScheduler
+import swh.scheduler.api.server as server
 from swh.scheduler.tests.test_scheduler import TestScheduler  # noqa
 
 # tests are executed using imported class (TestScheduler) using overloaded
