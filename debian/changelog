@@ -1,3 +1,13 @@
+swh-scheduler (0.5.3-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.5.3     - (tagged by Nicolas Dandrimont
+    <nicolas@dandrimont.eu> on 2020-09-24 17:49:27 +0200)
+  * Upstream changes:     - Release swh.scheduler v0.5.3     - Improve
+    swh cli startup time     - Add isort and update flake8     - Improve
+    pytest execution time     - Support recent kombu versions
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 24 Sep 2020 15:53:25 +0000
+
 swh-scheduler (0.5.2-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.5.2     - (tagged by Antoine R. Dumont
