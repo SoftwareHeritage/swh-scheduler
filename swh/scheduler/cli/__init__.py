@@ -9,10 +9,12 @@ import logging
 
 import click
 
-from swh.core.cli import CONTEXT_SETTINGS, AliasedGroup
+from swh.core.cli import CONTEXT_SETTINGS, AliasedGroup, swh as swh_cli_group
 
 
-@click.group(name="scheduler", context_settings=CONTEXT_SETTINGS, cls=AliasedGroup)
+@swh_cli_group.group(
+    name="scheduler", context_settings=CONTEXT_SETTINGS, cls=AliasedGroup
+)
 @click.option(
     "--config-file",
     "-C",

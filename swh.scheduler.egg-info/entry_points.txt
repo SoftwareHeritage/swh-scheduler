@@ -1,6 +1,4 @@
 
-        [console_scripts]
-        swh-scheduler=swh.scheduler.cli:main
         [swh.cli.subcommands]
-        scheduler=swh.scheduler.cli:cli
+        scheduler=swh.scheduler.cli
     
