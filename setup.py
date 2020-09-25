@@ -51,10 +51,8 @@ setup(
     extras_require={"testing": parse_requirements("test")},
     include_package_data=True,
     entry_points="""
-        [console_scripts]
-        swh-scheduler=swh.scheduler.cli:main
         [swh.cli.subcommands]
-        scheduler=swh.scheduler.cli:cli
+        scheduler=swh.scheduler.cli
     """,
     classifiers=[
         "Programming Language :: Python :: 3",
