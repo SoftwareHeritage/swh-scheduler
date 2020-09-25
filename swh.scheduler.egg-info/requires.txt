@@ -10,7 +10,7 @@ psycopg2
 pyyaml
 vcversioner
 setuptools
-swh.core[db,http]>=0.0.65
+swh.core[db,http]>=0.3
 swh.storage>=0.11.1
 
 [testing]
