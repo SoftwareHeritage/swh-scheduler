@@ -43,7 +43,7 @@ def swh_scheduler_config(request, postgresql):
 
 @pytest.fixture
 def swh_scheduler(swh_scheduler_config):
-    scheduler = get_scheduler("local", swh_scheduler_config)
+    scheduler = get_scheduler("local", **swh_scheduler_config)
     for taskname in TASK_NAMES:
         scheduler.create_task_type(
             {

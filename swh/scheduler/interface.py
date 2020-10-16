@@ -6,6 +6,8 @@
 from typing import Any, Dict, Iterable, List, Optional
 from uuid import UUID
 
+from typing_extensions import Protocol, runtime_checkable
+
 from swh.core.api import remote_api_endpoint
 from swh.scheduler.model import (
     ListedOrigin,
@@ -15,7 +17,8 @@ from swh.scheduler.model import (
 )
 
 
-class SchedulerInterface:
+@runtime_checkable
+class SchedulerInterface(Protocol):
     @remote_api_endpoint("task_type/create")
     def create_task_type(self, task_type):
         """Create a new task type ready for scheduling.

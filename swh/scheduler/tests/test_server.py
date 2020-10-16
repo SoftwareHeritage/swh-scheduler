@@ -3,8 +3,6 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import copy
-
 import pytest
 import yaml
 
@@ -57,7 +55,7 @@ def test_load_and_check_config_wrong_configuration(tmpdir):
 
 def test_load_and_check_config_remote_config_local_type_raise(tmpdir):
     """Configuration without 'local' storage is rejected"""
-    config = {"scheduler": {"cls": "remote", "args": {}}}
+    config = {"scheduler": {"cls": "remote"}}
     config_path = prepare_config_file(tmpdir, config)
     expected_error = (
         "The scheduler backend can only be started with a 'local'" " configuration"
@@ -68,29 +66,17 @@ def test_load_and_check_config_remote_config_local_type_raise(tmpdir):
 
 def test_load_and_check_config_local_incomplete_configuration(tmpdir):
     """Incomplete 'local' configuration should raise"""
-    config = {
-        "scheduler": {
-            "cls": "local",
-            "args": {"db": "database", "something": "needed-for-test",},
-        }
-    }
+    config = {"scheduler": {"cls": "local", "something": "needed-for-test",}}
 
-    for key in ["db", "args"]:
-        c = copy.deepcopy(config)
-        if key == "db":
-            source = c["scheduler"]["args"]
-        else:
-            source = c["scheduler"]
-        source.pop(key)
-        config_path = prepare_config_file(tmpdir, c)
-        expected_error = f"Invalid configuration; missing '{key}' config entry"
-        with pytest.raises(KeyError, match=expected_error):
-            load_and_check_config(config_path)
+    config_path = prepare_config_file(tmpdir, config)
+    expected_error = "Invalid configuration; missing 'db' config entry"
+    with pytest.raises(KeyError, match=expected_error):
+        load_and_check_config(config_path)
 
 
 def test_load_and_check_config_local_config_fine(tmpdir):
     """Local configuration is fine"""
-    config = {"scheduler": {"cls": "local", "args": {"db": "db",}}}
+    config = {"scheduler": {"cls": "local", "db": "db",}}
     config_path = prepare_config_file(tmpdir, config)
     cfg = load_and_check_config(config_path, type="local")
     assert cfg == config
@@ -98,8 +84,7 @@ def test_load_and_check_config_local_config_fine(tmpdir):
 
 def test_load_and_check_config_remote_config_fine(tmpdir):
     """Remote configuration is fine"""
-    config = {"scheduler": {"cls": "remote", "args": {}}}
+    config = {"scheduler": {"cls": "remote"}}
     config_path = prepare_config_file(tmpdir, config)
     cfg = load_and_check_config(config_path, type="any")
-
     assert cfg == config
