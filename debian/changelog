@@ -1,3 +1,16 @@
+swh-scheduler (0.7.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.7.0     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2020-10-19 09:30:36
+    +0200)
+  * Upstream changes:     - v0.7.0     - scheduler: Type and unify
+    get_scheduler factory with other factories     - pytest_plugin:
+    Explicitely name the scheduler test db differently     -
+    test_server: Simplify exception manipulations     - tox.ini: pin
+    black to the pre-commit version (19.10b0) to avoid flip-flops
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 19 Oct 2020 07:33:54 +0000
+
 swh-scheduler (0.6.0-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.6.0     - (tagged by David Douard
