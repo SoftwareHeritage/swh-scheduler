@@ -11,6 +11,7 @@ from celery.contrib.testing import worker
 from celery.contrib.testing.app import TestApp, setup_default_app
 import pkg_resources
 import pytest
+from pytest_postgresql import factories
 
 from swh.core.utils import numfile_sortkey as sortkey
 import swh.scheduler
@@ -24,19 +25,22 @@ DUMP_FILES = os.path.join(SQL_DIR, "*.sql")
 TASK_NAMES = ["ping", "multiping", "add", "error", "echo"]
 
 
+postgresql_scheduler = factories.postgresql("postgresql_proc", db_name="scheduler")
+
+
 @pytest.fixture
-def swh_scheduler_config(request, postgresql):
+def swh_scheduler_config(request, postgresql_scheduler):
     scheduler_config = {
-        "db": postgresql.dsn,
+        "db": postgresql_scheduler.dsn,
     }
 
     all_dump_files = sorted(glob.glob(DUMP_FILES), key=sortkey)
 
-    cursor = postgresql.cursor()
+    cursor = postgresql_scheduler.cursor()
     for fname in all_dump_files:
         with open(fname) as fobj:
             cursor.execute(fobj.read())
-    postgresql.commit()
+    postgresql_scheduler.commit()
 
     return scheduler_config
 
