@@ -1,9 +1,13 @@
-# Copyright (C) 2018  The Software Heritage developers
+# Copyright (C) 2018-2020  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-from typing import Any, Dict
+from __future__ import annotations
+
+from importlib import import_module
+from typing import TYPE_CHECKING, Any, Dict
+import warnings
 
 # Percentage of tasks with priority to schedule
 PRIORITY_SLOT = 0.6
@@ -11,11 +15,15 @@ PRIORITY_SLOT = 0.6
 DEFAULT_CONFIG = {
     "scheduler": (
         "dict",
-        {"cls": "local", "args": {"db": "dbname=softwareheritage-scheduler-dev",},},
+        {"cls": "local", "db": "dbname=softwareheritage-scheduler-dev",},
     )
 }
 # current configuration. To be set by the config loading mechanism
 CONFIG = {}  # type: Dict[str, Any]
+
+
+if TYPE_CHECKING:
+    from swh.scheduler.interface import SchedulerInterface
 
 
 def compute_nb_tasks_from(num_tasks):
@@ -35,16 +43,19 @@ def compute_nb_tasks_from(num_tasks):
     return (int((1 - PRIORITY_SLOT) * num_tasks), int(PRIORITY_SLOT * num_tasks))
 
 
-def get_scheduler(cls, args={}):
+BACKEND_TYPES: Dict[str, str] = {
+    "local": ".backend.SchedulerBackend",
+    "remote": ".api.client.RemoteScheduler",
+}
+
+
+def get_scheduler(cls: str, **kwargs) -> SchedulerInterface:
     """
-    Get a scheduler object of class `scheduler_class` with arguments
-    `scheduler_args`.
+    Get a scheduler object of class `cls` with arguments `**kwargs`.
 
     Args:
-        scheduler (dict): dictionary with keys:
-
-        cls (str): scheduler's class, either 'local' or 'remote'
-        args (dict): dictionary with keys, default to empty.
+        cls: scheduler's class, either 'local' or 'remote'
+        kwargs: arguments to pass to the class' constructor
 
     Returns:
         an instance of swh.scheduler, either local or remote:
@@ -57,11 +68,21 @@ def get_scheduler(cls, args={}):
 
     """
 
-    if cls == "remote":
-        from .api.client import RemoteScheduler as SchedulerBackend
-    elif cls == "local":
-        from .backend import SchedulerBackend
-    else:
-        raise ValueError("Unknown swh.scheduler class `%s`" % cls)
+    if "args" in kwargs:
+        warnings.warn(
+            'Explicit "args" key is deprecated, use keys directly instead.',
+            DeprecationWarning,
+        )
+        kwargs = kwargs["args"]
 
-    return SchedulerBackend(**args)
+    class_path = BACKEND_TYPES.get(cls)
+    if class_path is None:
+        raise ValueError(
+            f"Unknown Scheduler class `{cls}`. "
+            f"Supported: {', '.join(BACKEND_TYPES)}"
+        )
+
+    (module_path, class_name) = class_path.rsplit(".", 1)
+    module = import_module(module_path, package=__package__)
+    BackendClass = getattr(module, class_name)
+    return BackendClass(**kwargs)

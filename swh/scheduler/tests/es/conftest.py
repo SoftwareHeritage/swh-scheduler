@@ -12,7 +12,7 @@ from swh.scheduler import get_scheduler
 @pytest.fixture
 def swh_sched_config(swh_scheduler_config):
     return {
-        "scheduler": {"cls": "local", "args": swh_scheduler_config,},
+        "scheduler": {"cls": "local", **swh_scheduler_config,},
         "elasticsearch": {
             "cls": "memory",
             "args": {"index_name_prefix": "swh-tasks",},

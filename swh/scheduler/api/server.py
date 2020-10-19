@@ -82,12 +82,12 @@ def site_map():
     return links
 
 
-def load_and_check_config(config_file, type="local"):
+def load_and_check_config(config_path, type="local"):
     """Check the minimal configuration is set to run the api or raise an
        error explanation.
 
     Args:
-        config_file (str): Path to the configuration file to load
+        config_path (str): Path to the configuration file to load
         type (str): configuration type. For 'local' type, more
                     checks are done.
 
@@ -98,13 +98,13 @@ def load_and_check_config(config_file, type="local"):
         configuration as a dict
 
     """
-    if not config_file:
+    if not config_path:
         raise EnvironmentError("Configuration file must be defined")
 
-    if not os.path.exists(config_file):
-        raise FileNotFoundError("Configuration file %s does not exist" % (config_file,))
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(f"Configuration file {config_path} does not exist")
 
-    cfg = config.read(config_file)
+    cfg = config.read(config_path)
 
     vcfg = cfg.get("scheduler")
     if not vcfg:
@@ -118,11 +118,7 @@ def load_and_check_config(config_file, type="local"):
                 "configuration"
             )
 
-        args = vcfg.get("args")
-        if not args:
-            raise KeyError("Invalid configuration; missing 'args' config entry")
-
-        db = args.get("db")
+        db = vcfg.get("db")
         if not db:
             raise KeyError("Invalid configuration; missing 'db' config entry")
 
@@ -142,8 +138,8 @@ def make_app_from_configfile():
     """
     global api_cfg
     if not api_cfg:
-        config_file = os.environ.get("SWH_CONFIG_FILENAME")
-        api_cfg = load_and_check_config(config_file)
+        config_path = os.environ.get("SWH_CONFIG_FILENAME")
+        api_cfg = load_and_check_config(config_path)
         app.config.update(api_cfg)
     handler = logging.StreamHandler()
     app.logger.addHandler(handler)

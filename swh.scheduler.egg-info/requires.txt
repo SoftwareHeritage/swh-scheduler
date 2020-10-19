@@ -8,8 +8,8 @@ flask
 pika>=1.1.0
 psycopg2
 pyyaml
-vcversioner
 setuptools
+typing-extensions
 swh.core[db,http]>=0.3
 swh.storage>=0.11.1
 
