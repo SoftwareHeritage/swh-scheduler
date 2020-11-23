@@ -4,45 +4,37 @@
 # See top-level LICENSE file for more information
 
 from datetime import timedelta
-import glob
 import os
 
 from celery.contrib.testing import worker
 from celery.contrib.testing.app import TestApp, setup_default_app
 import pkg_resources
 import pytest
-from pytest_postgresql import factories
 
-from swh.core.utils import numfile_sortkey as sortkey
+from swh.core.db.pytest_plugin import postgresql_fact
 import swh.scheduler
 from swh.scheduler import get_scheduler
 
 SQL_DIR = os.path.join(os.path.dirname(swh.scheduler.__file__), "sql")
-DUMP_FILES = os.path.join(SQL_DIR, "*.sql")
 
 # celery tasks for testing purpose; tasks themselves should be
 # in swh/scheduler/tests/tasks.py
 TASK_NAMES = ["ping", "multiping", "add", "error", "echo"]
 
 
-postgresql_scheduler = factories.postgresql("postgresql_proc", db_name="scheduler")
+postgresql_scheduler = postgresql_fact(
+    "postgresql_proc",
+    db_name="scheduler",
+    dump_files=os.path.join(SQL_DIR, "*.sql"),
+    no_truncate_tables={"dbversion", "priority_ratio"},
+)
 
 
 @pytest.fixture
 def swh_scheduler_config(request, postgresql_scheduler):
-    scheduler_config = {
+    return {
         "db": postgresql_scheduler.dsn,
     }
-
-    all_dump_files = sorted(glob.glob(DUMP_FILES), key=sortkey)
-
-    cursor = postgresql_scheduler.cursor()
-    for fname in all_dump_files:
-        with open(fname) as fobj:
-            cursor.execute(fobj.read())
-    postgresql_scheduler.commit()
-
-    return scheduler_config
 
 
 @pytest.fixture
