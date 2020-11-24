@@ -1,3 +1,13 @@
+swh-scheduler (0.8.1-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.8.1     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2020-11-24 14:13:36
+    +0100)
+  * Upstream changes:     - v0.8.1     - conftest: Reference
+    swh.core.db.pytest_plugin
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 24 Nov 2020 13:16:08 +0000
+
 swh-scheduler (0.8.0-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.8.0     - (tagged by Antoine R. Dumont
