@@ -20,6 +20,11 @@ FAKE_MODULE_ENTRY_POINTS = {
 
 
 @pytest.fixture
+def cli_runner():
+    return CliRunner()
+
+
+@pytest.fixture
 def mock_pkg_resources(monkeypatch):
     """Monkey patch swh.scheduler's mock_pkg_resources.iter_entry_point call
 
@@ -62,7 +67,7 @@ def local_sched_configfile(local_sched_config, tmp_path):
 
 
 def test_register_ttypes_all(
-    mock_pkg_resources, local_sched_config, local_sched_configfile
+    cli_runner, mock_pkg_resources, local_sched_config, local_sched_configfile
 ):
     """Registering all task types"""
 
@@ -80,7 +85,7 @@ def test_register_ttypes_all(
             "lister.pypi",
         ],
     ]:
-        result = CliRunner().invoke(cli, command)
+        result = cli_runner.invoke(cli, command)
 
         assert result.exit_code == 0, traceback.print_exception(*result.exc_info)
 
@@ -97,12 +102,12 @@ def test_register_ttypes_all(
 
 
 def test_register_ttypes_filter(
-    mock_pkg_resources, local_sched_config, local_sched_configfile
+    mock_pkg_resources, cli_runner, local_sched_config, local_sched_configfile
 ):
     """Filtering on one worker should only register its associated task type
 
     """
-    result = CliRunner().invoke(
+    result = cli_runner.invoke(
         cli,
         [
             "--config-file",
@@ -125,3 +130,10 @@ def test_register_ttypes_filter(
         assert task_type_desc
         assert task_type_desc["type"] == task
         assert task_type_desc["backoff_factor"] == 1
+
+
+@pytest.mark.parametrize("cli_command", ["list", "register", "add"])
+def test_cli_task_type_raise(cli_runner, cli_command):
+    """Without a proper configuration, the cli raises"""
+    with pytest.raises(ValueError, match="Scheduler class"):
+        cli_runner.invoke(cli, ["task-type", cli_command], catch_exceptions=False)
