@@ -11,15 +11,17 @@ import random
 from typing import Any, Dict, List, Optional
 import uuid
 
-from arrow import utcnow
 import attr
 import pytest
 
 from swh.scheduler.exc import StaleData
 from swh.scheduler.interface import SchedulerInterface
 from swh.scheduler.model import ListedOrigin, ListedOriginPageToken
+from swh.scheduler.utils import utcnow
 
 from .common import LISTERS, TASK_TYPES, TEMPLATES, tasks_from_template
+
+ONEDAY = datetime.timedelta(days=1)
 
 
 def subdict(d, keys=None, excl=()):
@@ -394,10 +396,10 @@ class TestScheduler:
         # no pagination scenario
 
         # retrieve tasks to archive
-        after = _time.shift(days=-1)
-        after_ts = after.format("YYYY-MM-DD")
-        before = utcnow().shift(days=1)
-        before_ts = before.format("YYYY-MM-DD")
+        after = _time - ONEDAY
+        after_ts = after.strftime("%Y-%m-%d")
+        before = utcnow() + ONEDAY
+        before_ts = before.strftime("%Y-%m-%d")
         tasks_result = swh_scheduler.filter_task_to_archive(
             after_ts=after_ts, before_ts=before_ts, limit=total_tasks
         )

@@ -2,13 +2,13 @@
 # should match https://pypi.python.org/pypi names. For the full spec or
 # dependency lines, see https://pip.readthedocs.org/en/1.1/requirements.html
 
-arrow
 attrs
 attrs-strict
 celery >= 4.3
 Click
 elasticsearch > 5.4
 flask
+humanize
 pika >= 1.1.0
 psycopg2
 pyyaml
