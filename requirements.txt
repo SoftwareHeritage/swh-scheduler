@@ -4,7 +4,7 @@
 
 attrs
 attrs-strict
-celery >= 4.3
+celery >= 4.3, != 5.0.3
 Click
 elasticsearch > 5.4
 flask
