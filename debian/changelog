@@ -1,3 +1,16 @@
+swh-scheduler (0.8.2-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.8.2     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2020-12-07 09:52:28
+    +0100)
+  * Upstream changes:     - v0.8.2     - requirement: Adapt celery
+    requirements     - Replace usage of arrow datetime objects in favor
+    of pure datetime ones     - Stop using the deprecated configuration
+    scheme     - cli.task_type: All task_type clis without a scheduler
+    should raise
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 07 Dec 2020 08:55:39 +0000
+
 swh-scheduler (0.8.1-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.8.1     - (tagged by Antoine R. Dumont
