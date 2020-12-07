@@ -7,6 +7,10 @@
 from datetime import datetime, timezone
 
 
+def utcnow():
+    return datetime.now(tz=timezone.utc)
+
+
 def get_task(task_name):
     """Retrieve task object in our application instance by its fully
     qualified python name.
@@ -50,7 +54,7 @@ def create_task_dict(type, policy, *args, **kwargs):
     task = {
         "policy": policy,
         "type": type,
-        "next_run": datetime.now(tz=timezone.utc),
+        "next_run": utcnow(),
         "arguments": {
             "args": args if args else [],
             "kwargs": kwargs if kwargs else {},

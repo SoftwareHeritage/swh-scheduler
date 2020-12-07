@@ -62,13 +62,13 @@ def cli(ctx, config_file, database, url, no_stdout):
 
     if database:
         conf["scheduler"]["cls"] = "local"
-        conf["scheduler"]["args"]["db"] = database
+        conf["scheduler"]["db"] = database
     elif url:
         conf["scheduler"]["cls"] = "remote"
-        conf["scheduler"]["args"] = {"url": url}
+        conf["scheduler"]["url"] = url
     sched_conf = conf["scheduler"]
     try:
-        logger.debug("Instantiating scheduler with %s" % (sched_conf))
+        logger.debug("Instantiating scheduler with %s", sched_conf)
         scheduler = get_scheduler(**sched_conf)
     except (ValueError, OperationalError):
         # it's the subcommand to decide whether not having a proper

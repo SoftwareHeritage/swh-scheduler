@@ -42,7 +42,9 @@ PLUGIN_WORKER_DESCRIPTIONS = {
 @click.pass_context
 def task_type(ctx):
     """Manipulate task types."""
-    pass
+    scheduler = ctx.obj["scheduler"]
+    if not scheduler:
+        raise ValueError("Scheduler class (local/remote) must be instantiated")
 
 
 @task_type.command("list")
@@ -213,9 +215,6 @@ def add_task_type(
 ):
     """Create a new task type
     """
-    scheduler = ctx.obj["scheduler"]
-    if not scheduler:
-        raise ValueError("Scheduler class (local/remote) must be instantiated")
     task_type = dict(
         type=type,
         backend_name=task_name,
@@ -228,5 +227,5 @@ def add_task_type(
         num_retries=None,
         retry_delay=None,
     )
-    scheduler.create_task_type(task_type)
+    ctx.obj["scheduler"].create_task_type(task_type)
     click.echo("OK")

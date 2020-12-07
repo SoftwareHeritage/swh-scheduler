@@ -8,14 +8,13 @@ import logging
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 from uuid import UUID
 
-from arrow import Arrow, utcnow
 import attr
-from psycopg2.extensions import AsIs
 import psycopg2.extras
 import psycopg2.pool
 
 from swh.core.db import BaseDb
 from swh.core.db.common import db_transaction
+from swh.scheduler.utils import utcnow
 
 from .exc import StaleData
 from .model import (
@@ -28,12 +27,7 @@ from .model import (
 logger = logging.getLogger(__name__)
 
 
-def adapt_arrow(arrow):
-    return AsIs("'%s'::timestamptz" % arrow.isoformat())
-
-
 psycopg2.extensions.register_adapter(dict, psycopg2.extras.Json)
-psycopg2.extensions.register_adapter(Arrow, adapt_arrow)
 psycopg2.extras.register_uuid()
 
 
