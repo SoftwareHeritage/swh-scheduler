@@ -3,7 +3,6 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import datetime
 import json
 import logging
 import sys
@@ -12,12 +11,9 @@ import pika
 
 from swh.core.statsd import statsd
 from swh.scheduler import get_scheduler
+from swh.scheduler.utils import utcnow
 
 logger = logging.getLogger(__name__)
-
-
-def utcnow():
-    return datetime.datetime.now(tz=datetime.timezone.utc)
 
 
 def get_listener(broker_url, queue_name, scheduler_backend):

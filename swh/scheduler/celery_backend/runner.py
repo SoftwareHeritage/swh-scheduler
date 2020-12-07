@@ -5,13 +5,14 @@
 
 import logging
 
-import arrow
 from kombu.utils.uuid import uuid
 
 from swh.core.statsd import statsd
 from swh.scheduler import compute_nb_tasks_from, get_scheduler
+from swh.scheduler.utils import utcnow
 
 logger = logging.getLogger(__name__)
+
 # Max batch size for tasks
 MAX_NUM_TASKS = 10000
 
@@ -29,7 +30,7 @@ def run_ready_tasks(backend, app):
           {
             'task': the scheduler's task id,
             'backend_id': Celery's task id,
-            'scheduler': arrow.utcnow()
+            'scheduler': utcnow()
           }
 
         The result can be used to block-wait for the tasks' results::
@@ -98,7 +99,7 @@ def run_ready_tasks(backend, app):
             data = {
                 "task": task["id"],
                 "backend_id": backend_id,
-                "scheduled": arrow.utcnow(),
+                "scheduled": utcnow(),
             }
 
             backend_tasks.append(data)

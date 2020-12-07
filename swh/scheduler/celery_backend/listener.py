@@ -8,13 +8,13 @@ import logging
 import sys
 import time
 
-from arrow import utcnow
 import celery
 from celery.events import EventReceiver
 import click
 from kombu import Queue
 
 from swh.core.statsd import statsd
+from swh.scheduler.utils import utcnow
 
 
 class ReliableEventReceiver(EventReceiver):

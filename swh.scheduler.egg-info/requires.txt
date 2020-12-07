@@ -1,10 +1,10 @@
-arrow
 attrs
 attrs-strict
-celery>=4.3
+celery!=5.0.3,>=4.3
 Click
 elasticsearch>5.4
 flask
+humanize
 pika>=1.1.0
 psycopg2
 pyyaml

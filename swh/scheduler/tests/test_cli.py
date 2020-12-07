@@ -16,7 +16,7 @@ import pytest
 from swh.core.api.classes import stream_results
 from swh.model.model import Origin
 from swh.scheduler.cli import cli
-from swh.scheduler.utils import create_task_dict
+from swh.scheduler.utils import create_task_dict, utcnow
 from swh.storage import get_storage
 
 CLI_CONFIG = """
@@ -47,10 +47,10 @@ def invoke(scheduler, catch_exceptions, args):
 def test_schedule_tasks(swh_scheduler):
     csv_data = (
         b'swh-test-ping;[["arg1", "arg2"]];{"key": "value"};'
-        + datetime.datetime.utcnow().isoformat().encode()
+        + utcnow().isoformat().encode()
         + b"\n"
         + b'swh-test-ping;[["arg3", "arg4"]];{"key": "value"};'
-        + datetime.datetime.utcnow().isoformat().encode()
+        + utcnow().isoformat().encode()
         + b"\n"
     )
     with tempfile.NamedTemporaryFile(suffix=".csv") as csv_fd:
@@ -63,7 +63,7 @@ def test_schedule_tasks(swh_scheduler):
 Created 2 tasks
 
 Task 1
-  Next run: just now \(.*\)
+  Next run: today \(.*\)
   Interval: 1 day, 0:00:00
   Type: swh-test-ping
   Policy: recurring
@@ -73,7 +73,7 @@ Task 1
     key: 'value'
 
 Task 2
-  Next run: just now \(.*\)
+  Next run: today \(.*\)
   Interval: 1 day, 0:00:00
   Type: swh-test-ping
   Policy: recurring
@@ -114,7 +114,7 @@ def test_schedule_tasks_columns(swh_scheduler):
 Created 1 tasks
 
 Task 1
-  Next run: just now \(.*\)
+  Next run: today \(.*\)
   Interval: 1 day, 0:00:00
   Type: swh-test-ping
   Policy: oneshot
@@ -139,7 +139,7 @@ def test_schedule_task(swh_scheduler):
 Created 1 tasks
 
 Task 1
-  Next run: just now \(.*\)
+  Next run: today \(.*\)
   Interval: 1 day, 0:00:00
   Type: swh-test-ping
   Policy: recurring
@@ -177,7 +177,7 @@ def test_list_pending_tasks(swh_scheduler):
 Found 1 swh-test-ping tasks
 
 Task 1
-  Next run: just now \(.*\)
+  Next run: today \(.*\)
   Interval: 1 day, 0:00:00
   Type: swh-test-ping
   Policy: oneshot
@@ -229,7 +229,7 @@ def test_list_pending_tasks_filter_2(swh_scheduler):
 Found 1 swh-test-ping tasks
 
 Task 2
-  Next run: just now \(.*\)
+  Next run: today \(.*\)
   Interval: 1 day, 0:00:00
   Type: swh-test-ping
   Policy: oneshot
@@ -261,7 +261,7 @@ def test_list_pending_tasks_limit(swh_scheduler):
 Found 2 swh-test-ping tasks
 
 Task 1
-  Next run: just now \(.*\)
+  Next run: today \(.*\)
   Interval: 1 day, 0:00:00
   Type: swh-test-ping
   Policy: oneshot
@@ -270,7 +270,7 @@ Task 1
     key: 'value0'
 
 Task 2
-  Next run: just now \(.*\)
+  Next run: today \(.*\)
   Interval: 1 day, 0:00:00
   Type: swh-test-ping
   Policy: oneshot
@@ -279,7 +279,7 @@ Task 2
     key: 'value1'
 
 Task 3
-  Next run: just now \(.*\)
+  Next run: today \(.*\)
   Interval: 1 day, 0:00:00
   Type: swh-test-ping
   Policy: oneshot
@@ -315,7 +315,7 @@ def test_list_pending_tasks_before(swh_scheduler):
 Found 1 swh-test-ping tasks
 
 Task 2
-  Next run: in a day \(.*\)
+  Next run: tomorrow \(.*\)
   Interval: 1 day, 0:00:00
   Type: swh-test-ping
   Policy: oneshot
@@ -342,7 +342,7 @@ def test_list_tasks(swh_scheduler):
 Found 2 tasks
 
 Task 1
-  Next run: in 3 days \(.*\)
+  Next run: .+ \(.*\)
   Interval: 1 day, 0:00:00
   Type: swh-test-ping
   Policy: oneshot
@@ -353,7 +353,7 @@ Task 1
     key: 'value1'
 
 Task 2
-  Next run: just now \(.*\)
+  Next run: today \(.*\)
   Interval: 1 day, 0:00:00
   Type: swh-test-ping
   Policy: oneshot
@@ -380,7 +380,7 @@ def test_list_tasks_id(swh_scheduler):
 Found 1 tasks
 
 Task 2
-  Next run: just now \(.*\)
+  Next run: today \(.*\)
   Interval: 1 day, 0:00:00
   Type: swh-test-ping
   Policy: oneshot
@@ -409,7 +409,7 @@ def test_list_tasks_id_2(swh_scheduler):
 Found 2 tasks
 
 Task 2
-  Next run: just now \(.*\)
+  Next run: today \(.*\)
   Interval: 1 day, 0:00:00
   Type: swh-test-ping
   Policy: oneshot
@@ -420,7 +420,7 @@ Task 2
     key: 'value2'
 
 Task 3
-  Next run: just now \(.*\)
+  Next run: today \(.*\)
   Interval: 1 day, 0:00:00
   Type: swh-test-ping
   Policy: oneshot
@@ -449,7 +449,7 @@ def test_list_tasks_type(swh_scheduler):
 Found 2 tasks
 
 Task 1
-  Next run: just now \(.*\)
+  Next run: today \(.*\)
   Interval: 1 day, 0:00:00
   Type: swh-test-ping
   Policy: oneshot
@@ -460,7 +460,7 @@ Task 1
     key: 'value1'
 
 Task 3
-  Next run: just now \(.*\)
+  Next run: today \(.*\)
   Interval: 1 day, 0:00:00
   Type: swh-test-ping
   Policy: oneshot
@@ -487,7 +487,7 @@ def test_list_tasks_limit(swh_scheduler):
 Found 2 tasks
 
 Task 1
-  Next run: just now \(.*\)
+  Next run: today \(.*\)
   Interval: 1 day, 0:00:00
   Type: swh-test-ping
   Policy: oneshot
@@ -498,7 +498,7 @@ Task 1
     key: 'value1'
 
 Task 2
-  Next run: just now \(.*\)
+  Next run: today \(.*\)
   Interval: 1 day, 0:00:00
   Type: swh-test-ping
   Policy: oneshot
@@ -536,7 +536,7 @@ def test_list_tasks_before(swh_scheduler):
 Found 1 tasks
 
 Task 2
-  Next run: just now \(.*\)
+  Next run: today \(.*\)
   Interval: 1 day, 0:00:00
   Type: swh-test-ping
   Policy: oneshot
@@ -574,7 +574,7 @@ def test_list_tasks_after(swh_scheduler):
 Found 1 tasks
 
 Task 1
-  Next run: in 3 days \(.*\)
+  Next run: .+ \(.*\)
   Interval: 1 day, 0:00:00
   Type: swh-test-ping
   Policy: oneshot
