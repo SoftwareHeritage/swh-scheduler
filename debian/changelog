@@ -39,7 +39,7 @@ swh-scheduler (0.7.0-1~swh1) unstable-swh; urgency=medium
     +0200)
   * Upstream changes:     - v0.7.0     - scheduler: Type and unify
     get_scheduler factory with other factories     - pytest_plugin:
-    Explicitely name the scheduler test db differently     -
+    Explicitly name the scheduler test db differently     -
     test_server: Simplify exception manipulations     - tox.ini: pin
     black to the pre-commit version (19.10b0) to avoid flip-flops
 
