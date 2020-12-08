@@ -8,11 +8,11 @@ import logging
 import random
 import uuid
 
-import arrow
 from click.testing import CliRunner
 import pytest
 
 from swh.scheduler.cli import cli
+from swh.scheduler.utils import utcnow
 
 from ..common import TASK_TYPES, TEMPLATES, tasks_from_template
 
@@ -28,7 +28,7 @@ def test_cli_archive_tasks(swh_sched, swh_sched_config_file):
     for tt in TASK_TYPES.values():
         scheduler.create_task_type(tt)
 
-    next_run_start = arrow.utcnow().datetime - datetime.timedelta(days=1)
+    next_run_start = utcnow() - datetime.timedelta(days=1)
 
     recurring = tasks_from_template(template_git, next_run_start, 100)
     oneshots = tasks_from_template(

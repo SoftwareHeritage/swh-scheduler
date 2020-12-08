@@ -20,34 +20,18 @@ if TYPE_CHECKING:
 
 
 locale.setlocale(locale.LC_ALL, "")
-ARROW_LOCALE = locale.getlocale(locale.LC_TIME)[0]
-
-
-class DateTimeType(click.ParamType):
-    name = "time and date"
-
-    def convert(self, value, param, ctx):
-        import arrow
-
-        if not isinstance(value, arrow.Arrow):
-            value = arrow.get(value)
-
-        return value
-
-
-DATETIME = DateTimeType()
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
+DATETIME = click.DateTime()
 
 
 def format_dict(d):
+    """Recursively format date objects in the dict passed as argument"""
     import datetime
-
-    import arrow
 
     ret = {}
     for k, v in d.items():
-        if isinstance(v, (arrow.Arrow, datetime.date, datetime.datetime)):
-            v = arrow.get(v).format()
+        if isinstance(v, (datetime.date, datetime.datetime)):
+            v = v.isoformat()
         elif isinstance(v, dict):
             v = format_dict(v)
         ret[k] = v
@@ -96,7 +80,7 @@ def pretty_print_task(task, full=False):
     ... }
     >>> print(click.unstyle(pretty_print_task(task)))
     Task 1234
-      Next run: ... (2019-02-21 13:52:35+00:00)
+      Next run: ... (2019-02-21T13:52:35.407818)
       Interval: 1:00:00
       Type: test_task
       Policy: oneshot
@@ -110,7 +94,7 @@ def pretty_print_task(task, full=False):
     <BLANKLINE>
     >>> print(click.unstyle(pretty_print_task(task, full=True)))
     Task 1234
-      Next run: ... (2019-02-21 13:52:35+00:00)
+      Next run: ... (2019-02-21T13:52:35.407818)
       Interval: 1:00:00
       Type: test_task
       Policy: oneshot
@@ -125,13 +109,13 @@ def pretty_print_task(task, full=False):
         key2: 42
     <BLANKLINE>
     """
-    import arrow
+    import humanize
 
-    next_run = arrow.get(task["next_run"])
+    next_run = task["next_run"]
     lines = [
         "%s %s\n" % (click.style("Task", bold=True), task["id"]),
         click.style("  Next run: ", bold=True),
-        "%s (%s)" % (next_run.humanize(locale=ARROW_LOCALE), next_run.format()),
+        "%s (%s)" % (humanize.naturaldate(next_run), next_run.isoformat()),
         "\n",
         click.style("  Interval: ", bold=True),
         str(task["current_interval"]),
@@ -213,10 +197,10 @@ def schedule_tasks(ctx, columns, delimiter, file):
     import csv
     import json
 
-    import arrow
+    from swh.scheduler.utils import utcnow
 
     tasks = []
-    now = arrow.utcnow()
+    now = utcnow()
     scheduler = ctx.obj["scheduler"]
     if not scheduler:
         raise ValueError("Scheduler class (local/remote) must be instantiated")
@@ -230,7 +214,7 @@ def schedule_tasks(ctx, columns, delimiter, file):
             "args": args,
             "kwargs": kwargs,
         }
-        task["next_run"] = DATETIME.convert(task.get("next_run", now), None, None)
+        task["next_run"] = task.get("next_run", now)
         tasks.append(task)
 
     created = scheduler.create_tasks(tasks)
@@ -273,7 +257,7 @@ def schedule_task(ctx, type, options, policy, priority, next_run):
     Note: if the priority is not given, the task won't have the priority set,
     which is considered as the lowest priority level.
     """
-    import arrow
+    from swh.scheduler.utils import utcnow
 
     from .utils import parse_options
 
@@ -281,7 +265,7 @@ def schedule_task(ctx, type, options, policy, priority, next_run):
     if not scheduler:
         raise ValueError("Scheduler class (local/remote) must be instantiated")
 
-    now = arrow.utcnow()
+    now = utcnow()
 
     (args, kw) = parse_options(options)
     task = {
@@ -289,7 +273,7 @@ def schedule_task(ctx, type, options, policy, priority, next_run):
         "policy": policy,
         "priority": priority,
         "arguments": {"args": args, "kwargs": kw,},
-        "next_run": DATETIME.convert(next_run or now, None, None),
+        "next_run": next_run or now,
     }
     created = scheduler.create_tasks([task])
 
@@ -587,13 +571,13 @@ def respawn_tasks(ctx, task_ids, next_run):
 
        swh-scheduler task respawn 1 3 12
     """
-    import arrow
+    from swh.scheduler.utils import utcnow
 
     scheduler = ctx.obj["scheduler"]
     if not scheduler:
         raise ValueError("Scheduler class (local/remote) must be instantiated")
     if next_run is None:
-        next_run = arrow.utcnow()
+        next_run = utcnow()
     output = []
 
     scheduler.set_status_tasks(
@@ -678,10 +662,9 @@ def archive_tasks(
     """
     from itertools import groupby
 
-    import arrow
-
     from swh.core.utils import grouper
     from swh.scheduler.backend_es import ElasticSearchBackend
+    from swh.scheduler.utils import utcnow
 
     config = ctx.obj["config"]
     scheduler = ctx.obj["scheduler"]
@@ -699,7 +682,7 @@ def archive_tasks(
         logger.info("**NO CLEANUP**")
 
     es_storage = ElasticSearchBackend(**config)
-    now = arrow.utcnow()
+    now = utcnow()
 
     # Default to archive tasks from a rolling month starting the week
     # prior to the current one

@@ -1,8 +1,21 @@
-swh-scheduler (0.8.1-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-scheduler (0.8.2-1~swh2) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * Bump dependency
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 24 Nov 2020 13:18:26 +0000
+ -- Antoine R. Dumont (@ardumont) <ardumont@softwareheritage.org>  Tue, 08 Dec 2020 09:29:26 +0000
+
+swh-scheduler (0.8.2-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.8.2     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2020-12-07 09:52:28
+    +0100)
+  * Upstream changes:     - v0.8.2     - requirement: Adapt celery
+    requirements     - Replace usage of arrow datetime objects in favor
+    of pure datetime ones     - Stop using the deprecated configuration
+    scheme     - cli.task_type: All task_type clis without a scheduler
+    should raise
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 07 Dec 2020 08:55:39 +0000
 
 swh-scheduler (0.8.1-1~swh1) unstable-swh; urgency=medium
 
@@ -32,7 +45,7 @@ swh-scheduler (0.7.0-1~swh1) unstable-swh; urgency=medium
     +0200)
   * Upstream changes:     - v0.7.0     - scheduler: Type and unify
     get_scheduler factory with other factories     - pytest_plugin:
-    Explicitely name the scheduler test db differently     -
+    Explicitly name the scheduler test db differently     -
     test_server: Simplify exception manipulations     - tox.ini: pin
     black to the pre-commit version (19.10b0) to avoid flip-flops
 
