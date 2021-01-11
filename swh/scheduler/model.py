@@ -146,6 +146,10 @@ class ListedOrigin(BaseSchedulerModel):
         type=Optional[datetime.datetime], validator=[type_validator()], default=None,
     )
 
+    last_scheduled = attr.ib(
+        type=Optional[datetime.datetime], validator=[type_validator()], default=None,
+    )
+
     enabled = attr.ib(type=bool, validator=[type_validator()], default=True)
 
     first_seen = attr.ib(

@@ -11,7 +11,7 @@ comment on column dbversion.release is 'Version deployment timestamp';
 comment on column dbversion.description is 'Version description';
 
 insert into dbversion (version, release, description)
-       values (17, now(), 'Work In Progress');
+       values (18, now(), 'Work In Progress');
 
 create table task_type (
   type text primary key,
@@ -145,6 +145,9 @@ create table if not exists listed_origins (
   -- potentially provided by the lister
   last_update timestamptz,
 
+  -- visit scheduling information
+  last_scheduled timestamptz,
+
   primary key (lister_id, url, visit_type)
 );
 
@@ -159,3 +162,5 @@ comment on column listed_origins.first_seen is 'Time at which the origin was fir
 comment on column listed_origins.last_seen is 'Time at which the origin was last seen by the lister';
 
 comment on column listed_origins.last_update is 'Time of the last update to the origin recorded by the remote';
+
+comment on column listed_origins.last_scheduled is 'Time when this origin was scheduled to be visited last';

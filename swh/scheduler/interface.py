@@ -309,6 +309,16 @@ class SchedulerInterface(Protocol):
         """
         ...
 
+    @remote_api_endpoint("origins/grab_next")
+    def grab_next_visits(self, count: int, policy: str,) -> List[ListedOrigin]:
+        """Get at most the `count` next origins that need to be visited
+        according to the given scheduling `policy`.
+
+        This will mark the origins as "being visited" in the listed_origins
+        table, to avoid scheduling multiple visits to the same origin.
+        """
+        ...
+
     @remote_api_endpoint("priority_ratios/get")
     def get_priority_ratios(self):
         ...

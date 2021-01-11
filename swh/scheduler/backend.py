@@ -16,7 +16,7 @@ from swh.core.db import BaseDb
 from swh.core.db.common import db_transaction
 from swh.scheduler.utils import utcnow
 
-from .exc import StaleData
+from .exc import StaleData, UnknownPolicy
 from .model import (
     ListedOrigin,
     ListedOriginPageToken,
@@ -285,6 +285,38 @@ class SchedulerBackend:
             page_token = None
 
         return PaginatedListedOriginList(origins, page_token)
+
+    @db_transaction()
+    def grab_next_visits(
+        self, count: int, policy: str, db=None, cur=None,
+    ) -> List[ListedOrigin]:
+        """Get at most the `count` next origins that need to be visited
+        according to the given scheduling `policy`.
+
+        This will mark the origins as "being visited" in the listed_origins
+        table, to avoid scheduling multiple visits to the same origin.
+        """
+        origin_select_cols = ", ".join(ListedOrigin.select_columns())
+
+        if policy == "oldest_scheduled_first":
+            query = f"""
+                with filtered_origins as (
+                    select lister_id, url, visit_type
+                    from listed_origins
+                    order by last_scheduled nulls first
+                    limit %s
+                    for update skip locked
+                )
+                update listed_origins
+                set last_scheduled = now()
+                where (lister_id, url, visit_type) in (select * from filtered_origins)
+                returning {origin_select_cols}
+            """
+            cur.execute(query, (count,))
+
+            return [ListedOrigin(**d) for d in cur]
+        else:
+            raise UnknownPolicy(f"Unknown scheduling policy {policy}")
 
     task_create_keys = [
         "type",

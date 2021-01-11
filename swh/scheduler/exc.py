@@ -6,6 +6,7 @@
 __all__ = [
     "SchedulerException",
     "StaleData",
+    "UnknownPolicy",
 ]
 
 
@@ -14,4 +15,8 @@ class SchedulerException(Exception):
 
 
 class StaleData(SchedulerException):
+    pass
+
+
+class UnknownPolicy(SchedulerException):
     pass
