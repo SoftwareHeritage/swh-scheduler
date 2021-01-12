@@ -171,6 +171,15 @@ class ListedOrigin(BaseSchedulerModel):
         metadata={"auto_now": True},
     )
 
+    def as_task_dict(self):
+        return {
+            "type": f"load-{self.visit_type}",
+            "arguments": {
+                "args": [],
+                "kwargs": {"url": self.url, **self.extra_loader_arguments},
+            },
+        }
+
 
 ListedOriginPageToken = Tuple[UUID, str]
 

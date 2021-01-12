@@ -100,3 +100,37 @@ def grab_next(ctx, policy: str, fields: Optional[str], with_header: bool, count:
     origins = scheduler.grab_next_visits(count, policy=policy)
     for line in format_origins(origins, fields=parsed_fields, with_header=with_header):
         click.echo(line)
+
+
+@origin.command("schedule-next")
+@click.option(
+    "--policy", "-p", default="oldest_scheduled_first", help="Scheduling policy"
+)
+@click.argument("count", type=int)
+@click.pass_context
+def schedule_next(ctx, policy: str, count: int):
+    """Send the next COUNT origin visits to the scheduler as one-shot tasks."""
+    from ..utils import utcnow
+    from .task import pretty_print_task
+
+    scheduler = ctx.obj["scheduler"]
+
+    origins = scheduler.grab_next_visits(count, policy=policy)
+
+    created = scheduler.create_tasks(
+        [
+            {
+                **origin.as_task_dict(),
+                "policy": "oneshot",
+                "next_run": utcnow(),
+                "retries_left": 1,
+            }
+            for origin in origins
+        ]
+    )
+
+    output = ["Created %d tasks\n" % len(created)]
+    for task in created:
+        output.append(pretty_print_task(task))
+
+    click.echo_via_pager("\n".join(output))

@@ -8,6 +8,7 @@ from typing import Tuple
 import pytest
 
 from swh.scheduler.cli.origin import format_origins
+from swh.scheduler.tests.common import TASK_TYPES
 from swh.scheduler.tests.test_cli import invoke as basic_invoke
 
 
@@ -74,3 +75,29 @@ def test_grab_next(swh_scheduler, listed_origins):
     assert set(origin["url"] for origin in returned_origins) <= set(
         origin.url for origin in listed_origins
     )
+
+
+def test_schedule_next(swh_scheduler, listed_origins):
+    for task_type in TASK_TYPES.values():
+        swh_scheduler.create_task_type(task_type)
+
+    num_origins = 10
+    assert len(listed_origins) >= num_origins
+
+    swh_scheduler.record_listed_origins(listed_origins)
+
+    result = invoke(swh_scheduler, args=("schedule-next", str(num_origins)))
+    assert result.exit_code == 0
+
+    # pull all tasks out of the scheduler
+    tasks = swh_scheduler.search_tasks()
+    assert len(tasks) == num_origins
+
+    scheduled_tasks = {
+        (task["type"], task["arguments"]["kwargs"]["url"]) for task in tasks
+    }
+    all_possible_tasks = {
+        (f"load-{origin.visit_type}", origin.url) for origin in listed_origins
+    }
+
+    assert scheduled_tasks <= all_possible_tasks
