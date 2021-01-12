@@ -65,6 +65,8 @@ def test_site_map(flask_app_client):
             "task_type/create",
             "task_type/get",
             "task_type/get_all",
+            "visit_stats/get",
+            "visit_stats/upsert",
         )
     )
     assert rules == expected_rules

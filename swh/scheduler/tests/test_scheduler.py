@@ -1,4 +1,4 @@
-# Copyright (C) 2017-2019  The Software Heritage developers
+# Copyright (C) 2017-2021  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -16,7 +16,7 @@ import pytest
 
 from swh.scheduler.exc import StaleData, UnknownPolicy
 from swh.scheduler.interface import SchedulerInterface
-from swh.scheduler.model import ListedOrigin, ListedOriginPageToken
+from swh.scheduler.model import ListedOrigin, ListedOriginPageToken, OriginVisitStats
 from swh.scheduler.utils import utcnow
 
 from .common import LISTERS, TASK_TYPES, TEMPLATES, tasks_from_template
@@ -762,3 +762,64 @@ class TestScheduler:
     def _create_task_types(self, scheduler):
         for tt in TASK_TYPES.values():
             scheduler.create_task_type(tt)
+
+    def test_origin_visit_stats_upsert(self, swh_scheduler) -> None:
+        eventful_date = utcnow()
+        url = "https://github.com/test"
+
+        visit_stats = OriginVisitStats(
+            url=url,
+            visit_type="git",
+            last_eventful=eventful_date,
+            last_uneventful=None,
+            last_failed=None,
+        )
+        swh_scheduler.origin_visit_stats_upsert(visit_stats)
+        swh_scheduler.origin_visit_stats_upsert(visit_stats)
+
+        assert swh_scheduler.origin_visit_stats_get(url, "git") == visit_stats
+        assert swh_scheduler.origin_visit_stats_get(url, "svn") is None
+
+        uneventful_date = utcnow()
+        visit_stats = OriginVisitStats(
+            url=url,
+            visit_type="git",
+            last_eventful=None,
+            last_uneventful=uneventful_date,
+            last_failed=None,
+        )
+        swh_scheduler.origin_visit_stats_upsert(visit_stats)
+
+        uneventful_visit = swh_scheduler.origin_visit_stats_get(url, "git")
+
+        expected_visit_stats = OriginVisitStats(
+            url=url,
+            visit_type="git",
+            last_eventful=eventful_date,
+            last_uneventful=uneventful_date,
+            last_failed=None,
+        )
+
+        assert uneventful_visit == expected_visit_stats
+
+        failed_date = utcnow()
+        visit_stats = OriginVisitStats(
+            url=url,
+            visit_type="git",
+            last_eventful=None,
+            last_uneventful=None,
+            last_failed=failed_date,
+        )
+        swh_scheduler.origin_visit_stats_upsert(visit_stats)
+
+        failed_visit = swh_scheduler.origin_visit_stats_get(url, "git")
+
+        expected_visit_stats = OriginVisitStats(
+            url=url,
+            visit_type="git",
+            last_eventful=eventful_date,
+            last_uneventful=uneventful_date,
+            last_failed=failed_date,
+        )
+
+        assert failed_visit == expected_visit_stats

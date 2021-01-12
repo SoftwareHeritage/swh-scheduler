@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2020  The Software Heritage developers
+# Copyright (C) 2015-2021  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -13,6 +13,7 @@ from swh.scheduler.model import (
     ListedOrigin,
     ListedOriginPageToken,
     Lister,
+    OriginVisitStats,
     PaginatedListedOriginList,
 )
 
@@ -321,4 +322,17 @@ class SchedulerInterface(Protocol):
 
     @remote_api_endpoint("priority_ratios/get")
     def get_priority_ratios(self):
+        ...
+
+    @remote_api_endpoint("visit_stats/upsert")
+    def origin_visit_stats_upsert(self, visit_stats: OriginVisitStats) -> None:
+        """Create a new origin visit stats
+        """
+        ...
+
+    @remote_api_endpoint("visit_stats/get")
+    def origin_visit_stats_get(
+        self, url: str, visit_type: str
+    ) -> Optional[OriginVisitStats]:
+        """Retrieve the stats for an origin with a given visit type"""
         ...

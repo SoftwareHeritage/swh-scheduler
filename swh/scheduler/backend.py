@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2020  The Software Heritage developers
+# Copyright (C) 2015-2021  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -21,6 +21,7 @@ from .model import (
     ListedOrigin,
     ListedOriginPageToken,
     Lister,
+    OriginVisitStats,
     PaginatedListedOriginList,
 )
 
@@ -757,3 +758,58 @@ class SchedulerBackend:
     def get_priority_ratios(self, db=None, cur=None):
         cur.execute("select id, ratio from priority_ratio")
         return {row["id"]: row["ratio"] for row in cur.fetchall()}
+
+    @db_transaction()
+    def origin_visit_stats_upsert(
+        self, visit_stats: OriginVisitStats, db=None, cur=None
+    ) -> None:
+        query = """
+            INSERT into origin_visit_stats AS ovi (
+                    url,
+                    visit_type,
+                    last_eventful,
+                    last_uneventful,
+                    last_failed
+                )
+            VALUES (%s, %s, %s, %s, %s) ON CONFLICT (url, visit_type) DO
+            UPDATE
+            SET last_eventful = coalesce(
+                    excluded.last_eventful,
+                    ovi.last_eventful
+                ),
+                last_uneventful = coalesce(
+                    excluded.last_uneventful,
+                    ovi.last_uneventful
+                ),
+                last_failed = coalesce(
+                    excluded.last_failed,
+                    ovi.last_failed
+                )
+        """
+
+        cur.execute(
+            query,
+            (
+                visit_stats.url,
+                visit_stats.visit_type,
+                visit_stats.last_eventful,
+                visit_stats.last_uneventful,
+                visit_stats.last_failed,
+            ),
+        )
+
+    @db_transaction()
+    def origin_visit_stats_get(
+        self, url: str, visit_type: str, db=None, cur=None
+    ) -> Optional[OriginVisitStats]:
+        query = format_query(
+            "SELECT {keys} FROM origin_visit_stats WHERE url=%s AND visit_type=%s",
+            OriginVisitStats.select_columns(),
+        )
+        cur.execute(query, (url, visit_type))
+        row = cur.fetchone()
+
+        if row:
+            return OriginVisitStats(**row)
+        else:
+            return None

@@ -11,7 +11,7 @@ comment on column dbversion.release is 'Version deployment timestamp';
 comment on column dbversion.description is 'Version description';
 
 insert into dbversion (version, release, description)
-       values (18, now(), 'Work In Progress');
+       values (19, now(), 'Work In Progress');
 
 create table task_type (
   type text primary key,
@@ -164,3 +164,19 @@ comment on column listed_origins.last_seen is 'Time at which the origin was last
 comment on column listed_origins.last_update is 'Time of the last update to the origin recorded by the remote';
 
 comment on column listed_origins.last_scheduled is 'Time when this origin was scheduled to be visited last';
+
+create table origin_visit_stats (
+  url text not null,
+  visit_type text not null,
+  last_eventful timestamptz,
+  last_uneventful timestamptz,
+  last_failed timestamptz,
+
+  primary key (url, visit_type)
+);
+
+comment on column origin_visit_stats.url is 'Origin URL';
+comment on column origin_visit_stats.visit_type is 'Type of the visit for the given url';
+comment on column origin_visit_stats.last_eventful is 'Date of the last eventful event';
+comment on column origin_visit_stats.last_uneventful is 'Date of the last uneventful event';
+comment on column origin_visit_stats.last_failed is 'Date of the last failed event';

@@ -1,4 +1,4 @@
-# Copyright (C) 2020  The Software Heritage developers
+# Copyright (C) 2020-2021  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -10,6 +10,12 @@ from uuid import UUID
 import attr
 import attr.converters
 from attrs_strict import type_validator
+
+
+def check_timestamptz(value) -> None:
+    """Checks the date has a timezone."""
+    if value is not None and value.tzinfo is None:
+        raise ValueError("date must be a timezone-aware datetime.")
 
 
 @attr.s
@@ -195,3 +201,35 @@ class PaginatedListedOriginList(BaseSchedulerModel):
         converter=convert_listed_origin_page_token,
         default=None,
     )
+
+
+@attr.s(frozen=True, slots=True)
+class OriginVisitStats(BaseSchedulerModel):
+    """Represents an aggregated origin visits view.
+    """
+
+    url = attr.ib(
+        type=str, validator=[type_validator()], metadata={"primary_key": True}
+    )
+    visit_type = attr.ib(
+        type=str, validator=[type_validator()], metadata={"primary_key": True}
+    )
+    last_eventful = attr.ib(
+        type=Optional[datetime.datetime], validator=type_validator()
+    )
+    last_uneventful = attr.ib(
+        type=Optional[datetime.datetime], validator=type_validator()
+    )
+    last_failed = attr.ib(type=Optional[datetime.datetime], validator=type_validator())
+
+    @last_eventful.validator
+    def check_last_eventful(self, attribute, value):
+        check_timestamptz(value)
+
+    @last_uneventful.validator
+    def check_last_uneventful(self, attribute, value):
+        check_timestamptz(value)
+
+    @last_failed.validator
+    def check_last_failed(self, attribute, value):
+        check_timestamptz(value)
