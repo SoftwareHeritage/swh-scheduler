@@ -166,4 +166,5 @@ Reference Documentation
    :maxdepth: 2
 
    cli
+   simulator
    /apidoc/swh.scheduler
