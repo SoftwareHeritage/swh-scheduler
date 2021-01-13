@@ -230,6 +230,12 @@ class OriginVisitStats(BaseSchedulerModel):
         type=Optional[datetime.datetime], validator=type_validator()
     )
     last_failed = attr.ib(type=Optional[datetime.datetime], validator=type_validator())
+    last_notfound = attr.ib(
+        type=Optional[datetime.datetime], validator=type_validator()
+    )
+    last_snapshot = attr.ib(
+        type=Optional[bytes], validator=type_validator(), default=None
+    )
 
     @last_eventful.validator
     def check_last_eventful(self, attribute, value):
@@ -241,4 +247,8 @@ class OriginVisitStats(BaseSchedulerModel):
 
     @last_failed.validator
     def check_last_failed(self, attribute, value):
+        check_timestamptz(value)
+
+    @last_notfound.validator
+    def check_last_notfound(self, attribute, value):
         check_timestamptz(value)

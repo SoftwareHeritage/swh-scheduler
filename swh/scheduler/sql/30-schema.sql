@@ -11,7 +11,7 @@ comment on column dbversion.release is 'Version deployment timestamp';
 comment on column dbversion.description is 'Version description';
 
 insert into dbversion (version, release, description)
-       values (20, now(), 'Work In Progress');
+       values (22, now(), 'Work In Progress');
 
 create table task_type (
   type text primary key,
@@ -171,6 +171,8 @@ create table origin_visit_stats (
   last_eventful timestamptz,
   last_uneventful timestamptz,
   last_failed timestamptz,
+  last_notfound timestamptz,
+  last_snapshot bytea,
 
   primary key (url, visit_type)
 );
@@ -180,3 +182,5 @@ comment on column origin_visit_stats.visit_type is 'Type of the visit for the gi
 comment on column origin_visit_stats.last_eventful is 'Date of the last eventful event';
 comment on column origin_visit_stats.last_uneventful is 'Date of the last uneventful event';
 comment on column origin_visit_stats.last_failed is 'Date of the last failed event';
+comment on column origin_visit_stats.last_notfound is 'Date of the last notfound event';
+comment on column origin_visit_stats.last_snapshot is 'sha1_git of the last visit snapshot';

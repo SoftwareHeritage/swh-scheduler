@@ -770,23 +770,43 @@ class SchedulerBackend:
                     visit_type,
                     last_eventful,
                     last_uneventful,
-                    last_failed
+                    last_failed,
+                    last_notfound,
+                    last_snapshot
                 )
-            VALUES (%s, %s, %s, %s, %s) ON CONFLICT (url, visit_type) DO
+            VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT (url, visit_type) DO
             UPDATE
-            SET last_eventful = coalesce(
-                    excluded.last_eventful,
-                    ovi.last_eventful
+            SET last_eventful = (
+                    select max(eventful.date) from (values
+                        (excluded.last_eventful),
+                        (ovi.last_eventful)
+                    ) as eventful(date)
                 ),
-                last_uneventful = coalesce(
-                    excluded.last_uneventful,
-                    ovi.last_uneventful
+                last_uneventful = (
+                    select max(uneventful.date) from (values
+                        (excluded.last_uneventful),
+                        (ovi.last_uneventful)
+                    ) as uneventful(date)
                 ),
-                last_failed = coalesce(
-                    excluded.last_failed,
-                    ovi.last_failed
+                last_failed = (
+                    select max(failed.date) from (values
+                        (excluded.last_failed),
+                        (ovi.last_failed)
+                    ) as failed(date)
+                ),
+                last_notfound = (
+                    select max(notfound.date) from (values
+                        (excluded.last_notfound),
+                        (ovi.last_notfound)
+                    ) as notfound(date)
+                ),
+                last_snapshot = (select
+                    case
+                      when ovi.last_eventful < excluded.last_eventful then excluded.last_snapshot
+                      else ovi.last_snapshot
+                    end
                 )
-        """
+        """  # noqa
 
         cur.execute(
             query,
@@ -796,6 +816,8 @@ class SchedulerBackend:
                 visit_stats.last_eventful,
                 visit_stats.last_uneventful,
                 visit_stats.last_failed,
+                visit_stats.last_notfound,
+                visit_stats.last_snapshot,
             ),
         )
 
