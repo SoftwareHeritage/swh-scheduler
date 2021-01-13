@@ -289,10 +289,10 @@ class SchedulerBackend:
 
     @db_transaction()
     def grab_next_visits(
-        self, count: int, policy: str, db=None, cur=None,
+        self, visit_type: str, count: int, policy: str, db=None, cur=None,
     ) -> List[ListedOrigin]:
-        """Get at most the `count` next origins that need to be visited
-        according to the given scheduling `policy`.
+        """Get at most the `count` next origins that need to be visited with
+        the `visit_type` loader according to the given scheduling `policy`.
 
         This will mark the origins as "being visited" in the listed_origins
         table, to avoid scheduling multiple visits to the same origin.
@@ -304,6 +304,7 @@ class SchedulerBackend:
                 with filtered_origins as (
                     select lister_id, url, visit_type
                     from listed_origins
+                    where visit_type = %s
                     order by last_scheduled nulls first
                     limit %s
                     for update skip locked
@@ -313,7 +314,7 @@ class SchedulerBackend:
                 where (lister_id, url, visit_type) in (select * from filtered_origins)
                 returning {origin_select_cols}
             """
-            cur.execute(query, (count,))
+            cur.execute(query, (visit_type, count))
 
             return [ListedOrigin(**d) for d in cur]
         else:

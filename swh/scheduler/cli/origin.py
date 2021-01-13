@@ -85,10 +85,14 @@ def format_origins(
     default=True,
     help="Print the CSV header?",
 )
+@click.argument("type", type=str)
 @click.argument("count", type=int)
 @click.pass_context
-def grab_next(ctx, policy: str, fields: Optional[str], with_header: bool, count: int):
-    """Grab the next COUNT origins to visit from the listed origins table."""
+def grab_next(
+    ctx, policy: str, fields: Optional[str], with_header: bool, type: str, count: int
+):
+    """Grab the next COUNT origins to visit using the TYPE loader from the
+    listed origins table."""
 
     if fields:
         parsed_fields: Optional[List[str]] = fields.split(",")
@@ -97,7 +101,7 @@ def grab_next(ctx, policy: str, fields: Optional[str], with_header: bool, count:
 
     scheduler = ctx.obj["scheduler"]
 
-    origins = scheduler.grab_next_visits(count, policy=policy)
+    origins = scheduler.grab_next_visits(type, count, policy=policy)
     for line in format_origins(origins, fields=parsed_fields, with_header=with_header):
         click.echo(line)
 
@@ -106,16 +110,18 @@ def grab_next(ctx, policy: str, fields: Optional[str], with_header: bool, count:
 @click.option(
     "--policy", "-p", default="oldest_scheduled_first", help="Scheduling policy"
 )
+@click.argument("type", type=str)
 @click.argument("count", type=int)
 @click.pass_context
-def schedule_next(ctx, policy: str, count: int):
-    """Send the next COUNT origin visits to the scheduler as one-shot tasks."""
+def schedule_next(ctx, policy: str, type: str, count: int):
+    """Send the next COUNT origin visits of the TYPE loader to the scheduler as
+    one-shot tasks."""
     from ..utils import utcnow
     from .task import pretty_print_task
 
     scheduler = ctx.obj["scheduler"]
 
-    origins = scheduler.grab_next_visits(count, policy=policy)
+    origins = scheduler.grab_next_visits(type, count, policy=policy)
 
     created = scheduler.create_tasks(
         [

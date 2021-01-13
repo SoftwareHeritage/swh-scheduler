@@ -727,16 +727,18 @@ class TestScheduler:
         assert len(ret.origins) == len(listed_origins)
 
     @pytest.mark.parametrize("policy", ["oldest_scheduled_first"])
-    def test_grab_next_visits(self, swh_scheduler, listed_origins, policy):
+    def test_grab_next_visits(self, swh_scheduler, listed_origins_by_type, policy):
         NUM_RESULTS = 5
         # Strict inequality to check that grab_next_visits doesn't return more
         # results than requested
-        assert len(listed_origins) > NUM_RESULTS
+        visit_type = next(iter(listed_origins_by_type))
+        assert len(listed_origins_by_type[visit_type]) > NUM_RESULTS
 
-        swh_scheduler.record_listed_origins(listed_origins)
+        for origins in listed_origins_by_type.values():
+            swh_scheduler.record_listed_origins(origins)
 
         before = utcnow()
-        ret = swh_scheduler.grab_next_visits(NUM_RESULTS, policy=policy)
+        ret = swh_scheduler.grab_next_visits(visit_type, NUM_RESULTS, policy=policy)
         after = utcnow()
 
         assert len(ret) == NUM_RESULTS
@@ -744,20 +746,27 @@ class TestScheduler:
             assert before <= origin.last_scheduled <= after
 
     @pytest.mark.parametrize("policy", ["oldest_scheduled_first"])
-    def test_grab_next_visits_underflow(self, swh_scheduler, listed_origins, policy):
+    def test_grab_next_visits_underflow(
+        self, swh_scheduler, listed_origins_by_type, policy
+    ):
         NUM_RESULTS = 5
-        assert len(listed_origins) >= NUM_RESULTS
+        visit_type = next(iter(listed_origins_by_type))
+        assert len(listed_origins_by_type[visit_type]) > NUM_RESULTS
 
-        swh_scheduler.record_listed_origins(listed_origins[:NUM_RESULTS])
+        swh_scheduler.record_listed_origins(
+            listed_origins_by_type[visit_type][:NUM_RESULTS]
+        )
 
-        ret = swh_scheduler.grab_next_visits(NUM_RESULTS + 2, policy=policy)
+        ret = swh_scheduler.grab_next_visits(visit_type, NUM_RESULTS + 2, policy=policy)
 
         assert len(ret) == NUM_RESULTS
 
     def test_grab_next_visits_unknown_policy(self, swh_scheduler):
         NUM_RESULTS = 5
         with pytest.raises(UnknownPolicy, match="non_existing_policy"):
-            swh_scheduler.grab_next_visits(NUM_RESULTS, policy="non_existing_policy")
+            swh_scheduler.grab_next_visits(
+                "type", NUM_RESULTS, policy="non_existing_policy"
+            )
 
     def _create_task_types(self, scheduler):
         for tt in TASK_TYPES.values():

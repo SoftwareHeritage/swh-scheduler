@@ -17,4 +17,4 @@ create unique index on listers (name, instance_name);
 
 -- listed origins
 create index on listed_origins (url);
-create index on listed_origins (last_scheduled);
+create index on listed_origins (visit_type, last_scheduled);

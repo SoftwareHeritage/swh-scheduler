@@ -56,48 +56,57 @@ def test_format_origins_fields(listed_origins):
         assert output[i + 1] == f"{origin.lister_id},{origin.url},{origin.visit_type}"
 
 
-def test_grab_next(swh_scheduler, listed_origins):
-    num_origins = 10
-    assert len(listed_origins) >= num_origins
+def test_grab_next(swh_scheduler, listed_origins_by_type):
+    NUM_RESULTS = 10
+    # Strict inequality to check that grab_next_visits doesn't return more
+    # results than requested
+    visit_type = next(iter(listed_origins_by_type))
+    assert len(listed_origins_by_type[visit_type]) > NUM_RESULTS
 
-    swh_scheduler.record_listed_origins(listed_origins)
+    for origins in listed_origins_by_type.values():
+        swh_scheduler.record_listed_origins(origins)
 
-    result = invoke(swh_scheduler, args=("grab-next", str(num_origins)))
+    result = invoke(swh_scheduler, args=("grab-next", visit_type, str(NUM_RESULTS)))
     assert result.exit_code == 0
 
     out_lines = result.stdout.splitlines()
-    assert len(out_lines) == num_origins + 1
+    assert len(out_lines) == NUM_RESULTS + 1
 
     fields = out_lines[0].split(",")
     returned_origins = [dict(zip(fields, line.split(","))) for line in out_lines[1:]]
 
     # Check that we've received origins we had listed in the first place
     assert set(origin["url"] for origin in returned_origins) <= set(
-        origin.url for origin in listed_origins
+        origin.url for origin in listed_origins_by_type[visit_type]
     )
 
 
-def test_schedule_next(swh_scheduler, listed_origins):
+def test_schedule_next(swh_scheduler, listed_origins_by_type):
     for task_type in TASK_TYPES.values():
         swh_scheduler.create_task_type(task_type)
 
-    num_origins = 10
-    assert len(listed_origins) >= num_origins
+    NUM_RESULTS = 10
+    # Strict inequality to check that grab_next_visits doesn't return more
+    # results than requested
+    visit_type = next(iter(listed_origins_by_type))
+    assert len(listed_origins_by_type[visit_type]) > NUM_RESULTS
 
-    swh_scheduler.record_listed_origins(listed_origins)
+    for origins in listed_origins_by_type.values():
+        swh_scheduler.record_listed_origins(origins)
 
-    result = invoke(swh_scheduler, args=("schedule-next", str(num_origins)))
+    result = invoke(swh_scheduler, args=("schedule-next", visit_type, str(NUM_RESULTS)))
     assert result.exit_code == 0
 
     # pull all tasks out of the scheduler
     tasks = swh_scheduler.search_tasks()
-    assert len(tasks) == num_origins
+    assert len(tasks) == NUM_RESULTS
 
     scheduled_tasks = {
         (task["type"], task["arguments"]["kwargs"]["url"]) for task in tasks
     }
     all_possible_tasks = {
-        (f"load-{origin.visit_type}", origin.url) for origin in listed_origins
+        (f"load-{origin.visit_type}", origin.url)
+        for origin in listed_origins_by_type[visit_type]
     }
 
     assert scheduled_tasks <= all_possible_tasks
