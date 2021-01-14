@@ -75,7 +75,7 @@ def load_task_process(
 
 
 def scheduler_runner_process(
-    env: Environment, scheduler, task_queues: Dict[str, Queue], policy: str,
+    env: Environment, task_queues: Dict[str, Queue], policy: str,
 ) -> Iterator[Event]:
     """Scheduler runner. Grabs next visits from the database according to the
     scheduling policy, and fills the task_queues accordingly."""
@@ -93,7 +93,7 @@ def scheduler_runner_process(
                     remaining,
                 )
                 continue
-            next_origins = scheduler.grab_next_visits(
+            next_origins = env.scheduler.grab_next_visits(
                 visit_type, remaining, policy=policy
             )
             logger.debug(
@@ -115,15 +115,13 @@ def setup(
     policy: str,
 ):
     # We expect PGHOST, PGPORT, ... set externally
-    scheduler = get_scheduler(cls="local", db="")
-
     task_queues = {
         visit_type: Queue(env, capacity=task_queue_capacity)
         for visit_type in workers_per_type
     }
     status_queue = Queue(env)
 
-    env.process(scheduler_runner_process(env, scheduler, task_queues, policy))
+    env.process(scheduler_runner_process(env, task_queues, policy))
 
     for visit_type, num_workers in workers_per_type.items():
         task_queue = task_queues[visit_type]
@@ -152,6 +150,7 @@ def run():
     logging.basicConfig(level=logging.DEBUG)
     NUM_WORKERS = 2
     env = Environment(start_time=datetime.now(tz=timezone.utc))
+    env.scheduler = get_scheduler(cls="local", db="")
     setup(
         env,
         workers_per_type={"git": NUM_WORKERS},
