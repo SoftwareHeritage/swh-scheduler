@@ -4,7 +4,9 @@
 # See top-level LICENSE file for more information
 
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
+
+import attr
 
 from swh.scheduler.interface import SchedulerInterface
 from swh.scheduler.model import OriginVisitStats
@@ -41,12 +43,13 @@ def process_journal_objects(
     }, f"Got unexpected {', '.join(set(messages) - set([msg_type]))} message types"
     assert msg_type in messages, f"Expected {msg_type} messages"
 
+    origin_visit_stats: Dict[Tuple[str, str], Dict] = {}
     for msg_dict in messages[msg_type]:
         if msg_dict["status"] in ("created", "ongoing"):
             continue
         origin = msg_dict["origin"]
         visit_type = msg_dict["type"]
-        visit_stats_d = {
+        empty_object = {
             "url": origin,
             "visit_type": visit_type,
             "last_uneventful": None,
@@ -55,35 +58,41 @@ def process_journal_objects(
             "last_notfound": None,
             "last_snapshot": None,
         }
-        actual_visit_stats = scheduler.origin_visit_stats_get(origin, visit_type)
+        pk = origin, visit_type
+        if pk not in origin_visit_stats:
+            visit_stats = scheduler.origin_visit_stats_get(origin, visit_type)
+            origin_visit_stats[pk] = (
+                attr.asdict(visit_stats) if visit_stats else empty_object
+            )
+
+        visit_stats_d = origin_visit_stats[pk]
 
         if msg_dict["status"] == "not_found":
             visit_stats_d["last_notfound"] = max_date(
-                msg_dict["date"],
-                actual_visit_stats.last_notfound if actual_visit_stats else None,
+                msg_dict["date"], visit_stats_d.get("last_notfound")
             )
         elif msg_dict["snapshot"] is None:
             visit_stats_d["last_failed"] = max_date(
-                msg_dict["date"],
-                actual_visit_stats.last_failed if actual_visit_stats else None,
+                msg_dict["date"], visit_stats_d.get("last_failed")
             )
         else:  # visit with snapshot, something happened
-            if not actual_visit_stats:
+            if visit_stats_d == empty_object:
                 visit_stats_d["last_eventful"] = msg_dict["date"]
                 visit_stats_d["last_snapshot"] = msg_dict["snapshot"]
             else:
                 date = max_date(
-                    actual_visit_stats.last_eventful, actual_visit_stats.last_uneventful
+                    visit_stats_d["last_eventful"], visit_stats_d["last_uneventful"]
                 )
                 if date and msg_dict["date"] < date:
                     # ignore out of order message
                     continue
-                previous_snapshot = actual_visit_stats.last_snapshot
+                previous_snapshot = visit_stats_d["last_snapshot"]
                 if msg_dict["snapshot"] != previous_snapshot:
                     visit_stats_d["last_eventful"] = msg_dict["date"]
                     visit_stats_d["last_snapshot"] = msg_dict["snapshot"]
                 else:
                     visit_stats_d["last_uneventful"] = msg_dict["date"]
 
-        visit_stats = OriginVisitStats(**visit_stats_d)
-        scheduler.origin_visit_stats_upsert(visit_stats)
+    scheduler.origin_visit_stats_upsert(
+        OriginVisitStats(**ovs) for ovs in origin_visit_stats.values()
+    )

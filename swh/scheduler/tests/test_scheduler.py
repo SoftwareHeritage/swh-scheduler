@@ -15,7 +15,7 @@ import attr
 import pytest
 
 from swh.model.hashutil import hash_to_bytes
-from swh.scheduler.exc import StaleData, UnknownPolicy
+from swh.scheduler.exc import SchedulerException, StaleData, UnknownPolicy
 from swh.scheduler.interface import SchedulerInterface
 from swh.scheduler.model import ListedOrigin, ListedOriginPageToken, OriginVisitStats
 from swh.scheduler.utils import utcnow
@@ -785,8 +785,8 @@ class TestScheduler:
             last_failed=None,
             last_notfound=None,
         )
-        swh_scheduler.origin_visit_stats_upsert(visit_stats)
-        swh_scheduler.origin_visit_stats_upsert(visit_stats)
+        swh_scheduler.origin_visit_stats_upsert([visit_stats])
+        swh_scheduler.origin_visit_stats_upsert([visit_stats])
 
         assert swh_scheduler.origin_visit_stats_get(url, "git") == visit_stats
         assert swh_scheduler.origin_visit_stats_get(url, "svn") is None
@@ -800,7 +800,7 @@ class TestScheduler:
             last_failed=None,
             last_notfound=None,
         )
-        swh_scheduler.origin_visit_stats_upsert(visit_stats)
+        swh_scheduler.origin_visit_stats_upsert([visit_stats])
 
         uneventful_visit = swh_scheduler.origin_visit_stats_get(url, "git")
 
@@ -824,7 +824,7 @@ class TestScheduler:
             last_failed=failed_date,
             last_notfound=None,
         )
-        swh_scheduler.origin_visit_stats_upsert(visit_stats)
+        swh_scheduler.origin_visit_stats_upsert([visit_stats])
 
         failed_visit = swh_scheduler.origin_visit_stats_get(url, "git")
 
@@ -852,7 +852,7 @@ class TestScheduler:
             last_notfound=None,
             last_snapshot=hash_to_bytes("d81cc0710eb6cf9efd5b920a8453e1e07157b6cd"),
         )
-        swh_scheduler.origin_visit_stats_upsert(visit_stats)
+        swh_scheduler.origin_visit_stats_upsert([visit_stats])
 
         assert swh_scheduler.origin_visit_stats_get(url, "git") == visit_stats
         assert swh_scheduler.origin_visit_stats_get(url, "svn") is None
@@ -877,7 +877,7 @@ class TestScheduler:
             last_notfound=None,
             last_snapshot=snapshot2,
         )
-        swh_scheduler.origin_visit_stats_upsert(visit_stats0)
+        swh_scheduler.origin_visit_stats_upsert([visit_stats0])
 
         actual_visit_stats0 = swh_scheduler.origin_visit_stats_get(url, "git")
         assert actual_visit_stats0 == visit_stats0
@@ -890,7 +890,7 @@ class TestScheduler:
             last_notfound=None,
             last_failed=None,
         )
-        swh_scheduler.origin_visit_stats_upsert(visit_stats2)
+        swh_scheduler.origin_visit_stats_upsert([visit_stats2])
 
         actual_visit_stats2 = swh_scheduler.origin_visit_stats_get(url, "git")
         assert actual_visit_stats2 == attr.evolve(
@@ -909,10 +909,71 @@ class TestScheduler:
             last_notfound=None,
             last_snapshot=snapshot0,
         )
-        swh_scheduler.origin_visit_stats_upsert(visit_stats1)
+        swh_scheduler.origin_visit_stats_upsert([visit_stats1])
 
         actual_visit_stats1 = swh_scheduler.origin_visit_stats_get(url, "git")
 
         assert actual_visit_stats1 == attr.evolve(
             actual_visit_stats2, last_eventful=date2
         )
+
+    def test_origin_visit_stats_upsert_batch(self, swh_scheduler) -> None:
+        """Batch upsert is ok"""
+        visit_stats = [
+            OriginVisitStats(
+                url="foo",
+                visit_type="git",
+                last_eventful=utcnow(),
+                last_uneventful=None,
+                last_failed=None,
+                last_notfound=None,
+                last_snapshot=hash_to_bytes("d81cc0710eb6cf9efd5b920a8453e1e07157b6cd"),
+            ),
+            OriginVisitStats(
+                url="bar",
+                visit_type="git",
+                last_eventful=None,
+                last_uneventful=utcnow(),
+                last_notfound=None,
+                last_failed=None,
+                last_snapshot=hash_to_bytes("fffcc0710eb6cf9efd5b920a8453e1e07157bfff"),
+            ),
+        ]
+
+        swh_scheduler.origin_visit_stats_upsert(visit_stats)
+
+        for visit_stat in visit_stats:
+            assert (
+                swh_scheduler.origin_visit_stats_get(
+                    visit_stat.url, visit_stat.visit_type
+                )
+                is not None
+            )
+
+    def test_origin_visit_stats_upsert_cardinality_failing(self, swh_scheduler) -> None:
+        """Batch upsert does not support altering multiple times the same origin-visit-status
+
+        """
+        with pytest.raises(SchedulerException, match="CardinalityViolation"):
+            swh_scheduler.origin_visit_stats_upsert(
+                [
+                    OriginVisitStats(
+                        url="foo",
+                        visit_type="git",
+                        last_eventful=None,
+                        last_uneventful=utcnow(),
+                        last_notfound=None,
+                        last_failed=None,
+                        last_snapshot=None,
+                    ),
+                    OriginVisitStats(
+                        url="foo",
+                        visit_type="git",
+                        last_eventful=None,
+                        last_uneventful=utcnow(),
+                        last_notfound=None,
+                        last_failed=None,
+                        last_snapshot=None,
+                    ),
+                ]
+            )

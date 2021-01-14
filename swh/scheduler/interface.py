@@ -327,7 +327,9 @@ class SchedulerInterface(Protocol):
         ...
 
     @remote_api_endpoint("visit_stats/upsert")
-    def origin_visit_stats_upsert(self, visit_stats: OriginVisitStats) -> None:
+    def origin_visit_stats_upsert(
+        self, origin_visit_stats: Iterable[OriginVisitStats]
+    ) -> None:
         """Create a new origin visit stats
         """
         ...

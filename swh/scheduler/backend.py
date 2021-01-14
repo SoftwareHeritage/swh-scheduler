@@ -9,6 +9,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 from uuid import UUID
 
 import attr
+from psycopg2.errors import CardinalityViolation
 import psycopg2.extras
 import psycopg2.pool
 
@@ -16,7 +17,7 @@ from swh.core.db import BaseDb
 from swh.core.db.common import db_transaction
 from swh.scheduler.utils import utcnow
 
-from .exc import StaleData, UnknownPolicy
+from .exc import SchedulerException, StaleData, UnknownPolicy
 from .model import (
     ListedOrigin,
     ListedOriginPageToken,
@@ -762,20 +763,15 @@ class SchedulerBackend:
 
     @db_transaction()
     def origin_visit_stats_upsert(
-        self, visit_stats: OriginVisitStats, db=None, cur=None
+        self, origin_visit_stats: Iterable[OriginVisitStats], db=None, cur=None
     ) -> None:
-        query = """
-            INSERT into origin_visit_stats AS ovi (
-                    url,
-                    visit_type,
-                    last_eventful,
-                    last_uneventful,
-                    last_failed,
-                    last_notfound,
-                    last_snapshot
-                )
-            VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT (url, visit_type) DO
-            UPDATE
+        pk_cols = OriginVisitStats.primary_key_columns()
+        insert_cols, insert_meta = OriginVisitStats.insert_columns_and_metavars()
+
+        query = f"""
+            INSERT into origin_visit_stats AS ovi ({", ".join(insert_cols)})
+            VALUES %s
+            ON CONFLICT ({", ".join(pk_cols)}) DO UPDATE
             SET last_eventful = (
                     select max(eventful.date) from (values
                         (excluded.last_eventful),
@@ -808,18 +804,19 @@ class SchedulerBackend:
                 )
         """  # noqa
 
-        cur.execute(
-            query,
-            (
-                visit_stats.url,
-                visit_stats.visit_type,
-                visit_stats.last_eventful,
-                visit_stats.last_uneventful,
-                visit_stats.last_failed,
-                visit_stats.last_notfound,
-                visit_stats.last_snapshot,
-            ),
-        )
+        try:
+            psycopg2.extras.execute_values(
+                cur=cur,
+                sql=query,
+                argslist=(
+                    attr.asdict(visit_stats) for visit_stats in origin_visit_stats
+                ),
+                template=f"({', '.join(insert_meta)})",
+                page_size=1000,
+                fetch=False,
+            )
+        except CardinalityViolation as e:
+            raise SchedulerException(repr(e))
 
     @db_transaction()
     def origin_visit_stats_get(

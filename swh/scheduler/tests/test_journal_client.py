@@ -324,15 +324,17 @@ def test_journal_client_origin_visit_status_from_journal_last_uneventful(swh_sch
 
     # Let's insert some visit stats with some previous visit information
     swh_scheduler.origin_visit_stats_upsert(
-        OriginVisitStats(
-            url=visit_status["origin"],
-            visit_type=visit_status["type"],
-            last_eventful=DATE1,
-            last_uneventful=DATE3,
-            last_failed=DATE2,
-            last_notfound=DATE1,
-            last_snapshot=visit_status["snapshot"],
-        )
+        [
+            OriginVisitStats(
+                url=visit_status["origin"],
+                visit_type=visit_status["type"],
+                last_eventful=DATE1,
+                last_uneventful=DATE3,
+                last_failed=DATE2,
+                last_notfound=DATE1,
+                last_snapshot=visit_status["snapshot"],
+            )
+        ]
     )
 
     process_journal_objects(
