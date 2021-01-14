@@ -5,11 +5,14 @@
 
 from datetime import datetime, timedelta, timezone
 import logging
+import os
 from typing import Dict, Generator, Iterator, Tuple
 
+import attr
 from simpy import Environment as _Environment
 from simpy import Event, Store
 
+from swh.model.model import OriginVisitStatus
 from swh.scheduler import get_scheduler
 from swh.scheduler.model import ListedOrigin
 
@@ -39,8 +42,15 @@ class Environment(_Environment):
         return self.start_time + timedelta(seconds=self.now)
 
 
-def load_task_duration(visit_type: str, origin: str) -> float:
-    return 101.0
+class OriginModel:
+    def __init__(self, type: str, origin: str):
+        self.type = type
+        self.origin = origin
+
+    def load_task_characteristics(self) -> Tuple[float, bool, str]:
+        """Returns the (run_time, eventfulness, end_status) of the next
+        origin visit."""
+        return (101.0, True, "full")
 
 
 def worker_process(
@@ -67,11 +77,30 @@ def load_task_process(
 
     Uses the `load_task_duration` function to determine its run time.
     """
-    # TODO: OVS generation
-    task_duration = load_task_duration(visit_type, origin)
+    # This is cheating; actual tasks access the state from the storage, not the
+    # scheduler
+    stats = env.scheduler.origin_visit_stats_get(origin, visit_type)
+    last_snapshot = stats.last_snapshot if stats else None
+
+    status = OriginVisitStatus(
+        origin=origin,
+        visit=42,
+        type=visit_type,
+        status="created",
+        date=env.time,
+        snapshot=None,
+    )
+    origin_model = OriginModel(visit_type, origin)
+    (run_time, eventful, end_status) = origin_model.load_task_characteristics()
     logger.debug("%s task %s origin=%s: Start", env.time, visit_type, origin)
-    yield env.timeout(task_duration)
+    yield status_queue.put(status)
+    yield env.timeout(run_time)
     logger.debug("%s task %s origin=%s: End", env.time, visit_type, origin)
+
+    new_snapshot = os.urandom(20) if eventful else last_snapshot
+    yield status_queue.put(
+        attr.evolve(status, status=end_status, date=env.time, snapshot=new_snapshot)
+    )
 
 
 def scheduler_runner_process(
