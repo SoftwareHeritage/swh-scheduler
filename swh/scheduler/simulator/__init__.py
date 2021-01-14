@@ -6,7 +6,7 @@
 from datetime import datetime, timedelta, timezone
 import logging
 import os
-from typing import Dict, Generator, Iterator, Tuple
+from typing import Any, Dict, Generator, Iterator, List, Tuple
 
 import attr
 from simpy import Environment as _Environment
@@ -14,6 +14,7 @@ from simpy import Event, Store
 
 from swh.model.model import OriginVisitStatus
 from swh.scheduler import get_scheduler
+from swh.scheduler.journal_client import process_journal_objects
 from swh.scheduler.model import ListedOrigin
 
 logger = logging.getLogger(__name__)
@@ -137,6 +138,30 @@ def scheduler_runner_process(
         yield env.timeout(10.0)
 
 
+def scheduler_journal_client_process(
+    env: Environment, status_queue: Queue
+) -> Generator[Event, OriginVisitStatus, None]:
+    """Scheduler journal client. Every once in a while, pulls
+    `OriginVisitStatus`es from the status_queue to update the scheduler
+    origin_visit_stats table."""
+    BATCH_SIZE = 100
+
+    statuses: List[Dict[str, Any]] = []
+    while True:
+        statuses.append((yield status_queue.get()).to_dict())
+        if len(statuses) < BATCH_SIZE:
+            continue
+
+        logger.debug(
+            "%s journal client: processing %s statuses", env.time, len(statuses)
+        )
+        process_journal_objects(
+            {"origin_visit_status": statuses}, scheduler=env.scheduler
+        )
+
+        statuses = []
+
+
 def setup(
     env: Environment,
     workers_per_type: Dict[str, int],
@@ -151,6 +176,7 @@ def setup(
     status_queue = Queue(env)
 
     env.process(scheduler_runner_process(env, task_queues, policy))
+    env.process(scheduler_journal_client_process(env, status_queue))
 
     for visit_type, num_workers in workers_per_type.items():
         task_queue = task_queues[visit_type]
