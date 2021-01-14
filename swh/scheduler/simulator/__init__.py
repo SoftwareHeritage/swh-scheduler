@@ -3,11 +3,12 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import logging
 from typing import Dict, Generator, Iterator, Tuple
 
-from simpy import Environment, Event, Store
+from simpy import Environment as _Environment
+from simpy import Event, Store
 
 from swh.scheduler import get_scheduler
 from swh.scheduler.model import ListedOrigin
@@ -25,6 +26,19 @@ class Queue(Store):
         return self.capacity - len(self)
 
 
+class Environment(_Environment):
+    def __init__(self, start_time: datetime):
+        if start_time.tzinfo is None:
+            raise ValueError("start_time must have timezone information")
+        self.start_time = start_time
+        super().__init__()
+
+    @property
+    def time(self):
+        """Get the current simulated wall clock time"""
+        return self.start_time + timedelta(seconds=self.now)
+
+
 def load_task_duration(visit_type: str, origin: str) -> float:
     return 101.0
 
@@ -34,11 +48,11 @@ def worker_process(
 ) -> Generator[Event, Tuple[str, str], None]:
     """A worker which consumes tasks from the input task_queue. Tasks
     themselves send OriginVisitStatus objects to the status_queue."""
-    logger.debug("%s worker %s: Start", env.now, name)
+    logger.debug("%s worker %s: Start", env.time, name)
     while True:
         visit_type, origin = yield task_queue.get()
         logger.debug(
-            "%s worker %s: Run task %s origin=%s", env.now, name, visit_type, origin
+            "%s worker %s: Run task %s origin=%s", env.time, name, visit_type, origin
         )
         yield env.process(
             load_task_process(env, visit_type, origin, status_queue=status_queue)
@@ -55,9 +69,9 @@ def load_task_process(
     """
     # TODO: OVS generation
     task_duration = load_task_duration(visit_type, origin)
-    logger.debug("%s task %s origin=%s: Start", env.now, visit_type, origin)
+    logger.debug("%s task %s origin=%s: Start", env.time, visit_type, origin)
     yield env.timeout(task_duration)
-    logger.debug("%s task %s origin=%s: End", env.now, visit_type, origin)
+    logger.debug("%s task %s origin=%s: End", env.time, visit_type, origin)
 
 
 def scheduler_runner_process(
@@ -68,13 +82,13 @@ def scheduler_runner_process(
 
     while True:
         for visit_type, queue in task_queues.items():
-            logger.debug("%s runner: processing %s", env.now, visit_type)
+            logger.debug("%s runner: processing %s", env.time, visit_type)
             min_batch_size = max(queue.capacity // 10, 1)
             remaining = queue.slots_remaining()
             if remaining < min_batch_size:
                 logger.debug(
                     "%s runner: not enough slots in %s: %s",
-                    env.now,
+                    env.time,
                     visit_type,
                     remaining,
                 )
@@ -83,7 +97,10 @@ def scheduler_runner_process(
                 visit_type, remaining, policy=policy
             )
             logger.debug(
-                "%s runner: running %s %s tasks", env.now, visit_type, len(next_origins)
+                "%s runner: running %s %s tasks",
+                env.time,
+                visit_type,
+                len(next_origins),
             )
             for origin in next_origins:
                 yield queue.put((origin.visit_type, origin.url))
@@ -134,7 +151,7 @@ def fill_test_data():
 def run():
     logging.basicConfig(level=logging.DEBUG)
     NUM_WORKERS = 2
-    env = Environment()
+    env = Environment(start_time=datetime.now(tz=timezone.utc))
     setup(
         env,
         workers_per_type={"git": NUM_WORKERS},
