@@ -3,7 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import logging
 from typing import Dict, Generator, Optional, Tuple
 
@@ -61,15 +61,26 @@ def setup(
 def fill_test_data():
     scheduler = get_scheduler(cls="local", db="")
     stored_lister = scheduler.get_or_create_lister(name="example")
-    scheduler.record_listed_origins(
+    origins = [
+        ListedOrigin(
+            lister_id=stored_lister.id,
+            url=f"https://example.com/{i:04d}.git",
+            visit_type="git",
+            last_update=datetime(2020, 6, 15, 16, 0, 0, i, tzinfo=timezone.utc),
+        )
+        for i in range(100000)
+    ]
+    scheduler.record_listed_origins(origins)
+
+    scheduler.create_tasks(
         [
-            ListedOrigin(
-                lister_id=stored_lister.id,
-                url=f"https://example.com/{i:04d}.git",
-                visit_type="git",
-                last_update=datetime(2020, 6, 15, 16, 0, 0, i, tzinfo=timezone.utc),
-            )
-            for i in range(100000)
+            {
+                **origin.as_task_dict(),
+                "policy": "recurring",
+                "next_run": origin.last_update,
+                "interval": timedelta(days=64),
+            }
+            for origin in origins
         ]
     )
 
