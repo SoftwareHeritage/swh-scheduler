@@ -296,14 +296,15 @@ def fill_test_data():
 
 def run():
     logging.basicConfig(level=logging.INFO)
-    NUM_WORKERS = 2
-    env = Environment(start_time=datetime.now(tz=timezone.utc))
+    NUM_WORKERS = 48
+    start_time = datetime.now(tz=timezone.utc)
+    env = Environment(start_time=start_time)
     env.scheduler = get_scheduler(cls="local", db="")
     env.report = SimulationReport()
     setup(
         env,
         workers_per_type={"git": NUM_WORKERS},
-        task_queue_capacity=100,
+        task_queue_capacity=10000,
         policy="oldest_scheduled_first",
     )
     try:
@@ -311,4 +312,6 @@ def run():
     except KeyboardInterrupt:
         pass
     finally:
+        end_time = env.time
+        print("total time:", end_time - start_time)
         print(env.report.format())
