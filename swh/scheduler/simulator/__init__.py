@@ -7,9 +7,11 @@ from datetime import datetime, timedelta, timezone
 import hashlib
 import logging
 import os
+import textwrap
 from typing import Any, Dict, Generator, Iterator, List, Optional, Tuple
 
 import attr
+import plotille
 from simpy import Environment as _Environment
 from simpy import Event, Store
 
@@ -19,6 +21,51 @@ from swh.scheduler.journal_client import process_journal_objects
 from swh.scheduler.model import ListedOrigin, OriginVisitStats
 
 logger = logging.getLogger(__name__)
+
+
+@attr.s
+class SimulationReport:
+    DURATION_THRESHOLD = 3600
+    """Max duration for histograms"""
+
+    total_visits = attr.ib(type=int, default=0)
+    """Total count of finished visits"""
+
+    visit_runtimes = attr.ib(type=Dict[Tuple[str, bool], List[float]], factory=dict)
+    """Collect the visit runtimes for each (status, eventful) tuple"""
+
+    def record_visit(self, duration: float, eventful: bool, status: str) -> None:
+        self.total_visits += 1
+        self.visit_runtimes.setdefault((status, eventful), []).append(duration)
+
+    @property
+    def useless_visits(self):
+        """Number of uneventful, full visits"""
+        return len(self.visit_runtimes.get(("full", False), []))
+
+    def runtime_histogram(self, status: str, eventful: bool) -> str:
+        runtimes = self.visit_runtimes.get((status, eventful), [])
+        return plotille.hist(
+            [runtime for runtime in runtimes if runtime <= self.DURATION_THRESHOLD]
+        )
+
+    def format(self):
+        full_visits = self.visit_runtimes.get(("full", True), [])
+        histogram = self.runtime_histogram("full", True)
+        long_tasks = sum(runtime > self.DURATION_THRESHOLD for runtime in full_visits)
+
+        return (
+            textwrap.dedent(
+                f"""\
+                Total visits: {self.total_visits}
+                Useless visits: {self.useless_visits}
+                Eventful visits: {len(full_visits)}
+                Very long running tasks: {long_tasks}
+                Visit time histogram for eventful visits:
+                """
+            )
+            + histogram
+        )
 
 
 class Queue(Store):
@@ -32,6 +79,8 @@ class Queue(Store):
 
 
 class Environment(_Environment):
+    report: SimulationReport
+
     def __init__(self, start_time: datetime):
         if start_time.tzinfo is None:
             raise ValueError("start_time must have timezone information")
@@ -150,6 +199,8 @@ def load_task_process(
         attr.evolve(status, status=end_status, date=env.time, snapshot=new_snapshot)
     )
 
+    env.report.record_visit(run_time, eventful, end_status)
+
 
 def scheduler_runner_process(
     env: Environment, task_queues: Dict[str, Queue], policy: str,
@@ -246,10 +297,16 @@ def run():
     NUM_WORKERS = 2
     env = Environment(start_time=datetime.now(tz=timezone.utc))
     env.scheduler = get_scheduler(cls="local", db="")
+    env.report = SimulationReport()
     setup(
         env,
         workers_per_type={"git": NUM_WORKERS},
         task_queue_capacity=100,
         policy="oldest_scheduled_first",
     )
-    env.run(until=10000)
+    try:
+        env.run(until=10000)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        print(env.report.format())
