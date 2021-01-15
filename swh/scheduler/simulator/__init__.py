@@ -39,9 +39,10 @@ def worker_process(
 
 def setup(
     env: Environment,
+    scheduler: str,
+    policy: str,
     workers_per_type: Dict[str, int],
     task_queue_capacity: int,
-    policy: str,
 ):
     # We expect PGHOST, PGPORT, ... set externally
     task_queues = {
@@ -87,8 +88,7 @@ def fill_test_data():
     )
 
 
-def run(runtime: Optional[int]):
-    logging.basicConfig(level=logging.INFO)
+def run(scheduler: str, policy: str, runtime: Optional[int]):
     NUM_WORKERS = 48
     start_time = datetime.now(tz=timezone.utc)
     env = Environment(start_time=start_time)
@@ -96,9 +96,10 @@ def run(runtime: Optional[int]):
     env.report = SimulationReport()
     setup(
         env,
+        scheduler=scheduler,
+        policy=policy,
         workers_per_type={"git": NUM_WORKERS},
         task_queue_capacity=10000,
-        policy="oldest_scheduled_first",
     )
     try:
         env.run(until=runtime)

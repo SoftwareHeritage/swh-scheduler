@@ -48,8 +48,8 @@ beforehand:
    # This generates some data in the scheduler database. You can also feed the
    # database with more realistic data, e.g. from a lister or from a dump of the
    # production database.
-   python3 -m swh.scheduler.simulator fill_test_data
+   swh scheduler simulator fill-test-data
 
    # Run the simulator itself, interacting with the scheduler database you've
    # just seeded.
-   python3 -m swh.scheduler.simulator run
+   swh scheduler simulator run --scheduler origin_scheduler
