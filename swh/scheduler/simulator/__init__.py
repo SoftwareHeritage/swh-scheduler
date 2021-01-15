@@ -17,6 +17,7 @@ from simpy import Event, Store
 
 from swh.model.model import OriginVisitStatus
 from swh.scheduler import get_scheduler
+from swh.scheduler.interface import SchedulerInterface
 from swh.scheduler.journal_client import process_journal_objects
 from swh.scheduler.model import ListedOrigin, OriginVisitStats
 
@@ -80,6 +81,7 @@ class Queue(Store):
 
 class Environment(_Environment):
     report: SimulationReport
+    scheduler: SchedulerInterface
 
     def __init__(self, start_time: datetime):
         if start_time.tzinfo is None:
