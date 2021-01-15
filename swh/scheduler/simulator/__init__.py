@@ -289,7 +289,7 @@ def fill_test_data():
                 visit_type="git",
                 last_update=datetime(2020, 6, 15, 16, 0, 0, i, tzinfo=timezone.utc),
             )
-            for i in range(1000)
+            for i in range(100000)
         ]
     )
 
