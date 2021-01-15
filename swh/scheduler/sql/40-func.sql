@@ -370,7 +370,7 @@ begin
               adjustment_factor * cur_task.current_interval));
           update task
             set status = 'next_run_not_scheduled',
-                next_run = now() + new_interval,
+                next_run = new.ended + new_interval,
                 current_interval = new_interval,
                 retries_left = coalesce(cur_task_type.num_retries, 0)
             where id = cur_task.id;
@@ -379,7 +379,7 @@ begin
       if cur_task.retries_left > 0 then
         update task
           set status = 'next_run_not_scheduled',
-              next_run = now() + coalesce(cur_task_type.retry_delay, interval '1 hour'),
+              next_run = new.ended + coalesce(cur_task_type.retry_delay, interval '1 hour'),
               retries_left = cur_task.retries_left - 1
           where id = cur_task.id;
       else -- no retries left
@@ -391,7 +391,7 @@ begin
           when cur_task.policy = 'recurring' then
             update task
               set status = 'next_run_not_scheduled',
-                  next_run = now() + cur_task.current_interval,
+                  next_run = new.ended + cur_task.current_interval,
                   retries_left = coalesce(cur_task_type.num_retries, 0)
               where id = cur_task.id;
         end case;
