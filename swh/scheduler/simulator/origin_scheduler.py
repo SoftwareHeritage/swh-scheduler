@@ -10,11 +10,10 @@ from typing import Any, Dict, Generator, Iterator, List
 
 from simpy import Event
 
-from swh.model.model import OriginVisitStatus
 from swh.scheduler.journal_client import process_journal_objects
 
 from . import Environment
-from .common import Queue
+from .common import Queue, Task, TaskEvent
 
 logger = logging.getLogger(__name__)
 
@@ -41,14 +40,14 @@ def scheduler_runner_process(
                 len(next_origins),
             )
             for origin in next_origins:
-                yield queue.put((origin.visit_type, origin.url))
+                yield queue.put(Task(visit_type=origin.visit_type, origin=origin.url))
 
         yield env.timeout(10.0)
 
 
 def scheduler_journal_client_process(
     env: Environment, status_queue: Queue
-) -> Generator[Event, OriginVisitStatus, None]:
+) -> Generator[Event, TaskEvent, None]:
     """Scheduler journal client. Every once in a while, pulls
     `OriginVisitStatus`es from the status_queue to update the scheduler
     origin_visit_stats table."""
@@ -56,7 +55,8 @@ def scheduler_journal_client_process(
 
     statuses: List[Dict[str, Any]] = []
     while True:
-        statuses.append((yield status_queue.get()).to_dict())
+        task_event = yield status_queue.get()
+        statuses.append(task_event.status.to_dict())
         if len(statuses) < BATCH_SIZE:
             continue
 

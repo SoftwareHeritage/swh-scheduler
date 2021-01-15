@@ -3,6 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 import textwrap
 from typing import Dict, List, Tuple
@@ -12,6 +13,7 @@ import plotille
 from simpy import Environment as _Environment
 from simpy import Store
 
+from swh.model.model import OriginVisitStatus
 from swh.scheduler.interface import SchedulerInterface
 
 
@@ -58,6 +60,18 @@ class SimulationReport:
             )
             + histogram
         )
+
+
+@dataclass
+class Task:
+    visit_type: str
+    origin: str
+
+
+@dataclass
+class TaskEvent:
+    task: Task
+    status: OriginVisitStatus
 
 
 class Queue(Store):

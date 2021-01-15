@@ -5,14 +5,14 @@
 
 from datetime import datetime, timedelta, timezone
 import logging
-from typing import Dict, Generator, Optional, Tuple
+from typing import Dict, Generator, Optional
 
 from simpy import Event
 
 from swh.scheduler import get_scheduler
 from swh.scheduler.model import ListedOrigin
 
-from .common import Environment, Queue, SimulationReport
+from .common import Environment, Queue, SimulationReport, Task
 from .origin_scheduler import scheduler_journal_client_process, scheduler_runner_process
 from .origins import load_task_process
 
@@ -21,18 +21,20 @@ logger = logging.getLogger(__name__)
 
 def worker_process(
     env: Environment, name: str, task_queue: Queue, status_queue: Queue
-) -> Generator[Event, Tuple[str, str], None]:
+) -> Generator[Event, Task, None]:
     """A worker which consumes tasks from the input task_queue. Tasks
     themselves send OriginVisitStatus objects to the status_queue."""
     logger.debug("%s worker %s: Start", env.time, name)
     while True:
-        visit_type, origin = yield task_queue.get()
+        task = yield task_queue.get()
         logger.debug(
-            "%s worker %s: Run task %s origin=%s", env.time, name, visit_type, origin
+            "%s worker %s: Run task %s origin=%s",
+            env.time,
+            name,
+            task.visit_type,
+            task.origin,
         )
-        yield env.process(
-            load_task_process(env, visit_type, origin, status_queue=status_queue)
-        )
+        yield env.process(load_task_process(env, task, status_queue=status_queue))
 
 
 def setup(

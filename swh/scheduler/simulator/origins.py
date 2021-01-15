@@ -15,7 +15,7 @@ from simpy import Event
 from swh.model.model import OriginVisitStatus
 from swh.scheduler.model import OriginVisitStats
 
-from .common import Environment, Queue
+from .common import Environment, Queue, Task, TaskEvent
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +76,7 @@ class OriginModel:
 
 
 def load_task_process(
-    env: Environment, visit_type: str, origin: str, status_queue: Queue
+    env: Environment, task: Task, status_queue: Queue
 ) -> Iterator[Event]:
     """A loading task. This pushes OriginVisitStatus objects to the
     status_queue to simulate the visible outcomes of the task.
@@ -85,29 +85,34 @@ def load_task_process(
     """
     # This is cheating; actual tasks access the state from the storage, not the
     # scheduler
-    stats = env.scheduler.origin_visit_stats_get(origin, visit_type)
+    stats = env.scheduler.origin_visit_stats_get(task.origin, task.visit_type)
     last_snapshot = stats.last_snapshot if stats else None
 
     status = OriginVisitStatus(
-        origin=origin,
+        origin=task.origin,
         visit=42,
-        type=visit_type,
+        type=task.visit_type,
         status="created",
         date=env.time,
         snapshot=None,
     )
-    origin_model = OriginModel(visit_type, origin)
+    origin_model = OriginModel(task.visit_type, task.origin)
     (run_time, eventful, end_status) = origin_model.load_task_characteristics(
         env, stats
     )
-    logger.debug("%s task %s origin=%s: Start", env.time, visit_type, origin)
-    yield status_queue.put(status)
+    logger.debug("%s task %s origin=%s: Start", env.time, task.visit_type, task.origin)
+    yield status_queue.put(TaskEvent(task=task, status=status))
     yield env.timeout(run_time)
-    logger.debug("%s task %s origin=%s: End", env.time, visit_type, origin)
+    logger.debug("%s task %s origin=%s: End", env.time, task.visit_type, task.origin)
 
     new_snapshot = os.urandom(20) if eventful else last_snapshot
     yield status_queue.put(
-        attr.evolve(status, status=end_status, date=env.time, snapshot=new_snapshot)
+        TaskEvent(
+            task=task,
+            status=attr.evolve(
+                status, status=end_status, date=env.time, snapshot=new_snapshot
+            ),
+        )
     )
 
     env.report.record_visit(run_time, eventful, end_status)
