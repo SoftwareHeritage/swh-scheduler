@@ -4,9 +4,10 @@
 # See top-level LICENSE file for more information
 
 from datetime import datetime, timedelta, timezone
+import hashlib
 import logging
 import os
-from typing import Any, Dict, Generator, Iterator, List, Tuple
+from typing import Any, Dict, Generator, Iterator, List, Optional, Tuple
 
 import attr
 from simpy import Environment as _Environment
@@ -15,7 +16,7 @@ from simpy import Event, Store
 from swh.model.model import OriginVisitStatus
 from swh.scheduler import get_scheduler
 from swh.scheduler.journal_client import process_journal_objects
-from swh.scheduler.model import ListedOrigin
+from swh.scheduler.model import ListedOrigin, OriginVisitStats
 
 logger = logging.getLogger(__name__)
 
@@ -44,14 +45,58 @@ class Environment(_Environment):
 
 
 class OriginModel:
+    MIN_RUN_TIME = 0.5
+    """Minimal run time for a visit (retrieved from production data)"""
+
+    MAX_RUN_TIME = 7200
+    """Max run time for a visit"""
+
+    PER_COMMIT_RUN_TIME = 0.1
+    """Run time per commit"""
+
     def __init__(self, type: str, origin: str):
         self.type = type
         self.origin = origin
 
-    def load_task_characteristics(self) -> Tuple[float, bool, str]:
+    def seconds_between_commits(self):
+        n_bytes = 2
+        num_buckets = 2 ** (8 * n_bytes)
+        bucket = int.from_bytes(
+            hashlib.md5(self.origin.encode()).digest()[0:n_bytes], "little"
+        )
+        # minimum: 1 second (bucket == 0)
+        # max: 10 years (bucket == num_buckets - 1)
+        ten_y = 10 * 365 * 24 * 3600
+
+        return ten_y ** (bucket / num_buckets)
+        # return 1 + (ten_y - 1) * (bucket / (num_buckets - 1))
+
+    def load_task_characteristics(
+        self, env: Environment, stats: Optional[OriginVisitStats]
+    ) -> Tuple[float, bool, str]:
         """Returns the (run_time, eventfulness, end_status) of the next
         origin visit."""
-        return (101.0, True, "full")
+        if stats and stats.last_eventful:
+            time_since_last_successful_run = env.time - stats.last_eventful
+        else:
+            time_since_last_successful_run = timedelta(days=365)
+
+        seconds_between_commits = self.seconds_between_commits()
+        logger.debug(
+            "Interval between commits: %s", timedelta(seconds=seconds_between_commits)
+        )
+
+        seconds_since_last_successful = time_since_last_successful_run.total_seconds()
+        if seconds_since_last_successful < seconds_between_commits:
+            # No commits since last visit => uneventful
+            return (self.MIN_RUN_TIME, False, "full")
+        else:
+            n_commits = seconds_since_last_successful / seconds_between_commits
+            run_time = self.MIN_RUN_TIME + self.PER_COMMIT_RUN_TIME * n_commits
+            if run_time > self.MAX_RUN_TIME:
+                return (self.MAX_RUN_TIME, False, "partial")
+            else:
+                return (run_time, True, "full")
 
 
 def worker_process(
@@ -92,7 +137,9 @@ def load_task_process(
         snapshot=None,
     )
     origin_model = OriginModel(visit_type, origin)
-    (run_time, eventful, end_status) = origin_model.load_task_characteristics()
+    (run_time, eventful, end_status) = origin_model.load_task_characteristics(
+        env, stats
+    )
     logger.debug("%s task %s origin=%s: Start", env.time, visit_type, origin)
     yield status_queue.put(status)
     yield env.timeout(run_time)
