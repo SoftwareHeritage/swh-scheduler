@@ -294,7 +294,7 @@ def fill_test_data():
     )
 
 
-def run():
+def run(runtime: Optional[int]):
     logging.basicConfig(level=logging.INFO)
     NUM_WORKERS = 48
     start_time = datetime.now(tz=timezone.utc)
@@ -308,7 +308,7 @@ def run():
         policy="oldest_scheduled_first",
     )
     try:
-        env.run(until=10000)
+        env.run(until=runtime)
     except KeyboardInterrupt:
         pass
     finally:

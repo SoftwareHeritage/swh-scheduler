@@ -9,19 +9,21 @@ from . import fill_test_data, run
 
 
 def usage():
-    print(f"Usage: {sys.argv[0]} fill_test_data/run")
+    print(f"Usage: {sys.argv[0]} fill_test_data/run [<runtime_in_seconds>]")
     sys.exit(2)
 
 
 def main(argv):
     try:
-        myself, arg = argv
+        myself, arg, *args = argv
     except ValueError:
         usage()
 
     if arg == "run":
-        run()
+        run(int(args[0]) if args else None)
     elif arg == "fill_test_data":
+        if args:
+            usage()
         fill_test_data()
     else:
         usage()
