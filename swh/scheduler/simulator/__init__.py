@@ -112,16 +112,9 @@ def scheduler_runner_process(
 
     while True:
         for visit_type, queue in task_queues.items():
-            logger.debug("%s runner: processing %s", env.time, visit_type)
             min_batch_size = max(queue.capacity // 10, 1)
             remaining = queue.slots_remaining()
             if remaining < min_batch_size:
-                logger.debug(
-                    "%s runner: not enough slots in %s: %s",
-                    env.time,
-                    visit_type,
-                    remaining,
-                )
                 continue
             next_origins = env.scheduler.grab_next_visits(
                 visit_type, remaining, policy=policy
@@ -202,7 +195,7 @@ def fill_test_data():
 
 
 def run():
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     NUM_WORKERS = 2
     env = Environment(start_time=datetime.now(tz=timezone.utc))
     env.scheduler = get_scheduler(cls="local", db="")
