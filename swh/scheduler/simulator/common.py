@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 import textwrap
 from typing import Dict, List, Tuple
+import uuid
 
 import plotille
 from simpy import Environment as _Environment
@@ -65,12 +66,14 @@ class SimulationReport:
 class Task:
     visit_type: str
     origin: str
+    backend_id: uuid.UUID = field(default_factory=uuid.uuid4)
 
 
 @dataclass
 class TaskEvent:
     task: Task
     status: OriginVisitStatus
+    eventful: bool = field(default=False)
 
 
 class Queue(Store):

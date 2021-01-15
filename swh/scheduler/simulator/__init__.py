@@ -12,8 +12,8 @@ from simpy import Event
 from swh.scheduler import get_scheduler
 from swh.scheduler.model import ListedOrigin
 
+from . import origin_scheduler, task_scheduler
 from .common import Environment, Queue, SimulationReport, Task
-from .origin_scheduler import scheduler_journal_client_process, scheduler_runner_process
 from .origins import load_task_process
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ def worker_process(
 def setup(
     env: Environment,
     scheduler: str,
-    policy: str,
+    policy: Optional[str],
     workers_per_type: Dict[str, int],
     task_queue_capacity: int,
 ):
@@ -51,8 +51,20 @@ def setup(
     }
     status_queue = Queue(env)
 
-    env.process(scheduler_runner_process(env, task_queues, policy))
-    env.process(scheduler_journal_client_process(env, status_queue))
+    if scheduler == "origin_scheduler":
+        if policy is None:
+            raise ValueError("origin_scheduler needs a scheduling policy")
+        env.process(origin_scheduler.scheduler_runner_process(env, task_queues, policy))
+        env.process(
+            origin_scheduler.scheduler_journal_client_process(env, status_queue)
+        )
+    elif scheduler == "task_scheduler":
+        if policy is not None:
+            raise ValueError("task_scheduler doesn't support a scheduling policy")
+        env.process(task_scheduler.scheduler_runner_process(env, task_queues))
+        env.process(task_scheduler.scheduler_listener_process(env, status_queue))
+    else:
+        raise ValueError(f"Unknown scheduler: {scheduler}")
 
     for visit_type, num_workers in workers_per_type.items():
         task_queue = task_queues[visit_type]
@@ -88,7 +100,7 @@ def fill_test_data():
     )
 
 
-def run(scheduler: str, policy: str, runtime: Optional[int]):
+def run(scheduler: str, policy: Optional[str], runtime: Optional[int]):
     NUM_WORKERS = 48
     start_time = datetime.now(tz=timezone.utc)
     env = Environment(start_time=start_time)

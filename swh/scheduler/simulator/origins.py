@@ -112,6 +112,7 @@ def load_task_process(
             status=attr.evolve(
                 status, status=end_status, date=env.time, snapshot=new_snapshot
             ),
+            eventful=eventful,
         )
     )
 

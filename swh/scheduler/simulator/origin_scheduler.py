@@ -12,8 +12,7 @@ from simpy import Event
 
 from swh.scheduler.journal_client import process_journal_objects
 
-from . import Environment
-from .common import Queue, Task, TaskEvent
+from .common import Environment, Queue, Task, TaskEvent
 
 logger = logging.getLogger(__name__)
 
