@@ -5,6 +5,7 @@
 
 import datetime
 import functools
+from itertools import permutations
 
 import pytest
 
@@ -204,7 +205,7 @@ def test_journal_client_origin_visit_status_from_journal_last_failed(swh_schedul
         },
         {
             "origin": "bar",
-            "visit": 3,
+            "visit": 4,
             "status": "full",
             "date": DATE2,
             "type": "git",
@@ -271,16 +272,14 @@ def test_journal_client_origin_visit_status_from_journal_last_eventful(swh_sched
             last_snapshot=visit_status["snapshot"],
         )
 
-    most_recent_date = DATE3
-    most_recent_snapshot = hash_to_bytes("dddcc0710eb6cf9efd5b920a8453e1e07157bddd")
     visit_statuses = [
         {
             "origin": "foo",
-            "visit": 3,
+            "visit": 4,
             "status": "full",
-            "date": most_recent_date,
+            "date": DATE3,
             "type": "git",
-            "snapshot": most_recent_snapshot,
+            "snapshot": hash_to_bytes("dddcc0710eb6cf9efd5b920a8453e1e07157bddd"),
         },
         {
             "origin": "foo",
@@ -304,11 +303,11 @@ def test_journal_client_origin_visit_status_from_journal_last_eventful(swh_sched
         assert actual_origin_visit_stats == OriginVisitStats(
             url=visit_status["origin"],
             visit_type=visit_status["type"],
-            last_eventful=most_recent_date,
+            last_eventful=DATE3,
             last_uneventful=None,
             last_failed=None,
             last_notfound=None,
-            last_snapshot=most_recent_snapshot,
+            last_snapshot=hash_to_bytes("dddcc0710eb6cf9efd5b920a8453e1e07157bddd"),
         )
 
 
@@ -353,4 +352,128 @@ def test_journal_client_origin_visit_status_from_journal_last_uneventful(swh_sch
         last_failed=DATE2,
         last_notfound=DATE1,
         last_snapshot=visit_status["snapshot"],
+    )
+
+
+VISIT_STATUSES = [
+    {**ovs, "date": DATE1 + n * ONE_DAY}
+    for n, ovs in enumerate(
+        [
+            {
+                "origin": "foo",
+                "type": "git",
+                "visit": 1,
+                "status": "created",
+                "snapshot": None,
+            },
+            {
+                "origin": "foo",
+                "type": "git",
+                "visit": 1,
+                "status": "full",
+                "snapshot": hash_to_bytes("d81cc0710eb6cf9efd5b920a8453e1e07157b6cd"),
+            },
+            {
+                "origin": "foo",
+                "type": "git",
+                "visit": 2,
+                "status": "created",
+                "snapshot": None,
+            },
+            {
+                "origin": "foo",
+                "type": "git",
+                "visit": 2,
+                "status": "full",
+                "snapshot": hash_to_bytes("d81cc0710eb6cf9efd5b920a8453e1e07157b6cd"),
+            },
+        ]
+    )
+]
+
+
+@pytest.mark.parametrize(
+    "visit_statuses", permutations(VISIT_STATUSES, len(VISIT_STATUSES))
+)
+def test_journal_client_origin_visit_status_permutation0(visit_statuses, swh_scheduler):
+    """Ensure out of order topic subscription ends up in the same final state
+
+    """
+    process_journal_objects(
+        {"origin_visit_status": visit_statuses}, scheduler=swh_scheduler
+    )
+
+    expected_visit_stats = OriginVisitStats(
+        url="foo",
+        visit_type="git",
+        last_eventful=DATE1 + ONE_DAY,
+        last_uneventful=DATE1 + 3 * ONE_DAY,
+        last_failed=None,
+        last_notfound=None,
+        last_snapshot=hash_to_bytes("d81cc0710eb6cf9efd5b920a8453e1e07157b6cd"),
+    )
+
+    assert swh_scheduler.origin_visit_stats_get("foo", "git") == expected_visit_stats
+
+
+VISIT_STATUSES1 = [
+    {**ovs, "date": DATE1 + n * ONE_DAY}
+    for n, ovs in enumerate(
+        [
+            {
+                "origin": "cavabarder",
+                "type": "hg",
+                "visit": 1,
+                "status": "partial",
+                "snapshot": hash_to_bytes("d81cc0710eb6cf9efd5b920a8453e1e07157b6cd"),
+            },
+            {
+                "origin": "cavabarder",
+                "type": "hg",
+                "visit": 2,
+                "status": "full",
+                "snapshot": hash_to_bytes("d81cc0710eb6cf9efd5b920a8453e1e07157b6cd"),
+            },
+            {
+                "origin": "cavabarder",
+                "type": "hg",
+                "visit": 3,
+                "status": "full",
+                "snapshot": hash_to_bytes("aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"),
+            },
+            {
+                "origin": "cavabarder",
+                "type": "hg",
+                "visit": 4,
+                "status": "full",
+                "snapshot": hash_to_bytes("aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"),
+            },
+        ]
+    )
+]
+
+
+@pytest.mark.parametrize(
+    "visit_statuses", permutations(VISIT_STATUSES1, len(VISIT_STATUSES1))
+)
+def test_journal_client_origin_visit_status_permutation1(visit_statuses, swh_scheduler):
+    """Ensure out of order topic subscription ends up in the same final state
+
+    """
+    process_journal_objects(
+        {"origin_visit_status": visit_statuses}, scheduler=swh_scheduler
+    )
+
+    expected_visit_stats = OriginVisitStats(
+        url="cavabarder",
+        visit_type="hg",
+        last_eventful=DATE1 + 2 * ONE_DAY,
+        last_uneventful=DATE1 + 3 * ONE_DAY,
+        last_failed=None,
+        last_notfound=None,
+        last_snapshot=hash_to_bytes("aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"),
+    )
+
+    assert (
+        swh_scheduler.origin_visit_stats_get("cavabarder", "hg") == expected_visit_stats
     )

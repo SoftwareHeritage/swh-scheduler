@@ -76,22 +76,46 @@ def process_journal_objects(
                 msg_dict["date"], visit_stats_d.get("last_failed")
             )
         else:  # visit with snapshot, something happened
-            if visit_stats_d == empty_object:
+            if visit_stats_d["last_snapshot"] is None:
+                # first time visit with snapshot, we keep relevant information
                 visit_stats_d["last_eventful"] = msg_dict["date"]
                 visit_stats_d["last_snapshot"] = msg_dict["snapshot"]
             else:
-                date = max_date(
+                # visit with snapshot already stored, last_eventful should already be
+                # stored
+                assert visit_stats_d["last_eventful"] is not None
+                latest_recorded_visit_date = max_date(
                     visit_stats_d["last_eventful"], visit_stats_d["last_uneventful"]
                 )
-                if date and msg_dict["date"] < date:
-                    # ignore out of order message
-                    continue
+                current_status_date = msg_dict["date"]
                 previous_snapshot = visit_stats_d["last_snapshot"]
                 if msg_dict["snapshot"] != previous_snapshot:
-                    visit_stats_d["last_eventful"] = msg_dict["date"]
+                    if (
+                        latest_recorded_visit_date
+                        and current_status_date < latest_recorded_visit_date
+                    ):
+                        # out of order message so ignored
+                        continue
+                    # new eventful visit (new snapshot)
+                    visit_stats_d["last_eventful"] = current_status_date
                     visit_stats_d["last_snapshot"] = msg_dict["snapshot"]
                 else:
-                    visit_stats_d["last_uneventful"] = msg_dict["date"]
+                    # same snapshot as before
+                    if (
+                        latest_recorded_visit_date
+                        and current_status_date < latest_recorded_visit_date
+                    ):
+                        # we receive an old message which is an earlier "eventful" event
+                        # than what we had, we consider the last_eventful event as
+                        # actually an uneventful event. The true eventful message is the
+                        # current one
+                        visit_stats_d["last_uneventful"] = visit_stats_d[
+                            "last_eventful"
+                        ]
+                        visit_stats_d["last_eventful"] = current_status_date
+                    else:
+                        # uneventful event
+                        visit_stats_d["last_uneventful"] = current_status_date
 
     scheduler.origin_visit_stats_upsert(
         OriginVisitStats(**ovs) for ovs in origin_visit_stats.values()
