@@ -3,12 +3,11 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 import textwrap
 from typing import Dict, List, Tuple
 
-import attr
 import plotille
 from simpy import Environment as _Environment
 from simpy import Store
@@ -17,15 +16,15 @@ from swh.model.model import OriginVisitStatus
 from swh.scheduler.interface import SchedulerInterface
 
 
-@attr.s
+@dataclass
 class SimulationReport:
     DURATION_THRESHOLD = 3600
     """Max duration for histograms"""
 
-    total_visits = attr.ib(type=int, default=0)
+    total_visits: int = 0
     """Total count of finished visits"""
 
-    visit_runtimes = attr.ib(type=Dict[Tuple[str, bool], List[float]], factory=dict)
+    visit_runtimes: Dict[Tuple[str, bool], List[float]] = field(default_factory=dict)
     """Collect the visit runtimes for each (status, eventful) tuple"""
 
     def record_visit(self, duration: float, eventful: bool, status: str) -> None:
