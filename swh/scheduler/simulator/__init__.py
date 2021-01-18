@@ -73,9 +73,12 @@ def setup(
             env.process(worker_process(env, worker_name, task_queue, status_queue))
 
 
-def fill_test_data():
+def fill_test_data(num_origins: int = 100000):
     scheduler = get_scheduler(cls="local", db="")
+
     stored_lister = scheduler.get_or_create_lister(name="example")
+    assert stored_lister.id is not None
+
     origins = [
         ListedOrigin(
             lister_id=stored_lister.id,
@@ -83,7 +86,7 @@ def fill_test_data():
             visit_type="git",
             last_update=datetime(2020, 6, 15, 16, 0, 0, i, tzinfo=timezone.utc),
         )
-        for i in range(100000)
+        for i in range(num_origins)
     ]
     scheduler.record_listed_origins(origins)
 
