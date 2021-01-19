@@ -1,3 +1,5 @@
+.. _swh-scheduler-simulator:
+
 Software Heritage Scheduler Simulator
 =====================================
 
@@ -10,10 +12,18 @@ Simulator components
 --------------------
 
 - real instance of the scheduler database
-- simulated task queues
-- simulated workers
-- simulated load tasks
-- simulated archive -> scheduler feedback loop
+- simulated task queues: replaces RabbitMQ with simple in-memory structures
+- simulated workers: replaces Celery with simple while loops
+- simulated load tasks: replaces loaders with noops that take a certain time,
+  and generate synthetic OriginVisitStatus objects
+- simulated archive -> scheduler feedback loop: OriginVisitStatus objects are
+  pushed to a simple queue which gets processed by the scheduler journal
+  client's process function directly (instead of going through swh.storage and
+  swh.journal (kafka))
+
+In short, only the scheduler database and scheduler logic is kept; every other
+component (RabbitMQ, Celery, Kafka, SWH loaders, SWH storage) is either replaced
+with an barebones in-process utility, or removed entirely.
 
 Installing the simulator
 ------------------------

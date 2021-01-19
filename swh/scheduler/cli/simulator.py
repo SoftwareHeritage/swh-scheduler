@@ -50,6 +50,10 @@ def run_command(scheduler, policy, runtime):
     By default, the simulation runs forever. You can cap the simulated runtime
     with the --runtime option, and you can always press Ctrl+C to interrupt the
     running simulation.
+
+    'task_scheduler' is the "classic" task-based scheduler; 'origin_scheduler'
+    is the new origin-visit-aware simulator. The latter uses --policy to decide
+    which origins to schedule first based on information from listers.
     """
     from swh.scheduler.simulator import run
 

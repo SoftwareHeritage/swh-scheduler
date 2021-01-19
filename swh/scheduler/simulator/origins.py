@@ -3,6 +3,9 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+"""This module implements a model of the frequency of updates of an origin
+and how long it takes to load it."""
+
 from datetime import timedelta
 import hashlib
 import logging
@@ -35,11 +38,17 @@ class OriginModel:
         self.origin = origin
 
     def seconds_between_commits(self):
+        """Returns a random 'average time between two commits' of this origin,
+        used to estimate the run time of a load task, and how much the loading
+        architecture is lagging behind origin updates."""
         n_bytes = 2
         num_buckets = 2 ** (8 * n_bytes)
+
+        # Deterministic seed to generate "random" characteristics of this origin
         bucket = int.from_bytes(
             hashlib.md5(self.origin.encode()).digest()[0:n_bytes], "little"
         )
+
         # minimum: 1 second (bucket == 0)
         # max: 10 years (bucket == num_buckets - 1)
         ten_y = 10 * 365 * 24 * 3600

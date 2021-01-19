@@ -3,6 +3,13 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+"""This package runs the scheduler in a simulated environment, to evaluate
+various metrics. See :ref:`swh-scheduler-simulator`.
+
+This module orchestrates of the simulator by initializing processes and connecting
+them together; these processes are defined in modules in the package and
+simulate/call specific components."""
+
 from datetime import datetime, timedelta, timezone
 import logging
 from typing import Dict, Generator, Optional
@@ -83,6 +90,7 @@ def setup(
 
 
 def fill_test_data(num_origins: int = 100000):
+    """Fills the database with mock data to test the simulator."""
     scheduler = get_scheduler(cls="local", db="")
 
     stored_lister = scheduler.get_or_create_lister(name="example")
