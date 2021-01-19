@@ -108,7 +108,8 @@ def test_cli_journal_client_origin_visit_status(
     assert result.output == expected_output
 
     actual_visit_stats = swh_scheduler.origin_visit_stats_get(
-        visit_status["origin"], visit_status["type"]
+        [(visit_status["origin"], visit_status["type"])]
     )
 
-    assert actual_visit_stats is not None
+    assert actual_visit_stats
+    assert len(actual_visit_stats) == 1

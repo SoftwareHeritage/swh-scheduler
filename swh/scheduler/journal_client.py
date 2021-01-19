@@ -65,9 +65,9 @@ def process_journal_objects(
         }
         pk = origin, visit_type
         if pk not in origin_visit_stats:
-            visit_stats = scheduler.origin_visit_stats_get(origin, visit_type)
+            visit_stats = scheduler.origin_visit_stats_get([pk])
             origin_visit_stats[pk] = (
-                attr.asdict(visit_stats) if visit_stats else empty_object
+                attr.asdict(visit_stats[0]) if visit_stats else empty_object
             )
 
         visit_stats_d = origin_visit_stats[pk]

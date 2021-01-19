@@ -3,8 +3,9 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+
 import datetime
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 from uuid import UUID
 
 from typing_extensions import Protocol, runtime_checkable
@@ -347,9 +348,14 @@ class SchedulerInterface(Protocol):
 
     @remote_api_endpoint("visit_stats/get")
     def origin_visit_stats_get(
-        self, url: str, visit_type: str
-    ) -> Optional[OriginVisitStats]:
-        """Retrieve the stats for an origin with a given visit type"""
+        self, ids: Iterable[Tuple[str, str]]
+    ) -> List[OriginVisitStats]:
+        """Retrieve the stats for an origin with a given visit type
+
+        If some visit_stats are not found, they are filtered out of the result. So the
+        output list may be of length inferior to the length of the input list.
+
+        """
         ...
 
     @remote_api_endpoint("scheduler_metrics/update")

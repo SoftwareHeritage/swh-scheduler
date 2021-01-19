@@ -94,7 +94,9 @@ def load_task_process(
     """
     # This is cheating; actual tasks access the state from the storage, not the
     # scheduler
-    stats = env.scheduler.origin_visit_stats_get(task.origin, task.visit_type)
+    pk = task.origin, task.visit_type
+    visit_stats = env.scheduler.origin_visit_stats_get([pk])
+    stats: Optional[OriginVisitStats] = visit_stats[0] if len(visit_stats) > 0 else None
     last_snapshot = stats.last_snapshot if stats else None
 
     status = OriginVisitStatus(

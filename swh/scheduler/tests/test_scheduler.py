@@ -772,9 +772,8 @@ class TestScheduler:
 
         assert len(ret) == NUM_RESULTS
         for origin in ret:
-            visit_stats = swh_scheduler.origin_visit_stats_get(
-                origin.url, origin.visit_type
-            )
+            pk = (origin.url, origin.visit_type)
+            visit_stats = swh_scheduler.origin_visit_stats_get([pk])[0]
             assert visit_stats is not None
             assert before <= visit_stats.last_scheduled <= after
 
@@ -805,6 +804,9 @@ class TestScheduler:
         for tt in TASK_TYPES.values():
             scheduler.create_task_type(tt)
 
+    def test_origin_visit_stats_get_empty(self, swh_scheduler) -> None:
+        assert swh_scheduler.origin_visit_stats_get([]) == []
+
     def test_origin_visit_stats_upsert(self, swh_scheduler) -> None:
         eventful_date = utcnow()
         url = "https://github.com/test"
@@ -820,8 +822,8 @@ class TestScheduler:
         swh_scheduler.origin_visit_stats_upsert([visit_stats])
         swh_scheduler.origin_visit_stats_upsert([visit_stats])
 
-        assert swh_scheduler.origin_visit_stats_get(url, "git") == visit_stats
-        assert swh_scheduler.origin_visit_stats_get(url, "svn") is None
+        assert swh_scheduler.origin_visit_stats_get([(url, "git")]) == [visit_stats]
+        assert swh_scheduler.origin_visit_stats_get([(url, "svn")]) == []
 
         uneventful_date = utcnow()
         visit_stats = OriginVisitStats(
@@ -834,7 +836,7 @@ class TestScheduler:
         )
         swh_scheduler.origin_visit_stats_upsert([visit_stats])
 
-        uneventful_visit = swh_scheduler.origin_visit_stats_get(url, "git")
+        uneventful_visits = swh_scheduler.origin_visit_stats_get([(url, "git")])
 
         expected_visit_stats = OriginVisitStats(
             url=url,
@@ -845,7 +847,7 @@ class TestScheduler:
             last_notfound=None,
         )
 
-        assert uneventful_visit == expected_visit_stats
+        assert uneventful_visits == [expected_visit_stats]
 
         failed_date = utcnow()
         visit_stats = OriginVisitStats(
@@ -858,7 +860,7 @@ class TestScheduler:
         )
         swh_scheduler.origin_visit_stats_upsert([visit_stats])
 
-        failed_visit = swh_scheduler.origin_visit_stats_get(url, "git")
+        failed_visits = swh_scheduler.origin_visit_stats_get([(url, "git")])
 
         expected_visit_stats = OriginVisitStats(
             url=url,
@@ -869,7 +871,7 @@ class TestScheduler:
             last_notfound=None,
         )
 
-        assert failed_visit == expected_visit_stats
+        assert failed_visits == [expected_visit_stats]
 
     def test_origin_visit_stats_upsert_with_snapshot(self, swh_scheduler) -> None:
         eventful_date = utcnow()
@@ -886,8 +888,8 @@ class TestScheduler:
         )
         swh_scheduler.origin_visit_stats_upsert([visit_stats])
 
-        assert swh_scheduler.origin_visit_stats_get(url, "git") == visit_stats
-        assert swh_scheduler.origin_visit_stats_get(url, "svn") is None
+        assert swh_scheduler.origin_visit_stats_get([(url, "git")]) == [visit_stats]
+        assert swh_scheduler.origin_visit_stats_get([(url, "svn")]) == []
 
     def test_origin_visit_stats_upsert_messing_with_time(self, swh_scheduler) -> None:
         url = "interesting-origin"
@@ -911,7 +913,7 @@ class TestScheduler:
         )
         swh_scheduler.origin_visit_stats_upsert([visit_stats0])
 
-        actual_visit_stats0 = swh_scheduler.origin_visit_stats_get(url, "git")
+        actual_visit_stats0 = swh_scheduler.origin_visit_stats_get([(url, "git")])[0]
         assert actual_visit_stats0 == visit_stats0
 
         visit_stats2 = OriginVisitStats(
@@ -924,7 +926,7 @@ class TestScheduler:
         )
         swh_scheduler.origin_visit_stats_upsert([visit_stats2])
 
-        actual_visit_stats2 = swh_scheduler.origin_visit_stats_get(url, "git")
+        actual_visit_stats2 = swh_scheduler.origin_visit_stats_get([(url, "git")])[0]
         assert actual_visit_stats2 == attr.evolve(
             actual_visit_stats0, last_uneventful=date1
         )
@@ -943,7 +945,7 @@ class TestScheduler:
         )
         swh_scheduler.origin_visit_stats_upsert([visit_stats1])
 
-        actual_visit_stats1 = swh_scheduler.origin_visit_stats_get(url, "git")
+        actual_visit_stats1 = swh_scheduler.origin_visit_stats_get([(url, "git")])[0]
 
         assert actual_visit_stats1 == attr.evolve(
             actual_visit_stats2, last_eventful=date2
@@ -974,13 +976,10 @@ class TestScheduler:
 
         swh_scheduler.origin_visit_stats_upsert(visit_stats)
 
-        for visit_stat in visit_stats:
-            assert (
-                swh_scheduler.origin_visit_stats_get(
-                    visit_stat.url, visit_stat.visit_type
-                )
-                is not None
-            )
+        for visit_stat in swh_scheduler.origin_visit_stats_get(
+            [(vs.url, vs.visit_type) for vs in visit_stats]
+        ):
+            assert visit_stat is not None
 
     def test_origin_visit_stats_upsert_cardinality_failing(self, swh_scheduler) -> None:
         """Batch upsert does not support altering multiple times the same origin-visit-status

@@ -864,19 +864,21 @@ class SchedulerBackend:
 
     @db_transaction()
     def origin_visit_stats_get(
-        self, url: str, visit_type: str, db=None, cur=None
-    ) -> Optional[OriginVisitStats]:
+        self, ids: Iterable[Tuple[str, str]], db=None, cur=None
+    ) -> List[OriginVisitStats]:
+        if not ids:
+            return []
+        primary_keys = tuple((origin, visit_type) for (origin, visit_type) in ids)
         query = format_query(
-            "SELECT {keys} FROM origin_visit_stats WHERE url=%s AND visit_type=%s",
+            """
+            SELECT {keys}
+            FROM (VALUES %s) as stats(url, visit_type)
+            INNER JOIN origin_visit_stats USING (url, visit_type)
+        """,
             OriginVisitStats.select_columns(),
         )
-        cur.execute(query, (url, visit_type))
-        row = cur.fetchone()
-
-        if row:
-            return OriginVisitStats(**row)
-        else:
-            return None
+        psycopg2.extras.execute_values(cur=cur, sql=query, argslist=primary_keys)
+        return [OriginVisitStats(**row) for row in cur.fetchall()]
 
     @db_transaction()
     def update_metrics(
