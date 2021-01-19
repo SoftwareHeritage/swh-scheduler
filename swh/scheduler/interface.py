@@ -262,6 +262,15 @@ class SchedulerInterface(Protocol):
         """Search task run for a task id"""
         ...
 
+    @remote_api_endpoint("lister/get")
+    def get_lister(
+        self, name: str, instance_name: Optional[str] = None
+    ) -> Optional[Lister]:
+        """Retrieve information about the given instance of the lister from the
+        database.
+        """
+        ...
+
     @remote_api_endpoint("lister/get_or_create")
     def get_or_create_lister(
         self, name: str, instance_name: Optional[str] = None

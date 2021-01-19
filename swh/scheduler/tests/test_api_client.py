@@ -42,6 +42,7 @@ def test_site_map(flask_app_client):
     expected_rules = set(
         "/" + rule
         for rule in (
+            "lister/get",
             "lister/get_or_create",
             "lister/update",
             "origins/get",

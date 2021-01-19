@@ -138,6 +138,31 @@ class SchedulerBackend:
         return cur.fetchall()
 
     @db_transaction()
+    def get_lister(
+        self, name: str, instance_name: Optional[str] = None, db=None, cur=None
+    ) -> Optional[Lister]:
+        """Retrieve information about the given instance of the lister from the
+        database.
+        """
+        if instance_name is None:
+            instance_name = ""
+
+        select_cols = ", ".join(Lister.select_columns())
+
+        query = f"""
+            select {select_cols} from listers
+              where (name, instance_name) = (%s, %s)
+        """
+
+        cur.execute(query, (name, instance_name))
+
+        ret = cur.fetchone()
+        if not ret:
+            return None
+
+        return Lister(**ret)
+
+    @db_transaction()
     def get_or_create_lister(
         self, name: str, instance_name: Optional[str] = None, db=None, cur=None
     ) -> Lister:

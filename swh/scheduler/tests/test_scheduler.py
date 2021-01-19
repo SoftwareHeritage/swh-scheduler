@@ -646,6 +646,21 @@ class TestScheduler:
 
             assert lister == lister_get_again
 
+    def test_get_lister(self, swh_scheduler):
+        for lister_args in LISTERS:
+            assert swh_scheduler.get_lister(**lister_args) is None
+
+        db_listers = []
+        for lister_args in LISTERS:
+            db_listers.append(swh_scheduler.get_or_create_lister(**lister_args))
+
+        for lister, lister_args in zip(db_listers, LISTERS):
+            lister_get_again = swh_scheduler.get_lister(
+                lister.name, lister.instance_name
+            )
+
+            assert lister == lister_get_again
+
     def test_update_lister(self, swh_scheduler, stored_lister):
         lister = attr.evolve(stored_lister, current_state={"updated": "now"})
 
