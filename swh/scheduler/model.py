@@ -152,10 +152,6 @@ class ListedOrigin(BaseSchedulerModel):
         type=Optional[datetime.datetime], validator=[type_validator()], default=None,
     )
 
-    last_scheduled = attr.ib(
-        type=Optional[datetime.datetime], validator=[type_validator()], default=None,
-    )
-
     enabled = attr.ib(type=bool, validator=[type_validator()], default=True)
 
     first_seen = attr.ib(
@@ -232,6 +228,9 @@ class OriginVisitStats(BaseSchedulerModel):
     last_failed = attr.ib(type=Optional[datetime.datetime], validator=type_validator())
     last_notfound = attr.ib(
         type=Optional[datetime.datetime], validator=type_validator()
+    )
+    last_scheduled = attr.ib(
+        type=Optional[datetime.datetime], validator=[type_validator()], default=None,
     )
     last_snapshot = attr.ib(
         type=Optional[bytes], validator=type_validator(), default=None

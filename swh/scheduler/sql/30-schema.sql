@@ -11,7 +11,7 @@ comment on column dbversion.release is 'Version deployment timestamp';
 comment on column dbversion.description is 'Version description';
 
 insert into dbversion (version, release, description)
-       values (23, now(), 'Work In Progress');
+       values (24, now(), 'Work In Progress');
 
 create table task_type (
   type text primary key,
@@ -145,9 +145,6 @@ create table if not exists listed_origins (
   -- potentially provided by the lister
   last_update timestamptz,
 
-  -- visit scheduling information
-  last_scheduled timestamptz,
-
   primary key (lister_id, url, visit_type)
 );
 
@@ -163,7 +160,6 @@ comment on column listed_origins.last_seen is 'Time at which the origin was last
 
 comment on column listed_origins.last_update is 'Time of the last update to the origin recorded by the remote';
 
-comment on column listed_origins.last_scheduled is 'Time when this origin was scheduled to be visited last';
 
 create table origin_visit_stats (
   url text not null,
@@ -172,6 +168,9 @@ create table origin_visit_stats (
   last_uneventful timestamptz,
   last_failed timestamptz,
   last_notfound timestamptz,
+  -- visit scheduling information
+  last_scheduled timestamptz,
+  -- last snapshot resulting from an eventful visit
   last_snapshot bytea,
 
   primary key (url, visit_type)
@@ -183,4 +182,5 @@ comment on column origin_visit_stats.last_eventful is 'Date of the last eventful
 comment on column origin_visit_stats.last_uneventful is 'Date of the last uneventful event';
 comment on column origin_visit_stats.last_failed is 'Date of the last failed event';
 comment on column origin_visit_stats.last_notfound is 'Date of the last notfound event';
+comment on column origin_visit_stats.last_scheduled is 'Time when this origin was scheduled to be visited last';
 comment on column origin_visit_stats.last_snapshot is 'sha1_git of the last visit snapshot';

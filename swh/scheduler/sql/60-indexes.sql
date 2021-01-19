@@ -16,5 +16,8 @@ create index task_run_id_asc_idx on task_run(task asc, started asc);
 create unique index on listers (name, instance_name);
 
 -- listed origins
-create index on listed_origins (url);
-create index on listed_origins (visit_type, last_scheduled);
+create index on listed_origins (url, visit_type);
+
+-- visit stats
+create index on origin_visit_stats (url, visit_type);
+-- XXX probably add indexes on most (visit_type, last_xxx) couples

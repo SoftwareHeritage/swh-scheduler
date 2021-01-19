@@ -744,7 +744,11 @@ class TestScheduler:
 
         assert len(ret) == NUM_RESULTS
         for origin in ret:
-            assert before <= origin.last_scheduled <= after
+            visit_stats = swh_scheduler.origin_visit_stats_get(
+                origin.url, origin.visit_type
+            )
+            assert visit_stats is not None
+            assert before <= visit_stats.last_scheduled <= after
 
     @pytest.mark.parametrize("policy", ["oldest_scheduled_first"])
     def test_grab_next_visits_underflow(

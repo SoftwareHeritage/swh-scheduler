@@ -11,7 +11,7 @@ import pytest
 
 from swh.model.hashutil import hash_to_bytes
 from swh.scheduler.journal_client import max_date, process_journal_objects
-from swh.scheduler.model import OriginVisitStats
+from swh.scheduler.model import ListedOrigin, OriginVisitStats
 from swh.scheduler.utils import utcnow
 
 
@@ -476,4 +476,112 @@ def test_journal_client_origin_visit_status_permutation1(visit_statuses, swh_sch
 
     assert (
         swh_scheduler.origin_visit_stats_get("cavabarder", "hg") == expected_visit_stats
+    )
+
+
+VISIT_STATUSES_2 = [
+    {**ovs, "date": DATE1 + n * ONE_DAY}
+    for n, ovs in enumerate(
+        [
+            {
+                "origin": "cavabarder",
+                "type": "hg",
+                "visit": 1,
+                "status": "full",
+                "snapshot": hash_to_bytes("0000000000000000000000000000000000000000"),
+            },
+            {
+                "origin": "cavabarder",
+                "type": "hg",
+                "visit": 2,
+                "status": "full",
+                "snapshot": hash_to_bytes("1111111111111111111111111111111111111111"),
+            },
+            {
+                "origin": "iciaussi",
+                "type": "hg",
+                "visit": 1,
+                "status": "full",
+                "snapshot": hash_to_bytes("2222222222222222222222222222222222222222"),
+            },
+            {
+                "origin": "iciaussi",
+                "type": "hg",
+                "visit": 2,
+                "status": "full",
+                "snapshot": hash_to_bytes("3333333333333333333333333333333333333333"),
+            },
+            {
+                "origin": "cavabarder",
+                "type": "git",
+                "visit": 1,
+                "status": "full",
+                "snapshot": hash_to_bytes("4444444444444444444444444444444444444444"),
+            },
+            {
+                "origin": "cavabarder",
+                "type": "git",
+                "visit": 2,
+                "status": "full",
+                "snapshot": hash_to_bytes("5555555555555555555555555555555555555555"),
+            },
+            {
+                "origin": "iciaussi",
+                "type": "git",
+                "visit": 1,
+                "status": "full",
+                "snapshot": hash_to_bytes("6666666666666666666666666666666666666666"),
+            },
+            {
+                "origin": "iciaussi",
+                "type": "git",
+                "visit": 2,
+                "status": "full",
+                "snapshot": hash_to_bytes("7777777777777777777777777777777777777777"),
+            },
+        ]
+    )
+]
+
+
+def test_journal_client_origin_visit_status_after_grab_next_visits(
+    swh_scheduler, stored_lister
+):
+    """Ensure OriginVisitStat entries created in the db as a result of calling
+    grab_next_visits() do not mess the OriginVisitStats upsert mechanism.
+
+    """
+
+    listed_origins = [
+        ListedOrigin(lister_id=stored_lister.id, url=url, visit_type=visit_type)
+        for (url, visit_type) in set((v["origin"], v["type"]) for v in VISIT_STATUSES_2)
+    ]
+    swh_scheduler.record_listed_origins(listed_origins)
+    before = utcnow()
+    swh_scheduler.grab_next_visits(
+        visit_type="git", count=10, policy="oldest_scheduled_first"
+    )
+    after = utcnow()
+
+    assert swh_scheduler.origin_visit_stats_get("cavabarder", "hg") is None
+    assert swh_scheduler.origin_visit_stats_get("cavabarder", "git") is not None
+
+    process_journal_objects(
+        {"origin_visit_status": VISIT_STATUSES_2}, scheduler=swh_scheduler
+    )
+
+    for url in ("cavabarder", "iciaussi"):
+        ovs = swh_scheduler.origin_visit_stats_get(url, "git")
+        assert before <= ovs.last_scheduled <= after
+
+        ovs = swh_scheduler.origin_visit_stats_get(url, "hg")
+        assert ovs.last_scheduled is None
+
+    ovs = swh_scheduler.origin_visit_stats_get("cavabarder", "git")
+    assert ovs.last_eventful == DATE1 + 5 * ONE_DAY
+    assert ovs.last_uneventful is None
+    assert ovs.last_failed is None
+    assert ovs.last_notfound is None
+    assert ovs.last_snapshot == hash_to_bytes(
+        "5555555555555555555555555555555555555555"
     )

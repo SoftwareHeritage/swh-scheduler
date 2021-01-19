@@ -302,19 +302,36 @@ class SchedulerBackend:
 
         if policy == "oldest_scheduled_first":
             query = f"""
-                with filtered_origins as (
-                    select lister_id, url, visit_type
-                    from listed_origins
-                    where visit_type = %s
-                    order by last_scheduled nulls first
-                    limit %s
-                    for update skip locked
+            WITH selected_origins AS (
+              SELECT
+                {origin_select_cols}
+                   FROM
+                     listed_origins
+                   LEFT JOIN
+                     origin_visit_stats USING (url, visit_type)
+                   WHERE
+                     visit_type = %s
+                   ORDER BY
+                     origin_visit_stats.last_scheduled NULLS FIRST
+                   LIMIT %s
+            ),
+            update_stats AS (
+              INSERT INTO
+                origin_visit_stats (
+                  url, visit_type, last_scheduled
                 )
-                update listed_origins
-                set last_scheduled = now()
-                where (lister_id, url, visit_type) in (select * from filtered_origins)
-                returning {origin_select_cols}
-            """
+              SELECT
+                url, visit_type, now()
+              FROM
+                selected_origins
+              ON CONFLICT (url, visit_type) DO UPDATE
+                SET last_scheduled = GREATEST(origin_visit_stats.last_scheduled, EXCLUDED.last_scheduled)
+            )
+            SELECT
+              *
+            FROM
+              selected_origins
+            """  # noqa
             cur.execute(query, (visit_type, count))
 
             return [ListedOrigin(**d) for d in cur]
@@ -799,7 +816,7 @@ class SchedulerBackend:
                 last_snapshot = (select
                     case
                       when ovi.last_eventful < excluded.last_eventful then excluded.last_snapshot
-                      else ovi.last_snapshot
+                      else coalesce(ovi.last_snapshot, excluded.last_snapshot)
                     end
                 )
         """  # noqa
