@@ -16,7 +16,7 @@ from typing import Dict, Generator, Optional
 
 from simpy import Event
 
-from swh.scheduler import get_scheduler
+from swh.scheduler.interface import SchedulerInterface
 from swh.scheduler.model import ListedOrigin
 
 from . import origin_scheduler, task_scheduler
@@ -46,20 +46,19 @@ def worker_process(
 
 def setup(
     env: Environment,
-    scheduler: str,
+    scheduler_type: str,
     policy: Optional[str],
     workers_per_type: Dict[str, int],
     task_queue_capacity: int,
     min_batch_size: int,
 ):
-    # We expect PGHOST, PGPORT, ... set externally
     task_queues = {
         visit_type: Queue(env, capacity=task_queue_capacity)
         for visit_type in workers_per_type
     }
     status_queue = Queue(env)
 
-    if scheduler == "origin_scheduler":
+    if scheduler_type == "origin_scheduler":
         if policy is None:
             raise ValueError("origin_scheduler needs a scheduling policy")
         env.process(
@@ -70,7 +69,7 @@ def setup(
         env.process(
             origin_scheduler.scheduler_journal_client_process(env, status_queue)
         )
-    elif scheduler == "task_scheduler":
+    elif scheduler_type == "task_scheduler":
         if policy is not None:
             raise ValueError("task_scheduler doesn't support a scheduling policy")
         env.process(
@@ -80,7 +79,7 @@ def setup(
         )
         env.process(task_scheduler.scheduler_listener_process(env, status_queue))
     else:
-        raise ValueError(f"Unknown scheduler: {scheduler}")
+        raise ValueError(f"Unknown scheduler type to simulate: {scheduler_type}")
 
     for visit_type, num_workers in workers_per_type.items():
         task_queue = task_queues[visit_type]
@@ -89,10 +88,8 @@ def setup(
             env.process(worker_process(env, worker_name, task_queue, status_queue))
 
 
-def fill_test_data(num_origins: int = 100000):
+def fill_test_data(scheduler: SchedulerInterface, num_origins: int = 100000):
     """Fills the database with mock data to test the simulator."""
-    scheduler = get_scheduler(cls="local", db="")
-
     stored_lister = scheduler.get_or_create_lister(name="example")
     assert stored_lister.id is not None
 
@@ -120,15 +117,20 @@ def fill_test_data(num_origins: int = 100000):
     )
 
 
-def run(scheduler: str, policy: Optional[str], runtime: Optional[int]):
+def run(
+    scheduler: SchedulerInterface,
+    scheduler_type: str,
+    policy: Optional[str],
+    runtime: Optional[int],
+):
     NUM_WORKERS = 48
     start_time = datetime.now(tz=timezone.utc)
     env = Environment(start_time=start_time)
-    env.scheduler = get_scheduler(cls="local", db="")
+    env.scheduler = scheduler
     env.report = SimulationReport()
     setup(
         env,
-        scheduler=scheduler,
+        scheduler_type=scheduler_type,
         policy=policy,
         workers_per_type={"git": NUM_WORKERS},
         task_queue_capacity=10000,

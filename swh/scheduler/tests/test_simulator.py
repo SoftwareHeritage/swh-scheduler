@@ -12,19 +12,11 @@ NUM_ORIGINS = 42
 TEST_RUNTIME = 1000
 
 
-@pytest.fixture
-def monkeypatch_get_scheduler(swh_scheduler, monkeypatch):
-    def get_scheduler(*args, **kwargs):
-        return swh_scheduler
-
-    monkeypatch.setattr(simulator, "get_scheduler", get_scheduler)
-
+def test_fill_test_data(swh_scheduler):
     for task_type in TASK_TYPES.values():
         swh_scheduler.create_task_type(task_type)
 
-
-def test_fill_test_data(swh_scheduler, monkeypatch_get_scheduler):
-    simulator.fill_test_data(num_origins=NUM_ORIGINS)
+    simulator.fill_test_data(swh_scheduler, num_origins=NUM_ORIGINS)
 
     res = swh_scheduler.get_listed_origins()
     assert len(res.origins) == NUM_ORIGINS
@@ -35,11 +27,27 @@ def test_fill_test_data(swh_scheduler, monkeypatch_get_scheduler):
 
 
 @pytest.mark.parametrize("policy", ("oldest_scheduled_first",))
-def test_run_origin_scheduler(swh_scheduler, monkeypatch_get_scheduler, policy):
-    simulator.fill_test_data(num_origins=NUM_ORIGINS)
-    simulator.run("origin_scheduler", policy=policy, runtime=TEST_RUNTIME)
+def test_run_origin_scheduler(swh_scheduler, policy):
+    for task_type in TASK_TYPES.values():
+        swh_scheduler.create_task_type(task_type)
+
+    simulator.fill_test_data(swh_scheduler, num_origins=NUM_ORIGINS)
+    simulator.run(
+        swh_scheduler,
+        scheduler_type="origin_scheduler",
+        policy=policy,
+        runtime=TEST_RUNTIME,
+    )
 
 
-def test_run_task_scheduler(swh_scheduler, monkeypatch_get_scheduler):
-    simulator.fill_test_data(num_origins=NUM_ORIGINS)
-    simulator.run("task_scheduler", policy=None, runtime=TEST_RUNTIME)
+def test_run_task_scheduler(swh_scheduler):
+    for task_type in TASK_TYPES.values():
+        swh_scheduler.create_task_type(task_type)
+
+    simulator.fill_test_data(swh_scheduler, num_origins=NUM_ORIGINS)
+    simulator.run(
+        swh_scheduler,
+        scheduler_type="task_scheduler",
+        policy=None,
+        runtime=TEST_RUNTIME,
+    )

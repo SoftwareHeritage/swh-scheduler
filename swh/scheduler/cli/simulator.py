@@ -17,13 +17,14 @@ def simulator():
 
 
 @simulator.command("fill-test-data")
-def fill_test_data_command():
+@click.pass_context
+def fill_test_data_command(ctx):
     """Fill the scheduler with test data for simulation purposes."""
     from swh.scheduler.simulator import fill_test_data
 
     click.echo("Filling test data...")
     start = time.monotonic()
-    fill_test_data()
+    fill_test_data(ctx.obj["scheduler"])
     runtime = time.monotonic() - start
     click.echo(f"Completed in {runtime:.2f} seconds")
 
@@ -44,7 +45,8 @@ def fill_test_data_command():
     help="Scheduling policy to simulate (only for origin_scheduler)",
 )
 @click.option("--runtime", "-t", type=float, help="Simulated runtime")
-def run_command(scheduler, policy, runtime):
+@click.pass_context
+def run_command(ctx, scheduler, policy, runtime):
     """Run the scheduler simulator.
 
     By default, the simulation runs forever. You can cap the simulated runtime
@@ -58,4 +60,9 @@ def run_command(scheduler, policy, runtime):
     from swh.scheduler.simulator import run
 
     policy = policy if scheduler == "origin_scheduler" else None
-    run(scheduler=scheduler, policy=policy, runtime=runtime)
+    run(
+        scheduler=ctx.obj["scheduler"],
+        scheduler_type=scheduler,
+        policy=policy,
+        runtime=runtime,
+    )
