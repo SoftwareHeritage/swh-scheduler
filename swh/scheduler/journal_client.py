@@ -48,10 +48,18 @@ def process_journal_objects(
     }, f"Got unexpected {', '.join(set(messages) - set([msg_type]))} message types"
     assert msg_type in messages, f"Expected {msg_type} messages"
 
-    origin_visit_stats: Dict[Tuple[str, str], Dict] = {}
-    for msg_dict in messages[msg_type]:
-        if msg_dict["status"] in ("created", "ongoing"):
-            continue
+    interesting_messages = [
+        msg for msg in messages[msg_type] if msg["status"] not in ("created", "ongoing")
+    ]
+
+    origin_visit_stats: Dict[Tuple[str, str], Dict] = {
+        (visit_stats.url, visit_stats.visit_type): attr.asdict(visit_stats)
+        for visit_stats in scheduler.origin_visit_stats_get(
+            list(set((vs["origin"], vs["type"]) for vs in interesting_messages))
+        )
+    }
+
+    for msg_dict in interesting_messages:
         origin = msg_dict["origin"]
         visit_type = msg_dict["type"]
         empty_object = {
@@ -65,11 +73,7 @@ def process_journal_objects(
         }
         pk = origin, visit_type
         if pk not in origin_visit_stats:
-            visit_stats = scheduler.origin_visit_stats_get([pk])
-            origin_visit_stats[pk] = (
-                attr.asdict(visit_stats[0]) if visit_stats else empty_object
-            )
-
+            origin_visit_stats[pk] = empty_object
         visit_stats_d = origin_visit_stats[pk]
 
         if msg_dict["status"] == "not_found":
