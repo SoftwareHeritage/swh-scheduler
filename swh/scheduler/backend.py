@@ -3,6 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import datetime
 import json
 import logging
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
@@ -24,6 +25,7 @@ from .model import (
     Lister,
     OriginVisitStats,
     PaginatedListedOriginList,
+    SchedulerMetrics,
 )
 
 logger = logging.getLogger(__name__)
@@ -850,3 +852,63 @@ class SchedulerBackend:
             return OriginVisitStats(**row)
         else:
             return None
+
+    @db_transaction()
+    def update_metrics(
+        self,
+        lister_id: Optional[UUID] = None,
+        timestamp: Optional[datetime.datetime] = None,
+        db=None,
+        cur=None,
+    ) -> List[SchedulerMetrics]:
+        """Update the performance metrics of this scheduler instance.
+
+        Returns the updated metrics.
+
+        Args:
+          lister_id: if passed, update the metrics only for this lister instance
+          timestamp: if passed, the date at which we're updating the metrics,
+            defaults to the database NOW()
+        """
+        query = format_query(
+            "SELECT {keys} FROM update_metrics(%s, %s)",
+            SchedulerMetrics.select_columns(),
+        )
+        cur.execute(query, (lister_id, timestamp))
+        return [SchedulerMetrics(**row) for row in cur.fetchall()]
+
+    @db_transaction()
+    def get_metrics(
+        self,
+        lister_id: Optional[UUID] = None,
+        visit_type: Optional[str] = None,
+        db=None,
+        cur=None,
+    ) -> List[SchedulerMetrics]:
+        """Retrieve the performance metrics of this scheduler instance.
+
+        Args:
+          lister_id: filter the metrics for this lister instance only
+          visit_type: filter the metrics for this visit type only
+        """
+
+        where_filters = []
+        where_args = []
+        if lister_id:
+            where_filters.append("lister_id = %s")
+            where_args.append(str(lister_id))
+        if visit_type:
+            where_filters.append("visit_type = %s")
+            where_args.append(visit_type)
+
+        where_clause = ""
+        if where_filters:
+            where_clause = f"where {' and '.join(where_filters)}"
+
+        query = format_query(
+            "SELECT {keys} FROM scheduler_metrics %s" % where_clause,
+            SchedulerMetrics.select_columns(),
+        )
+
+        cur.execute(query, tuple(where_args))
+        return [SchedulerMetrics(**row) for row in cur.fetchall()]

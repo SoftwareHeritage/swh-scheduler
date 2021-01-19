@@ -251,3 +251,35 @@ class OriginVisitStats(BaseSchedulerModel):
     @last_notfound.validator
     def check_last_notfound(self, attribute, value):
         check_timestamptz(value)
+
+
+@attr.s(frozen=True, slots=True)
+class SchedulerMetrics(BaseSchedulerModel):
+    """Metrics for the scheduler, aggregated by (lister_id, visit_type)"""
+
+    lister_id = attr.ib(
+        type=UUID, validator=[type_validator()], metadata={"primary_key": True}
+    )
+    visit_type = attr.ib(
+        type=str, validator=[type_validator()], metadata={"primary_key": True}
+    )
+
+    last_update = attr.ib(
+        type=Optional[datetime.datetime], validator=[type_validator()], default=None,
+    )
+
+    origins_known = attr.ib(type=int, validator=[type_validator()], default=0)
+    """Number of known (enabled or disabled) origins"""
+
+    origins_enabled = attr.ib(type=int, validator=[type_validator()], default=0)
+    """Number of origins that were present in the latest listings"""
+
+    origins_never_visited = attr.ib(type=int, validator=[type_validator()], default=0)
+    """Number of enabled origins that have never been visited
+    (according to the visit cache)"""
+
+    origins_with_pending_changes = attr.ib(
+        type=int, validator=[type_validator()], default=0
+    )
+    """Number of enabled origins with known activity (recorded by a lister)
+    since our last visit"""

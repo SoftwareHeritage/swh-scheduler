@@ -406,3 +406,43 @@ create trigger update_task_on_task_end
   for each row
   when (new.status NOT IN ('scheduled', 'started'))
   execute procedure swh_scheduler_update_task_on_task_end ();
+
+
+create or replace function update_metrics(lister_id uuid default NULL, ts timestamptz default now())
+  returns setof scheduler_metrics
+  language sql
+as $$
+  insert into scheduler_metrics (
+    lister_id, visit_type, last_update,
+    origins_known, origins_enabled,
+    origins_never_visited, origins_with_pending_changes
+  )
+    select
+      lo.lister_id, lo.visit_type, coalesce(ts, now()) as last_update,
+      count(*) as origins_known,
+      count(*) filter (where enabled) as origins_enabled,
+      count(*) filter (where
+        enabled and last_snapshot is NULL
+      ) as origins_never_visited,
+      count(*) filter (where
+        enabled and lo.last_update > greatest(ovs.last_eventful, ovs.last_uneventful)
+      ) as origins_with_pending_changes
+    from listed_origins lo
+    left join origin_visit_stats ovs using (url, visit_type)
+    where
+      -- update only for the requested lister
+      update_metrics.lister_id = lo.lister_id
+      -- or for all listers if the function argument is null
+      or update_metrics.lister_id is null
+    group by (lister_id, visit_type)
+  on conflict (lister_id, visit_type) do update
+    set
+      last_update = EXCLUDED.last_update,
+      origins_known = EXCLUDED.origins_known,
+      origins_enabled = EXCLUDED.origins_enabled,
+      origins_never_visited = EXCLUDED.origins_never_visited,
+      origins_with_pending_changes = EXCLUDED.origins_with_pending_changes
+  returning *
+$$;
+
+comment on function update_metrics(uuid, timestamptz) is 'Update metrics for the given lister_id';

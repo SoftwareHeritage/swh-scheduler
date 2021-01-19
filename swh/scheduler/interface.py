@@ -3,6 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import datetime
 from typing import Any, Dict, Iterable, List, Optional
 from uuid import UUID
 
@@ -15,6 +16,7 @@ from swh.scheduler.model import (
     Lister,
     OriginVisitStats,
     PaginatedListedOriginList,
+    SchedulerMetrics,
 )
 
 
@@ -339,4 +341,33 @@ class SchedulerInterface(Protocol):
         self, url: str, visit_type: str
     ) -> Optional[OriginVisitStats]:
         """Retrieve the stats for an origin with a given visit type"""
+        ...
+
+    @remote_api_endpoint("scheduler_metrics/update")
+    def update_metrics(
+        self,
+        lister_id: Optional[UUID] = None,
+        timestamp: Optional[datetime.datetime] = None,
+    ) -> List[SchedulerMetrics]:
+        """Update the performance metrics of this scheduler instance.
+
+        Returns the updated metrics.
+
+        Args:
+          lister_id: if passed, update the metrics only for this lister instance
+          timestamp: if passed, the date at which we're updating the metrics,
+            defaults to the database NOW()
+        """
+        ...
+
+    @remote_api_endpoint("scheduler_metrics/get")
+    def get_metrics(
+        self, lister_id: Optional[UUID] = None, visit_type: Optional[str] = None
+    ) -> List[SchedulerMetrics]:
+        """Retrieve the performance metrics of this scheduler instance.
+
+        Args:
+          lister_id: filter the metrics for this lister instance only
+          visit_type: filter the metrics for this visit type only
+        """
         ...

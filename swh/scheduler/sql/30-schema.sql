@@ -11,7 +11,7 @@ comment on column dbversion.release is 'Version deployment timestamp';
 comment on column dbversion.description is 'Version description';
 
 insert into dbversion (version, release, description)
-       values (24, now(), 'Work In Progress');
+       values (25, now(), 'Work In Progress');
 
 create table task_type (
   type text primary key,
@@ -184,3 +184,25 @@ comment on column origin_visit_stats.last_failed is 'Date of the last failed eve
 comment on column origin_visit_stats.last_notfound is 'Date of the last notfound event';
 comment on column origin_visit_stats.last_scheduled is 'Time when this origin was scheduled to be visited last';
 comment on column origin_visit_stats.last_snapshot is 'sha1_git of the last visit snapshot';
+
+
+create table scheduler_metrics (
+  lister_id uuid not null references listers(id),
+  visit_type text not null,
+  last_update timestamptz not null,
+  origins_known int not null default 0,
+  origins_enabled int not null default 0,
+  origins_never_visited int not null default 0,
+  origins_with_pending_changes int not null default 0,
+
+  primary key (lister_id, visit_type)
+);
+
+comment on table scheduler_metrics is 'Cache of per-lister metrics for the scheduler, collated between the listed_origins and origin_visit_stats tables.';
+comment on column scheduler_metrics.lister_id is 'Lister instance on which metrics have been aggregated';
+comment on column scheduler_metrics.visit_type is 'Visit type on which metrics have been aggregated';
+comment on column scheduler_metrics.last_update is 'Last update of these metrics';
+comment on column scheduler_metrics.origins_known is 'Number of known (enabled or disabled) origins';
+comment on column scheduler_metrics.origins_enabled is 'Number of origins that were present in the latest listing';
+comment on column scheduler_metrics.origins_never_visited is 'Number of origins that have never been successfully visited';
+comment on column scheduler_metrics.origins_with_pending_changes is 'Number of enabled origins with known activity since our last visit';

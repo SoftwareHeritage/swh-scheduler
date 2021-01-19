@@ -48,6 +48,8 @@ def test_site_map(flask_app_client):
             "origins/grab_next",
             "origins/record",
             "priority_ratios/get",
+            "scheduler_metrics/get",
+            "scheduler_metrics/update",
             "task/create",
             "task/delete_archived",
             "task/disable",
