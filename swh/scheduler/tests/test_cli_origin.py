@@ -110,3 +110,14 @@ def test_schedule_next(swh_scheduler, listed_origins_by_type):
     }
 
     assert scheduled_tasks <= all_possible_tasks
+
+
+def test_update_metrics(swh_scheduler, listed_origins):
+    swh_scheduler.record_listed_origins(listed_origins)
+
+    assert swh_scheduler.get_metrics() == []
+
+    result = invoke(swh_scheduler, args=("update-metrics",))
+
+    assert result.exit_code == 0
+    assert swh_scheduler.get_metrics() != []

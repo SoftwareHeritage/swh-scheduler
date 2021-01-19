@@ -12,6 +12,9 @@ import click
 from . import cli
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
+    from ..interface import SchedulerInterface
     from ..model import ListedOrigin
 
 
@@ -140,3 +143,40 @@ def schedule_next(ctx, policy: str, type: str, count: int):
         output.append(pretty_print_task(task))
 
     click.echo_via_pager("\n".join(output))
+
+
+@origin.command("update-metrics")
+@click.option("--lister", default=None, help="Only update metrics for this lister")
+@click.option(
+    "--instance", default=None, help="Only update metrics for this lister instance"
+)
+@click.pass_context
+def update_metrics(ctx, lister: Optional[str], instance: Optional[str]):
+    """Update the scheduler metrics on listed origins.
+
+    Examples:
+       swh scheduler origin update-metrics
+       swh scheduler origin update-metrics --lister github
+       swh scheduler origin update-metrics --lister phabricator --instance llvm
+    """
+    import json
+
+    import attr
+
+    scheduler: SchedulerInterface = ctx.obj["scheduler"]
+
+    lister_id: Optional[UUID] = None
+    if lister is not None:
+        lister_instance = scheduler.get_lister(name=lister, instance_name=instance)
+        if not lister_instance:
+            click.echo(f"Lister not found: {lister} instance={instance}")
+            ctx.exit(2)
+            assert False  # for mypy
+
+        lister_id = lister_instance.id
+
+    def dictify_metrics(d):
+        return {k: str(v) for (k, v) in attr.asdict(d).items()}
+
+    ret = scheduler.update_metrics(lister_id=lister_id)
+    click.echo(json.dumps(list(map(dictify_metrics, ret)), indent=4, sort_keys=True))
