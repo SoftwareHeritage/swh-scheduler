@@ -56,6 +56,7 @@ setup(
     entry_points="""
         [swh.cli.subcommands]
         scheduler=swh.scheduler.cli
+        scheduler-journal=swh.scheduler.cli.journal
     """,
     classifiers=[
         "Programming Language :: Python :: 3",

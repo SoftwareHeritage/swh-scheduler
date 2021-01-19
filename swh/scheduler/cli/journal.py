@@ -6,10 +6,10 @@
 
 import click
 
-from . import cli
+from . import cli as cli_scheduler_group
 
 
-@cli.command("journal-client")
+@cli_scheduler_group.command("journal-client")
 @click.pass_context
 @click.option(
     "--stop-after-objects",
@@ -19,6 +19,8 @@ from . import cli
     help="Maximum number of objects to replay. Default is to run forever.",
 )
 def visit_stats_journal_client(ctx, stop_after_objects):
+    """Keep the the origin visits stats table up to date from a swh kafka journal
+    """
     from functools import partial
 
     from swh.journal.client import get_journal_client
