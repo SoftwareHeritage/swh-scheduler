@@ -48,7 +48,10 @@ setup(
     setup_requires=["setuptools-scm"],
     use_scm_version=True,
     install_requires=parse_requirements() + parse_requirements("swh"),
-    extras_require={"testing": parse_requirements("test")},
+    extras_require={
+        "testing": parse_requirements("test") + parse_requirements("journal"),
+        "journal": parse_requirements("journal"),
+    },
     include_package_data=True,
     entry_points="""
         [swh.cli.subcommands]
