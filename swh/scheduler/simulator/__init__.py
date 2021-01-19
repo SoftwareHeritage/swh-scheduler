@@ -43,6 +43,7 @@ def setup(
     policy: Optional[str],
     workers_per_type: Dict[str, int],
     task_queue_capacity: int,
+    min_batch_size: int,
 ):
     # We expect PGHOST, PGPORT, ... set externally
     task_queues = {
@@ -54,14 +55,22 @@ def setup(
     if scheduler == "origin_scheduler":
         if policy is None:
             raise ValueError("origin_scheduler needs a scheduling policy")
-        env.process(origin_scheduler.scheduler_runner_process(env, task_queues, policy))
+        env.process(
+            origin_scheduler.scheduler_runner_process(
+                env, task_queues, policy, min_batch_size=min_batch_size
+            )
+        )
         env.process(
             origin_scheduler.scheduler_journal_client_process(env, status_queue)
         )
     elif scheduler == "task_scheduler":
         if policy is not None:
             raise ValueError("task_scheduler doesn't support a scheduling policy")
-        env.process(task_scheduler.scheduler_runner_process(env, task_queues))
+        env.process(
+            task_scheduler.scheduler_runner_process(
+                env, task_queues, min_batch_size=min_batch_size
+            )
+        )
         env.process(task_scheduler.scheduler_listener_process(env, status_queue))
     else:
         raise ValueError(f"Unknown scheduler: {scheduler}")
@@ -115,6 +124,7 @@ def run(scheduler: str, policy: Optional[str], runtime: Optional[int]):
         policy=policy,
         workers_per_type={"git": NUM_WORKERS},
         task_queue_capacity=10000,
+        min_batch_size=1000,
     )
     try:
         env.run(until=runtime)

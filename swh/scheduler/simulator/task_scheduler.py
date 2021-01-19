@@ -16,14 +16,13 @@ logger = logging.getLogger(__name__)
 
 
 def scheduler_runner_process(
-    env: Environment, task_queues: Dict[str, Queue],
+    env: Environment, task_queues: Dict[str, Queue], min_batch_size: int,
 ) -> Iterator[Event]:
     """Scheduler runner. Grabs next visits from the database according to the
     scheduling policy, and fills the task_queues accordingly."""
 
     while True:
         for visit_type, queue in task_queues.items():
-            min_batch_size = max(queue.capacity // 10, 1)
             remaining = queue.slots_remaining()
             if remaining < min_batch_size:
                 continue
