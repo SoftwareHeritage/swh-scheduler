@@ -15,6 +15,7 @@ from simpy import Store
 
 from swh.model.model import OriginVisitStatus
 from swh.scheduler.interface import SchedulerInterface
+from swh.scheduler.model import SchedulerMetrics
 
 
 @dataclass
@@ -26,11 +27,17 @@ class SimulationReport:
     """Total count of finished visits"""
 
     visit_runtimes: Dict[Tuple[str, bool], List[float]] = field(default_factory=dict)
-    """Collect the visit runtimes for each (status, eventful) tuple"""
+    """Collected visit runtimes for each (status, eventful) tuple"""
+
+    metrics: List[Tuple[datetime, List[SchedulerMetrics]]] = field(default_factory=list)
+    """Collected scheduler metrics for every timestamp"""
 
     def record_visit(self, duration: float, eventful: bool, status: str) -> None:
         self.total_visits += 1
         self.visit_runtimes.setdefault((status, eventful), []).append(duration)
+
+    def record_metrics(self, timestamp: datetime, metrics: List[SchedulerMetrics]):
+        self.metrics.append((timestamp, metrics))
 
     @property
     def useless_visits(self):
@@ -43,9 +50,25 @@ class SimulationReport:
             [runtime for runtime in runtimes if runtime <= self.DURATION_THRESHOLD]
         )
 
+    def metrics_plot(self) -> str:
+        timestamps, metric_lists = zip(*self.metrics)
+        known = [sum(m.origins_known for m in metrics) for metrics in metric_lists]
+        never_visited = [
+            sum(m.origins_never_visited for m in metrics) for metrics in metric_lists
+        ]
+
+        figure = plotille.Figure()
+        figure.x_label = "simulated time"
+        figure.y_label = "origins"
+        figure.scatter(timestamps, known, label="Known origins")
+        figure.scatter(timestamps, never_visited, label="Origins never visited")
+
+        return figure.show(legend=True)
+
     def format(self):
         full_visits = self.visit_runtimes.get(("full", True), [])
         histogram = self.runtime_histogram("full", True)
+        plot = self.metrics_plot()
         long_tasks = sum(runtime > self.DURATION_THRESHOLD for runtime in full_visits)
 
         return (
@@ -59,6 +82,13 @@ class SimulationReport:
                 """
             )
             + histogram
+            + "\n"
+            + textwrap.dedent(
+                """\
+                Metrics over time:
+                """
+            )
+            + plot
         )
 
 

@@ -26,6 +26,17 @@ from .origins import load_task_process
 logger = logging.getLogger(__name__)
 
 
+def update_metrics_process(
+    env: Environment, update_interval: int
+) -> Generator[Event, None, None]:
+    """Update the scheduler metrics every `update_interval` seconds, and add
+    them to the SimulationReport"""
+    while True:
+        metrics = env.scheduler.update_metrics(timestamp=env.time)
+        env.report.record_metrics(env.time, metrics)
+        yield env.timeout(update_interval)
+
+
 def worker_process(
     env: Environment, name: str, task_queue: Queue, status_queue: Queue
 ) -> Generator[Event, Task, None]:
@@ -51,6 +62,7 @@ def setup(
     workers_per_type: Dict[str, int],
     task_queue_capacity: int,
     min_batch_size: int,
+    metrics_update_interval: int,
 ):
     task_queues = {
         visit_type: Queue(env, capacity=task_queue_capacity)
@@ -80,6 +92,8 @@ def setup(
         env.process(task_scheduler.scheduler_listener_process(env, status_queue))
     else:
         raise ValueError(f"Unknown scheduler type to simulate: {scheduler_type}")
+
+    env.process(update_metrics_process(env, metrics_update_interval))
 
     for visit_type, num_workers in workers_per_type.items():
         task_queue = task_queues[visit_type]
@@ -135,6 +149,7 @@ def run(
         workers_per_type={"git": NUM_WORKERS},
         task_queue_capacity=10000,
         min_batch_size=1000,
+        metrics_update_interval=3600,
     )
     try:
         env.run(until=runtime)
@@ -142,5 +157,7 @@ def run(
         pass
     finally:
         end_time = env.time
-        print("total time:", end_time - start_time)
+        print("total simulated time:", end_time - start_time)
+        metrics = env.scheduler.update_metrics(timestamp=end_time)
+        env.report.record_metrics(end_time, metrics)
         print(env.report.format())
