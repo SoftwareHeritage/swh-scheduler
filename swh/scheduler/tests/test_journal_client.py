@@ -111,12 +111,10 @@ def test_journal_client_origin_visit_status_from_journal_last_notfound(swh_sched
         {"origin_visit_status": [visit_status]}, scheduler=swh_scheduler
     )
 
-    actual_origin_visit_stats = swh_scheduler.origin_visit_stats_get(
-        visit_status["origin"], visit_status["type"]
-    )
+    actual_origin_visit_stats = swh_scheduler.origin_visit_stats_get("foo", "git")
     assert actual_origin_visit_stats == OriginVisitStats(
-        url=visit_status["origin"],
-        visit_type=visit_status["type"],
+        url="foo",
+        visit_type="git",
         last_eventful=None,
         last_uneventful=None,
         last_failed=None,
@@ -127,17 +125,17 @@ def test_journal_client_origin_visit_status_from_journal_last_notfound(swh_sched
     visit_statuses = [
         {
             "origin": "foo",
-            "visit": 4,
+            "visit": 3,
             "status": "not_found",
-            "date": DATE3,
+            "date": DATE2,
             "type": "git",
             "snapshot": None,
         },
         {
             "origin": "foo",
-            "visit": 3,
+            "visit": 4,
             "status": "not_found",
-            "date": DATE2,
+            "date": DATE3,
             "type": "git",
             "snapshot": None,
         },
@@ -147,20 +145,17 @@ def test_journal_client_origin_visit_status_from_journal_last_notfound(swh_sched
         {"origin_visit_status": visit_statuses}, scheduler=swh_scheduler
     )
 
-    for visit_status in visit_statuses:
-        actual_origin_visit_stats = swh_scheduler.origin_visit_stats_get(
-            visit_status["origin"], visit_status["type"]
-        )
-        assert actual_origin_visit_stats is not None
-        assert actual_origin_visit_stats == OriginVisitStats(
-            url=visit_status["origin"],
-            visit_type=visit_status["type"],
-            last_eventful=None,
-            last_uneventful=None,
-            last_failed=None,
-            last_notfound=DATE3,
-            last_snapshot=None,
-        )
+    actual_origin_visit_stats = swh_scheduler.origin_visit_stats_get("foo", "git")
+    assert actual_origin_visit_stats is not None
+    assert actual_origin_visit_stats == OriginVisitStats(
+        url="foo",
+        visit_type="git",
+        last_eventful=None,
+        last_uneventful=None,
+        last_failed=None,
+        last_notfound=DATE3,
+        last_snapshot=None,
+    )
 
 
 def test_journal_client_origin_visit_status_from_journal_last_failed(swh_scheduler):
@@ -175,35 +170,20 @@ def test_journal_client_origin_visit_status_from_journal_last_failed(swh_schedul
         },
         {
             "origin": "bar",
-            "visit": 2,
+            "visit": 1,
             "status": "full",
             "date": DATE1,
             "type": "git",
             "snapshot": None,
         },
-    ]
-
-    process_journal_objects(
-        {"origin_visit_status": visit_statuses}, scheduler=swh_scheduler
-    )
-
-    # Ensure those visit status are ignored
-    for visit_status in visit_statuses:
-        actual_origin_visit_stats = swh_scheduler.origin_visit_stats_get(
-            visit_status["origin"], visit_status["type"]
-        )
-        assert actual_origin_visit_stats is not None
-        assert actual_origin_visit_stats == OriginVisitStats(
-            url=visit_status["origin"],
-            visit_type=visit_status["type"],
-            last_eventful=None,
-            last_uneventful=None,
-            last_failed=visit_status["date"],
-            last_notfound=None,
-            last_snapshot=None,
-        )
-
-    visit_statuses = [
+        {
+            "origin": "bar",
+            "visit": 2,
+            "status": "full",
+            "date": DATE2,
+            "type": "git",
+            "snapshot": None,
+        },
         {
             "origin": "bar",
             "visit": 3,
@@ -212,34 +192,23 @@ def test_journal_client_origin_visit_status_from_journal_last_failed(swh_schedul
             "type": "git",
             "snapshot": None,
         },
-        {
-            "origin": "bar",
-            "visit": 4,
-            "status": "full",
-            "date": DATE2,
-            "type": "git",
-            "snapshot": None,
-        },
     ]
 
     process_journal_objects(
         {"origin_visit_status": visit_statuses}, scheduler=swh_scheduler
     )
 
-    for visit_status in visit_statuses:
-        actual_origin_visit_stats = swh_scheduler.origin_visit_stats_get(
-            visit_status["origin"], visit_status["type"]
-        )
-        assert actual_origin_visit_stats is not None
-        assert actual_origin_visit_stats == OriginVisitStats(
-            url=visit_status["origin"],
-            visit_type=visit_status["type"],
-            last_eventful=None,
-            last_uneventful=None,
-            last_failed=DATE3,
-            last_notfound=None,
-            last_snapshot=None,
-        )
+    actual_origin_visit_stats = swh_scheduler.origin_visit_stats_get("bar", "git")
+    assert actual_origin_visit_stats is not None
+    assert actual_origin_visit_stats == OriginVisitStats(
+        url="bar",
+        visit_type="git",
+        last_eventful=None,
+        last_uneventful=None,
+        last_failed=DATE3,
+        last_notfound=None,
+        last_snapshot=None,
+    )
 
 
 def test_journal_client_origin_visit_status_from_journal_last_eventful(swh_scheduler):
@@ -254,70 +223,45 @@ def test_journal_client_origin_visit_status_from_journal_last_eventful(swh_sched
         },
         {
             "origin": "foo",
-            "visit": 2,
+            "visit": 1,
             "status": "full",
             "date": DATE1,
             "type": "git",
             "snapshot": hash_to_bytes("eeecc0710eb6cf9efd5b920a8453e1e07157bfff"),
         },
-    ]
-
-    process_journal_objects(
-        {"origin_visit_status": visit_statuses}, scheduler=swh_scheduler
-    )
-
-    for visit_status in visit_statuses:
-        actual_origin_visit_stats = swh_scheduler.origin_visit_stats_get(
-            visit_status["origin"], visit_status["type"]
-        )
-        assert actual_origin_visit_stats is not None
-        assert actual_origin_visit_stats == OriginVisitStats(
-            url=visit_status["origin"],
-            visit_type=visit_status["type"],
-            last_eventful=visit_status["date"],
-            last_uneventful=None,
-            last_failed=None,
-            last_notfound=None,
-            last_snapshot=visit_status["snapshot"],
-        )
-
-    visit_statuses = [
         {
             "origin": "foo",
-            "visit": 4,
-            "status": "full",
-            "date": DATE3,
-            "type": "git",
-            "snapshot": hash_to_bytes("dddcc0710eb6cf9efd5b920a8453e1e07157bddd"),
-        },
-        {
-            "origin": "foo",
-            "visit": 3,
+            "visit": 2,
             "status": "partial",
             "date": DATE2,
             "type": "git",
             "snapshot": hash_to_bytes("aaacc0710eb6cf9efd5b920a8453e1e07157baaa"),
         },
+        {
+            "origin": "foo",
+            "visit": 3,
+            "status": "full",
+            "date": DATE3,
+            "type": "git",
+            "snapshot": hash_to_bytes("dddcc0710eb6cf9efd5b920a8453e1e07157bddd"),
+        },
     ]
 
     process_journal_objects(
         {"origin_visit_status": visit_statuses}, scheduler=swh_scheduler
     )
 
-    for visit_status in visit_statuses:
-        actual_origin_visit_stats = swh_scheduler.origin_visit_stats_get(
-            visit_status["origin"], visit_status["type"]
-        )
-        assert actual_origin_visit_stats is not None
-        assert actual_origin_visit_stats == OriginVisitStats(
-            url=visit_status["origin"],
-            visit_type=visit_status["type"],
-            last_eventful=DATE3,
-            last_uneventful=None,
-            last_failed=None,
-            last_notfound=None,
-            last_snapshot=hash_to_bytes("dddcc0710eb6cf9efd5b920a8453e1e07157bddd"),
-        )
+    actual_origin_visit_stats = swh_scheduler.origin_visit_stats_get("foo", "git")
+    assert actual_origin_visit_stats is not None
+    assert actual_origin_visit_stats == OriginVisitStats(
+        url="foo",
+        visit_type="git",
+        last_eventful=DATE3,
+        last_uneventful=None,
+        last_failed=None,
+        last_notfound=None,
+        last_snapshot=hash_to_bytes("dddcc0710eb6cf9efd5b920a8453e1e07157bddd"),
+    )
 
 
 def test_journal_client_origin_visit_status_from_journal_last_uneventful(swh_scheduler):
@@ -425,7 +369,7 @@ def test_journal_client_origin_visit_status_permutation0(visit_statuses, swh_sch
     assert swh_scheduler.origin_visit_stats_get("foo", "git") == expected_visit_stats
 
 
-VISIT_STATUSES1 = [
+VISIT_STATUSES_1 = [
     {**ovs, "date": DATE1 + n * ONE_DAY}
     for n, ovs in enumerate(
         [
@@ -463,7 +407,7 @@ VISIT_STATUSES1 = [
 
 
 @pytest.mark.parametrize(
-    "visit_statuses", permutations(VISIT_STATUSES1, len(VISIT_STATUSES1))
+    "visit_statuses", permutations(VISIT_STATUSES_1, len(VISIT_STATUSES_1))
 )
 def test_journal_client_origin_visit_status_permutation1(visit_statuses, swh_scheduler):
     """Ensure out of order topic subscription ends up in the same final state

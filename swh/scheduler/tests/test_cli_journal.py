@@ -14,7 +14,7 @@ import yaml
 from swh.journal.serializers import value_to_kafka
 from swh.scheduler import get_scheduler
 from swh.scheduler.cli import cli
-from swh.scheduler.tests.test_journal_client import VISIT_STATUSES1
+from swh.scheduler.tests.test_journal_client import VISIT_STATUSES_1
 
 
 @pytest.fixture
@@ -91,7 +91,7 @@ def test_cli_journal_client_origin_visit_status(
             "acks": "all",
         }
     )
-    visit_status = VISIT_STATUSES1[0]
+    visit_status = VISIT_STATUSES_1[0]
 
     value = value_to_kafka(visit_status)
     topic = "swh.journal.objects.origin_visit_status"
