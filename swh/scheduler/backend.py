@@ -335,6 +335,13 @@ class SchedulerBackend:
         ]
         if policy == "oldest_scheduled_first":
             order_by = "origin_visit_stats.last_scheduled NULLS FIRST"
+        elif policy == "never_visited_oldest_update_first":
+            # never visited origins have a NULL last_snapshot
+            where_clauses.append("origin_visit_stats.last_snapshot IS NULL")
+
+            # order by increasing last_update (oldest first)
+            where_clauses.append("listed_origins.last_update IS NOT NULL")
+            order_by = "listed_origins.last_update"
         else:
             raise UnknownPolicy(f"Unknown scheduling policy {policy}")
 

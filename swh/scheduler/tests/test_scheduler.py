@@ -825,6 +825,32 @@ class TestScheduler:
             expected=expected,
         )
 
+    def test_grab_next_visits_never_visited_oldest_update_first(
+        self, swh_scheduler, listed_origins_by_type,
+    ):
+        visit_type, origins = self._grab_next_visits_setup(
+            swh_scheduler, listed_origins_by_type
+        )
+
+        # Update known origins with a `last_update` field that we control
+        base_date = datetime.datetime(2020, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+        updated_origins = [
+            attr.evolve(origin, last_update=base_date - datetime.timedelta(seconds=i))
+            for i, origin in enumerate(origins)
+        ]
+        updated_origins = swh_scheduler.record_listed_origins(updated_origins)
+
+        # We expect to retrieve origins with the oldest update date, that is
+        # origins at the end of our updated_origins list.
+        expected_origins = sorted(updated_origins, key=lambda o: o.last_update)
+
+        self._check_grab_next_visit(
+            swh_scheduler,
+            visit_type=visit_type,
+            policy="never_visited_oldest_update_first",
+            expected=expected_origins,
+        )
+
     def test_grab_next_visits_underflow(self, swh_scheduler, listed_origins_by_type):
         """Check that grab_next_visits works when there not enough origins in
         the database"""
