@@ -14,7 +14,6 @@ import yaml
 from swh.journal.serializers import value_to_kafka
 from swh.scheduler import get_scheduler
 from swh.scheduler.cli import cli
-import swh.scheduler.cli.journal  # noqa ensure the journal client cli is loaded
 from swh.scheduler.tests.test_journal_client import VISIT_STATUSES1
 
 
