@@ -14,18 +14,23 @@ from swh.scheduler.model import OriginVisitStats
 msg_type = "origin_visit_status"
 
 
-def max_date(d1: Optional[datetime], d2: Optional[datetime]) -> datetime:
-    """Return the max date of the visit stats
+def max_date(*dates: Optional[datetime]) -> datetime:
+    """Return the max date of given (possibly None) dates
 
+    At least one date must be not None.
     """
-    if d1 is None and d2 is None:
+    datesok: Tuple[datetime, ...] = tuple(d for d in dates if d is not None)
+    if not datesok:
         raise ValueError("At least one date should be a valid datetime")
-    if d1 is None:
-        assert d2 is not None  # make mypy happy
-        return d2
-    if d2 is None:
-        return d1
-    return max(d1, d2)
+
+    maxdate = datesok[0]
+    if len(datesok) == 1:
+        return maxdate
+
+    for d in datesok[1:]:
+        maxdate = max(d, maxdate)
+
+    return maxdate
 
 
 def process_journal_objects(

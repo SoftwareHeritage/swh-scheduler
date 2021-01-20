@@ -36,19 +36,28 @@ assert DATE1 < DATE2 < DATE3
 
 
 @pytest.mark.parametrize(
-    "d1,d2,expected_max_date",
+    "dates,expected_max_date",
     [
-        (None, DATE2, DATE2),
-        (DATE1, None, DATE1),
-        (DATE1, DATE2, DATE2),
-        (DATE2, DATE1, DATE2),
+        ((DATE1,), DATE1),
+        ((None, DATE2), DATE2),
+        ((DATE1, None), DATE1),
+        ((DATE1, DATE2), DATE2),
+        ((DATE2, DATE1), DATE2),
+        ((DATE1, DATE2, DATE3), DATE3),
+        ((None, DATE2, DATE3), DATE3),
+        ((None, None, DATE3), DATE3),
+        ((DATE1, None, DATE3), DATE3),
     ],
 )
-def test_max_date(d1, d2, expected_max_date):
-    assert max_date(d1, d2) == expected_max_date
+def test_max_date(dates, expected_max_date):
+    assert max_date(*dates) == expected_max_date
 
 
 def test_max_date_raise():
+    with pytest.raises(ValueError, match="valid datetime"):
+        max_date()
+    with pytest.raises(ValueError, match="valid datetime"):
+        max_date(None)
     with pytest.raises(ValueError, match="valid datetime"):
         max_date(None, None)
 
