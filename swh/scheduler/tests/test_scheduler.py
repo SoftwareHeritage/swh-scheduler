@@ -851,6 +851,54 @@ class TestScheduler:
             expected=expected_origins,
         )
 
+    def test_grab_next_visits_already_visited_order_by_lag(
+        self, swh_scheduler, listed_origins_by_type,
+    ):
+        visit_type, origins = self._grab_next_visits_setup(
+            swh_scheduler, listed_origins_by_type
+        )
+
+        # Update known origins with a `last_update` field that we control
+        base_date = datetime.datetime(2020, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+        updated_origins = [
+            attr.evolve(origin, last_update=base_date - datetime.timedelta(seconds=i))
+            for i, origin in enumerate(origins)
+        ]
+        updated_origins = swh_scheduler.record_listed_origins(updated_origins)
+
+        # Update the visit stats with a known visit at a controlled date for
+        # half the origins.  Pick the date in the middle of the
+        # updated_origins' `last_update` range
+        visit_date = updated_origins[len(updated_origins) // 2].last_update
+        visited_origins = updated_origins[::2]
+        visit_stats = [
+            OriginVisitStats(
+                url=origin.url,
+                visit_type=origin.visit_type,
+                last_snapshot=hash_to_bytes("d81cc0710eb6cf9efd5b920a8453e1e07157b6cd"),
+                last_eventful=visit_date,
+                last_uneventful=None,
+                last_failed=None,
+                last_notfound=None,
+            )
+            for origin in visited_origins
+        ]
+        swh_scheduler.origin_visit_stats_upsert(visit_stats)
+
+        # We expect to retrieve visited origins with the largest lag, but only
+        # those which haven't been visited since their last update
+        expected_origins = sorted(
+            [origin for origin in visited_origins if origin.last_update > visit_date],
+            key=lambda o: visit_date - o.last_update,
+        )
+
+        self._check_grab_next_visit(
+            swh_scheduler,
+            visit_type=visit_type,
+            policy="already_visited_order_by_lag",
+            expected=expected_origins,
+        )
+
     def test_grab_next_visits_underflow(self, swh_scheduler, listed_origins_by_type):
         """Check that grab_next_visits works when there not enough origins in
         the database"""

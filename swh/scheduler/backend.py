@@ -342,6 +342,33 @@ class SchedulerBackend:
             # order by increasing last_update (oldest first)
             where_clauses.append("listed_origins.last_update IS NOT NULL")
             order_by = "listed_origins.last_update"
+        elif policy == "already_visited_order_by_lag":
+            # TODO: store "visit lag" in a materialized view?
+
+            # visited origins have a NOT NULL last_snapshot
+            where_clauses.append("origin_visit_stats.last_snapshot IS NOT NULL")
+
+            # ignore origins we have visited after the known last update
+            where_clauses.append("listed_origins.last_update IS NOT NULL")
+            where_clauses.append(
+                """
+              listed_origins.last_update
+              > GREATEST(
+                origin_visit_stats.last_eventful,
+                origin_visit_stats.last_uneventful
+              )
+            """
+            )
+
+            # order by decreasing visit lag
+            order_by = """\
+              listed_origins.last_update
+              - GREATEST(
+                origin_visit_stats.last_eventful,
+                origin_visit_stats.last_uneventful
+              )
+              DESC
+            """
         else:
             raise UnknownPolicy(f"Unknown scheduling policy {policy}")
 
