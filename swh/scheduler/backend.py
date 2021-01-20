@@ -327,20 +327,34 @@ class SchedulerBackend:
         """
         origin_select_cols = ", ".join(ListedOrigin.select_columns())
 
+        # TODO: filter on last_scheduled "too recent" to avoid always
+        # re-scheduling the same tasks.
+        where_clauses = [
+            "enabled",  # "NOT enabled" = the lister said the origin no longer exists
+            "visit_type = %s",
+        ]
         if policy == "oldest_scheduled_first":
-            query = f"""
+            order_by = "origin_visit_stats.last_scheduled NULLS FIRST"
+        else:
+            raise UnknownPolicy(f"Unknown scheduling policy {policy}")
+
+        select_query = f"""
+          SELECT
+            {origin_select_cols}
+          FROM
+            listed_origins
+          LEFT JOIN
+            origin_visit_stats USING (url, visit_type)
+          WHERE
+            {" AND ".join(where_clauses)}
+          ORDER BY
+            {order_by}
+          LIMIT %s
+        """
+
+        query = f"""
             WITH selected_origins AS (
-              SELECT
-                {origin_select_cols}
-                   FROM
-                     listed_origins
-                   LEFT JOIN
-                     origin_visit_stats USING (url, visit_type)
-                   WHERE
-                     visit_type = %s
-                   ORDER BY
-                     origin_visit_stats.last_scheduled NULLS FIRST
-                   LIMIT %s
+               {select_query}
             ),
             update_stats AS (
               INSERT INTO
@@ -352,18 +366,19 @@ class SchedulerBackend:
               FROM
                 selected_origins
               ON CONFLICT (url, visit_type) DO UPDATE
-                SET last_scheduled = GREATEST(origin_visit_stats.last_scheduled, EXCLUDED.last_scheduled)
+                SET last_scheduled = GREATEST(
+                  origin_visit_stats.last_scheduled,
+                  EXCLUDED.last_scheduled
+                )
             )
             SELECT
               *
             FROM
               selected_origins
-            """  # noqa
-            cur.execute(query, (visit_type, count))
+        """
 
-            return [ListedOrigin(**d) for d in cur]
-        else:
-            raise UnknownPolicy(f"Unknown scheduling policy {policy}")
+        cur.execute(query, (visit_type, count))
+        return [ListedOrigin(**d) for d in cur]
 
     task_create_keys = [
         "type",
