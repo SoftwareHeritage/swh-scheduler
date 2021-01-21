@@ -122,6 +122,13 @@ def process_journal_objects(
                             "last_eventful"
                         ]
                         visit_stats_d["last_eventful"] = current_status_date
+                    elif (
+                        latest_recorded_visit_date
+                        and current_status_date == latest_recorded_visit_date
+                    ):
+                        # A duplicated message must be ignored to avoid
+                        # populating the last_uneventful message
+                        continue
                     else:
                         # uneventful event
                         visit_stats_d["last_uneventful"] = current_status_date
