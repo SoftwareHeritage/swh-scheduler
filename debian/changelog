@@ -1,3 +1,9 @@
+swh-scheduler (0.9.0-1~swh2~bpo10+1) buster-swh; urgency=medium
+
+  * Rebuild for buster-swh
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 21 Jan 2021 13:30:17 +0000
+
 swh-scheduler (0.9.0-1~swh2) unstable-swh; urgency=medium
 
   * Bump new release to unstuck packaging
