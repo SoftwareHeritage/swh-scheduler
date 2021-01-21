@@ -831,36 +831,11 @@ class SchedulerBackend:
             INSERT into origin_visit_stats AS ovi ({", ".join(insert_cols)})
             VALUES %s
             ON CONFLICT ({", ".join(pk_cols)}) DO UPDATE
-            SET last_eventful = (
-                    select max(eventful.date) from (values
-                        (excluded.last_eventful),
-                        (ovi.last_eventful)
-                    ) as eventful(date)
-                ),
-                last_uneventful = (
-                    select max(uneventful.date) from (values
-                        (excluded.last_uneventful),
-                        (ovi.last_uneventful)
-                    ) as uneventful(date)
-                ),
-                last_failed = (
-                    select max(failed.date) from (values
-                        (excluded.last_failed),
-                        (ovi.last_failed)
-                    ) as failed(date)
-                ),
-                last_notfound = (
-                    select max(notfound.date) from (values
-                        (excluded.last_notfound),
-                        (ovi.last_notfound)
-                    ) as notfound(date)
-                ),
-                last_snapshot = (select
-                    case
-                      when ovi.last_eventful < excluded.last_eventful then excluded.last_snapshot
-                      else coalesce(ovi.last_snapshot, excluded.last_snapshot)
-                    end
-                )
+            SET last_eventful = coalesce(excluded.last_eventful, ovi.last_eventful),
+                last_uneventful = coalesce(excluded.last_uneventful, ovi.last_uneventful),
+                last_failed = coalesce(excluded.last_failed, ovi.last_failed),
+                last_notfound = coalesce(excluded.last_notfound, ovi.last_notfound),
+                last_snapshot = coalesce(excluded.last_snapshot, ovi.last_snapshot)
         """  # noqa
 
         try:
