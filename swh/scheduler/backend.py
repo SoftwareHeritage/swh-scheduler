@@ -321,12 +321,20 @@ class SchedulerBackend:
         """
         origin_select_cols = ", ".join(ListedOrigin.select_columns())
 
+        query_args: List[Any] = []
+
+        where_clauses = []
+
+        # "NOT enabled" = the lister said the origin no longer exists
+        where_clauses.append("enabled")
+
+        # Only schedule visits of the given type
+        where_clauses.append("visit_type = %s")
+        query_args.append(visit_type)
+
         # TODO: filter on last_scheduled "too recent" to avoid always
         # re-scheduling the same tasks.
-        where_clauses = [
-            "enabled",  # "NOT enabled" = the lister said the origin no longer exists
-            "visit_type = %s",
-        ]
+
         if policy == "oldest_scheduled_first":
             order_by = "origin_visit_stats.last_scheduled NULLS FIRST"
         elif policy == "never_visited_oldest_update_first":
@@ -374,11 +382,12 @@ class SchedulerBackend:
           LEFT JOIN
             origin_visit_stats USING (url, visit_type)
           WHERE
-            {" AND ".join(where_clauses)}
+            ({") AND (".join(where_clauses)})
           ORDER BY
             {order_by}
           LIMIT %s
         """
+        query_args.append(count)
 
         query = f"""
             WITH selected_origins AS (
@@ -405,7 +414,7 @@ class SchedulerBackend:
               selected_origins
         """
 
-        cur.execute(query, (visit_type, count))
+        cur.execute(query, tuple(query_args))
         return [ListedOrigin(**d) for d in cur]
 
     task_create_keys = [
