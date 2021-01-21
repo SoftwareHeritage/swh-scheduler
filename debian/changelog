@@ -1,8 +1,13 @@
-swh-scheduler (0.9.0-1~swh2~bpo10+1) buster-swh; urgency=medium
+swh-scheduler (0.9.1-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 0.9.1     - (tagged by Vincent SELLIER
+    <vincent.sellier@softwareheritage.org> on 2021-01-21 19:20:33 +0100)
+  * Upstream changes:     - v0.9.1     - * Solve uneventful/eventful
+    with unordered messages with snapshots     - * Do not consider
+    duplicated messages as uneventful event     - * Reorganize
+    grab_next_visits tests to better check sorting behavior
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 21 Jan 2021 13:30:17 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 21 Jan 2021 18:28:00 +0000
 
 swh-scheduler (0.9.0-1~swh2) unstable-swh; urgency=medium
 

@@ -755,50 +755,98 @@ class TestScheduler:
         assert ret.next_page_token is None
         assert len(ret.origins) == len(listed_origins)
 
-    @pytest.mark.parametrize("policy", ["oldest_scheduled_first"])
-    def test_grab_next_visits(self, swh_scheduler, listed_origins_by_type, policy):
-        NUM_RESULTS = 5
-        # Strict inequality to check that grab_next_visits doesn't return more
-        # results than requested
+    def _grab_next_visits_setup(self, swh_scheduler, listed_origins_by_type):
+        """Basic origins setup for scheduling policy tests"""
         visit_type = next(iter(listed_origins_by_type))
-        assert len(listed_origins_by_type[visit_type]) > NUM_RESULTS
+        origins = listed_origins_by_type[visit_type][:100]
+        assert len(origins) > 0
 
-        for origins in listed_origins_by_type.values():
-            swh_scheduler.record_listed_origins(origins)
+        recorded_origins = swh_scheduler.record_listed_origins(origins)
+
+        return visit_type, recorded_origins
+
+    def _check_grab_next_visit(self, swh_scheduler, visit_type, policy, expected):
+        """Calls grab_next_visits with the passed policy, and check that all
+        the origins returned are the expected ones (in the same order), and
+        that no extra origins are returned. Also checks the origin visits have
+        been marked as scheduled."""
+        assert len(expected) != 0
 
         before = utcnow()
-        ret = swh_scheduler.grab_next_visits(visit_type, NUM_RESULTS, policy=policy)
+        ret = swh_scheduler.grab_next_visits(
+            visit_type=visit_type,
+            # Request one more than expected to check that no extra origin is returned
+            count=len(expected) + 1,
+            policy=policy,
+        )
         after = utcnow()
 
-        assert len(ret) == NUM_RESULTS
-        for origin in ret:
-            pk = (origin.url, origin.visit_type)
-            visit_stats = swh_scheduler.origin_visit_stats_get([pk])[0]
-            assert visit_stats is not None
+        assert ret == expected
+        visit_stats_list = swh_scheduler.origin_visit_stats_get(
+            [(origin.url, origin.visit_type) for origin in expected]
+        )
+        assert len(visit_stats_list) == len(expected)
+        for visit_stats in visit_stats_list:
+            # Check that last_scheduled got updated
             assert before <= visit_stats.last_scheduled <= after
 
-    @pytest.mark.parametrize("policy", ["oldest_scheduled_first"])
-    def test_grab_next_visits_underflow(
-        self, swh_scheduler, listed_origins_by_type, policy
+    def test_grab_next_visits_oldest_scheduled_first(
+        self, swh_scheduler, listed_origins_by_type,
     ):
-        NUM_RESULTS = 5
-        visit_type = next(iter(listed_origins_by_type))
-        assert len(listed_origins_by_type[visit_type]) > NUM_RESULTS
-
-        swh_scheduler.record_listed_origins(
-            listed_origins_by_type[visit_type][:NUM_RESULTS]
+        visit_type, origins = self._grab_next_visits_setup(
+            swh_scheduler, listed_origins_by_type
         )
 
-        ret = swh_scheduler.grab_next_visits(visit_type, NUM_RESULTS + 2, policy=policy)
+        # Give all origins but one a last_scheduled date
+        base_date = datetime.datetime(2020, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+        visit_stats = [
+            OriginVisitStats(
+                url=origin.url,
+                visit_type=origin.visit_type,
+                last_snapshot=None,
+                last_eventful=None,
+                last_uneventful=None,
+                last_failed=None,
+                last_notfound=None,
+                last_scheduled=base_date - datetime.timedelta(seconds=i),
+            )
+            for i, origin in enumerate(origins[1:])
+        ]
+        swh_scheduler.origin_visit_stats_upsert(visit_stats)
 
-        assert len(ret) == NUM_RESULTS
+        # We expect to retrieve the origin with a NULL last_scheduled
+        # as well as those with the oldest values (i.e. the last ones), in order.
+        expected = [origins[0]] + origins[1:][::-1]
+
+        self._check_grab_next_visit(
+            swh_scheduler,
+            visit_type=visit_type,
+            policy="oldest_scheduled_first",
+            expected=expected,
+        )
+
+    def test_grab_next_visits_underflow(self, swh_scheduler, listed_origins_by_type):
+        """Check that grab_next_visits works when there not enough origins in
+        the database"""
+        visit_type = next(iter(listed_origins_by_type))
+
+        # Only add 5 origins to the database
+        origins = listed_origins_by_type[visit_type][:5]
+        assert origins
+
+        swh_scheduler.record_listed_origins(origins)
+
+        ret = swh_scheduler.grab_next_visits(
+            visit_type, len(origins) + 2, policy="oldest_scheduled_first"
+        )
+
+        assert len(ret) == 5
 
     def test_grab_next_visits_unknown_policy(self, swh_scheduler):
+        unknown_policy = "non_existing_policy"
         NUM_RESULTS = 5
-        with pytest.raises(UnknownPolicy, match="non_existing_policy"):
-            swh_scheduler.grab_next_visits(
-                "type", NUM_RESULTS, policy="non_existing_policy"
-            )
+        with pytest.raises(UnknownPolicy, match=unknown_policy):
+            swh_scheduler.grab_next_visits("type", NUM_RESULTS, policy=unknown_policy)
 
     def _create_task_types(self, scheduler):
         for tt in TASK_TYPES.values():
@@ -890,66 +938,6 @@ class TestScheduler:
 
         assert swh_scheduler.origin_visit_stats_get([(url, "git")]) == [visit_stats]
         assert swh_scheduler.origin_visit_stats_get([(url, "svn")]) == []
-
-    def test_origin_visit_stats_upsert_messing_with_time(self, swh_scheduler) -> None:
-        url = "interesting-origin"
-
-        # Let's play with dates...
-        date2 = utcnow()
-        date1 = date2 - ONEDAY
-        date0 = date1 - ONEDAY
-        assert date0 < date1 < date2
-
-        snapshot2 = hash_to_bytes("d81cc0710eb6cf9efd5b920a8453e1e07157b6cd")
-        snapshot0 = hash_to_bytes("fffcc0710eb6cf9efd5b920a8453e1e07157bfff")
-        visit_stats0 = OriginVisitStats(
-            url=url,
-            visit_type="git",
-            last_eventful=date2,
-            last_uneventful=None,
-            last_failed=None,
-            last_notfound=None,
-            last_snapshot=snapshot2,
-        )
-        swh_scheduler.origin_visit_stats_upsert([visit_stats0])
-
-        actual_visit_stats0 = swh_scheduler.origin_visit_stats_get([(url, "git")])[0]
-        assert actual_visit_stats0 == visit_stats0
-
-        visit_stats2 = OriginVisitStats(
-            url=url,
-            visit_type="git",
-            last_eventful=None,
-            last_uneventful=date1,
-            last_notfound=None,
-            last_failed=None,
-        )
-        swh_scheduler.origin_visit_stats_upsert([visit_stats2])
-
-        actual_visit_stats2 = swh_scheduler.origin_visit_stats_get([(url, "git")])[0]
-        assert actual_visit_stats2 == attr.evolve(
-            actual_visit_stats0, last_uneventful=date1
-        )
-
-        # a past date, what happens?
-        # date0 < date2 so this ovs should be dismissed
-        # the "eventful" associated snapshot should be dismissed as well
-        visit_stats1 = OriginVisitStats(
-            url=url,
-            visit_type="git",
-            last_eventful=date0,
-            last_uneventful=None,
-            last_failed=None,
-            last_notfound=None,
-            last_snapshot=snapshot0,
-        )
-        swh_scheduler.origin_visit_stats_upsert([visit_stats1])
-
-        actual_visit_stats1 = swh_scheduler.origin_visit_stats_get([(url, "git")])[0]
-
-        assert actual_visit_stats1 == attr.evolve(
-            actual_visit_stats2, last_eventful=date2
-        )
 
     def test_origin_visit_stats_upsert_batch(self, swh_scheduler) -> None:
         """Batch upsert is ok"""
