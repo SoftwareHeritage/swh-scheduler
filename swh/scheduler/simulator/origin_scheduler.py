@@ -29,7 +29,7 @@ def scheduler_runner_process(
             if remaining < min_batch_size:
                 continue
             next_origins = env.scheduler.grab_next_visits(
-                visit_type, remaining, policy=policy
+                visit_type, remaining, policy=policy, timestamp=env.time
             )
             logger.debug(
                 "%s runner: running %s %s tasks",
