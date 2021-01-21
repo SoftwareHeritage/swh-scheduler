@@ -6,7 +6,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 import textwrap
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 import uuid
 
 import plotille
@@ -32,7 +32,21 @@ class SimulationReport:
     metrics: List[Tuple[datetime, List[SchedulerMetrics]]] = field(default_factory=list)
     """Collected scheduler metrics for every timestamp"""
 
-    def record_visit(self, duration: float, eventful: bool, status: str) -> None:
+    latest_snapshots: Dict[Tuple[str, str], bytes] = field(default_factory=dict)
+    """Collected latest snapshots for origins"""
+
+    def record_visit(
+        self,
+        origin: Tuple[str, str],
+        duration: float,
+        status: str,
+        snapshot=Optional[bytes],
+    ) -> None:
+        eventful = False
+        if status == "full":
+            eventful = snapshot != self.latest_snapshots.get(origin)
+            self.latest_snapshots[origin] = snapshot
+
         self.total_visits += 1
         self.visit_runtimes.setdefault((status, eventful), []).append(duration)
 
