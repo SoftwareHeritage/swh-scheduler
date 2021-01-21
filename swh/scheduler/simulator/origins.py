@@ -6,21 +6,54 @@
 """This module implements a model of the frequency of updates of an origin
 and how long it takes to load it."""
 
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 import hashlib
 import logging
 import os
 from typing import Iterator, Optional, Tuple
+import uuid
 
 import attr
 from simpy import Event
 
 from swh.model.model import OriginVisitStatus
-from swh.scheduler.model import OriginVisitStats
+from swh.scheduler.model import ListedOrigin, OriginVisitStats
 
 from .common import Environment, Queue, Task, TaskEvent
 
 logger = logging.getLogger(__name__)
+
+
+_nb_generated_origins = 0
+
+
+def generate_listed_origin(
+    lister_id: uuid.UUID, now: Optional[datetime] = None
+) -> ListedOrigin:
+    """Returns a globally unique new origin. Seed the `last_update` value
+    according to the OriginModel and the passed timestamp.
+
+    Arguments:
+      lister: instance of the lister that generated this origin
+      now: time of listing, to emulate last_update (defaults to :func:`datetime.now`)
+    """
+    global _nb_generated_origins
+    _nb_generated_origins += 1
+    assert _nb_generated_origins < 10 ** 6, "Too many origins!"
+
+    if now is None:
+        now = datetime.now(tz=timezone.utc)
+
+    url = f"https://example.com/{_nb_generated_origins:6d}.git"
+    visit_type = "git"
+    origin = OriginModel(visit_type, url)
+
+    return ListedOrigin(
+        lister_id=lister_id,
+        url=url,
+        visit_type=visit_type,
+        last_update=origin.get_last_update(now),
+    )
 
 
 class OriginModel:
@@ -32,6 +65,9 @@ class OriginModel:
 
     PER_COMMIT_RUN_TIME = 0.1
     """Run time per commit"""
+
+    EPOCH = datetime(2015, 9, 1, 0, 0, 0, tzinfo=timezone.utc)
+    """The origin of all origins (at least according to Software Heritage)"""
 
     def __init__(self, type: str, origin: str):
         self.type = type
@@ -55,6 +91,19 @@ class OriginModel:
 
         return ten_y ** (bucket / num_buckets)
         # return 1 + (ten_y - 1) * (bucket / (num_buckets - 1))
+
+    def get_last_update(self, now: datetime):
+        """Get the last_update value for this origin.
+
+        We assume that the origin had its first commit at `EPOCH`, and that one
+        commit happened every `self.seconds_between_commits()`. This returns
+        the last commit date before or equal to `now`.
+        """
+        _, time_since_last_commit = divmod(
+            (now - self.EPOCH).total_seconds(), self.seconds_between_commits()
+        )
+
+        return now - timedelta(seconds=time_since_last_commit)
 
     def load_task_characteristics(
         self, env: Environment, stats: Optional[OriginVisitStats]
