@@ -42,11 +42,15 @@ def test_site_map(flask_app_client):
     expected_rules = set(
         "/" + rule
         for rule in (
+            "lister/get",
             "lister/get_or_create",
             "lister/update",
             "origins/get",
+            "origins/grab_next",
             "origins/record",
             "priority_ratios/get",
+            "scheduler_metrics/get",
+            "scheduler_metrics/update",
             "task/create",
             "task/delete_archived",
             "task/disable",
@@ -64,6 +68,8 @@ def test_site_map(flask_app_client):
             "task_type/create",
             "task_type/get",
             "task_type/get_all",
+            "visit_stats/get",
+            "visit_stats/upsert",
         )
     )
     assert rules == expected_rules

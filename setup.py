@@ -16,22 +16,23 @@ with open(path.join(here, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
 
 
-def parse_requirements(name=None):
-    if name:
-        reqf = "requirements-%s.txt" % name
-    else:
-        reqf = "requirements.txt"
-
+def parse_requirements(*names):
     requirements = []
-    if not path.exists(reqf):
-        return requirements
+    for name in names:
+        if name:
+            reqf = "requirements-%s.txt" % name
+        else:
+            reqf = "requirements.txt"
 
-    with open(reqf) as f:
-        for line in f.readlines():
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            requirements.append(line)
+        if not path.exists(reqf):
+            return requirements
+
+        with open(reqf) as f:
+            for line in f.readlines():
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                requirements.append(line)
     return requirements
 
 
@@ -47,12 +48,17 @@ setup(
     packages=find_packages(),
     setup_requires=["setuptools-scm"],
     use_scm_version=True,
-    install_requires=parse_requirements() + parse_requirements("swh"),
-    extras_require={"testing": parse_requirements("test")},
+    install_requires=parse_requirements(None, "swh"),
+    extras_require={
+        "testing": parse_requirements("test", "journal", "simulator"),
+        "journal": parse_requirements("journal"),
+        "simulator": parse_requirements("simulator"),
+    },
     include_package_data=True,
     entry_points="""
         [swh.cli.subcommands]
         scheduler=swh.scheduler.cli
+        scheduler-journal=swh.scheduler.cli.journal
     """,
     classifiers=[
         "Programming Language :: Python :: 3",

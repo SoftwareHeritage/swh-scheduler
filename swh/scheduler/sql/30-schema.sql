@@ -11,7 +11,7 @@ comment on column dbversion.release is 'Version deployment timestamp';
 comment on column dbversion.description is 'Version description';
 
 insert into dbversion (version, release, description)
-       values (17, now(), 'Work In Progress');
+       values (25, now(), 'Work In Progress');
 
 create table task_type (
   type text primary key,
@@ -159,3 +159,50 @@ comment on column listed_origins.first_seen is 'Time at which the origin was fir
 comment on column listed_origins.last_seen is 'Time at which the origin was last seen by the lister';
 
 comment on column listed_origins.last_update is 'Time of the last update to the origin recorded by the remote';
+
+
+create table origin_visit_stats (
+  url text not null,
+  visit_type text not null,
+  last_eventful timestamptz,
+  last_uneventful timestamptz,
+  last_failed timestamptz,
+  last_notfound timestamptz,
+  -- visit scheduling information
+  last_scheduled timestamptz,
+  -- last snapshot resulting from an eventful visit
+  last_snapshot bytea,
+
+  primary key (url, visit_type)
+);
+
+comment on column origin_visit_stats.url is 'Origin URL';
+comment on column origin_visit_stats.visit_type is 'Type of the visit for the given url';
+comment on column origin_visit_stats.last_eventful is 'Date of the last eventful event';
+comment on column origin_visit_stats.last_uneventful is 'Date of the last uneventful event';
+comment on column origin_visit_stats.last_failed is 'Date of the last failed event';
+comment on column origin_visit_stats.last_notfound is 'Date of the last notfound event';
+comment on column origin_visit_stats.last_scheduled is 'Time when this origin was scheduled to be visited last';
+comment on column origin_visit_stats.last_snapshot is 'sha1_git of the last visit snapshot';
+
+
+create table scheduler_metrics (
+  lister_id uuid not null references listers(id),
+  visit_type text not null,
+  last_update timestamptz not null,
+  origins_known int not null default 0,
+  origins_enabled int not null default 0,
+  origins_never_visited int not null default 0,
+  origins_with_pending_changes int not null default 0,
+
+  primary key (lister_id, visit_type)
+);
+
+comment on table scheduler_metrics is 'Cache of per-lister metrics for the scheduler, collated between the listed_origins and origin_visit_stats tables.';
+comment on column scheduler_metrics.lister_id is 'Lister instance on which metrics have been aggregated';
+comment on column scheduler_metrics.visit_type is 'Visit type on which metrics have been aggregated';
+comment on column scheduler_metrics.last_update is 'Last update of these metrics';
+comment on column scheduler_metrics.origins_known is 'Number of known (enabled or disabled) origins';
+comment on column scheduler_metrics.origins_enabled is 'Number of origins that were present in the latest listing';
+comment on column scheduler_metrics.origins_never_visited is 'Number of origins that have never been successfully visited';
+comment on column scheduler_metrics.origins_with_pending_changes is 'Number of enabled origins with known activity since our last visit';

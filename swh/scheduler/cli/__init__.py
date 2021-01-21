@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2020  The Software Heritage developers
+# Copyright (C) 2016-2021  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -11,6 +11,9 @@ import click
 
 from swh.core.cli import CONTEXT_SETTINGS, AliasedGroup
 from swh.core.cli import swh as swh_cli_group
+
+# If you're looking for subcommand imports, they are further down this file to
+# avoid a circular import!
 
 
 @swh_cli_group.group(
@@ -79,7 +82,7 @@ def cli(ctx, config_file, database, url, no_stdout):
     ctx.obj["config"] = conf
 
 
-from . import admin, celery_monitor, task, task_type  # noqa
+from . import admin, celery_monitor, journal, origin, simulator, task, task_type  # noqa
 
 
 def main():
