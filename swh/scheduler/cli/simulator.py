@@ -47,7 +47,6 @@ def fill_test_data_command(ctx, num_origins):
 @click.option(
     "--policy",
     "-p",
-    type=click.Choice(["oldest_scheduled_first"]),
     default="oldest_scheduled_first",
     help="Scheduling policy to simulate (only for origin_scheduler)",
 )
