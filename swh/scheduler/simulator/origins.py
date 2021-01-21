@@ -4,13 +4,20 @@
 # See top-level LICENSE file for more information
 
 """This module implements a model of the frequency of updates of an origin
-and how long it takes to load it."""
+and how long it takes to load it.
+
+For each origin, a commit frequency is chosen deterministically based on the
+hash of its URL and assume all origins were created on an arbitrary epoch.
+From this we compute a number of commits, that is the product of these two.
+
+And the run time of a load task is approximated as proportional to the number
+of commits since the previous visit of the origin (possibly 0)."""
 
 from datetime import datetime, timedelta, timezone
 import hashlib
 import logging
 import os
-from typing import Iterator, Optional, Tuple
+from typing import Generator, Iterator, List, Optional, Tuple
 import uuid
 
 import attr
@@ -131,6 +138,34 @@ class OriginModel:
                 return (self.MAX_RUN_TIME, False, "partial")
             else:
                 return (run_time, True, "full")
+
+
+def lister_process(
+    env: Environment, lister_id: uuid.UUID
+) -> Generator[Event, Event, None]:
+    """Every hour, generate new origins and update the `last_update` field for
+    the ones this process generated in the past"""
+    NUM_NEW_ORIGINS = 100
+
+    origins: List[ListedOrigin] = []
+
+    while True:
+        updated_origins = []
+        for origin in origins:
+            model = OriginModel(origin.visit_type, origin.url)
+            updated_origins.append(
+                attr.evolve(origin, last_update=model.get_last_update(env.time))
+            )
+
+        origins = updated_origins
+        origins.extend(
+            generate_listed_origin(lister_id, now=env.time)
+            for _ in range(NUM_NEW_ORIGINS)
+        )
+
+        env.scheduler.record_listed_origins(origins)
+
+        yield env.timeout(3600)
 
 
 def load_task_process(

@@ -20,7 +20,7 @@ from swh.scheduler.interface import SchedulerInterface
 
 from . import origin_scheduler, task_scheduler
 from .common import Environment, Queue, SimulationReport, Task
-from .origins import generate_listed_origin, load_task_process
+from .origins import generate_listed_origin, lister_process, load_task_process
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +103,10 @@ def setup(
         for i in range(num_workers):
             worker_name = f"worker-{visit_type}-{i}"
             env.process(worker_process(env, worker_name, task_queue, status_queue))
+
+    lister = env.scheduler.get_or_create_lister(name="example")
+    assert lister.id
+    env.process(lister_process(env, lister.id))
 
 
 def fill_test_data(scheduler: SchedulerInterface, num_origins: int = 100000):
