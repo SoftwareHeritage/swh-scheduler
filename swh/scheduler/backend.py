@@ -348,8 +348,21 @@ class SchedulerBackend:
         where_clauses.append("visit_type = %s")
         query_args.append(visit_type)
 
-        # TODO: filter on last_scheduled "too recent" to avoid always
-        # re-scheduling the same tasks.
+        # Don't re-schedule visits if they're already scheduled but we haven't
+        # recorded a result yet, unless they've been scheduled more than a week
+        # ago (it probably means we've lost them in flight somewhere).
+        where_clauses.append(
+            """origin_visit_stats.last_scheduled IS NULL
+            OR origin_visit_stats.last_scheduled < GREATEST(
+              %s - '7 day'::interval,
+              origin_visit_stats.last_eventful,
+              origin_visit_stats.last_uneventful,
+              origin_visit_stats.last_failed,
+              origin_visit_stats.last_notfound
+            )
+        """
+        )
+        query_args.append(timestamp)
 
         if policy == "oldest_scheduled_first":
             order_by = "origin_visit_stats.last_scheduled NULLS FIRST"
