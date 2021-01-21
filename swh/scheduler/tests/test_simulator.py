@@ -5,6 +5,7 @@
 
 import pytest
 
+from swh.core.api.classes import stream_results
 import swh.scheduler.simulator as simulator
 from swh.scheduler.tests.common import TASK_TYPES
 
@@ -18,9 +19,8 @@ def test_fill_test_data(swh_scheduler):
 
     simulator.fill_test_data(swh_scheduler, num_origins=NUM_ORIGINS)
 
-    res = swh_scheduler.get_listed_origins()
-    assert len(res.origins) == NUM_ORIGINS
-    assert res.next_page_token is None
+    origins = list(stream_results(swh_scheduler.get_listed_origins))
+    assert len(origins) == NUM_ORIGINS
 
     res = swh_scheduler.search_tasks()
     assert len(res) == NUM_ORIGINS

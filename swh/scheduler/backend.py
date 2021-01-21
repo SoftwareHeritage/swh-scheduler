@@ -19,14 +19,8 @@ from swh.core.db.common import db_transaction
 from swh.scheduler.utils import utcnow
 
 from .exc import SchedulerException, StaleData, UnknownPolicy
-from .model import (
-    ListedOrigin,
-    ListedOriginPageToken,
-    Lister,
-    OriginVisitStats,
-    PaginatedListedOriginList,
-    SchedulerMetrics,
-)
+from .interface import ListedOriginPageToken, PaginatedListedOriginList
+from .model import ListedOrigin, Lister, OriginVisitStats, SchedulerMetrics
 
 logger = logging.getLogger(__name__)
 
@@ -309,7 +303,7 @@ class SchedulerBackend:
         origins = [ListedOrigin(**d) for d in cur]
 
         if len(origins) == limit:
-            page_token = (origins[-1].lister_id, origins[-1].url)
+            page_token = (str(origins[-1].lister_id), origins[-1].url)
         else:
             page_token = None
 

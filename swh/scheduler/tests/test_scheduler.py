@@ -16,13 +16,8 @@ import pytest
 
 from swh.model.hashutil import hash_to_bytes
 from swh.scheduler.exc import SchedulerException, StaleData, UnknownPolicy
-from swh.scheduler.interface import SchedulerInterface
-from swh.scheduler.model import (
-    ListedOrigin,
-    ListedOriginPageToken,
-    OriginVisitStats,
-    SchedulerMetrics,
-)
+from swh.scheduler.interface import ListedOriginPageToken, SchedulerInterface
+from swh.scheduler.model import ListedOrigin, OriginVisitStats, SchedulerMetrics
 from swh.scheduler.utils import utcnow
 
 from .common import LISTERS, TASK_TYPES, TEMPLATES, tasks_from_template
@@ -713,9 +708,9 @@ class TestScheduler:
             )
 
             assert ret.next_page_token is None
-            assert len(ret.origins) == 1
-            assert ret.origins[0].lister_id == origin.lister_id
-            assert ret.origins[0].url == origin.url
+            assert len(ret.results) == 1
+            assert ret.results[0].lister_id == origin.lister_id
+            assert ret.results[0].url == origin.url
 
     @pytest.mark.parametrize("num_origins,limit", [(20, 6), (5, 42), (20, 20)])
     def test_get_listed_origins_limit(
@@ -736,7 +731,7 @@ class TestScheduler:
                 limit=limit,
                 page_token=next_page_token,
             )
-            returned_origins.extend(ret.origins)
+            returned_origins.extend(ret.results)
             next_page_token = ret.next_page_token
             if next_page_token is None:
                 break
@@ -753,7 +748,7 @@ class TestScheduler:
 
         ret = swh_scheduler.get_listed_origins(limit=len(listed_origins) + 1)
         assert ret.next_page_token is None
-        assert len(ret.origins) == len(listed_origins)
+        assert len(ret.results) == len(listed_origins)
 
     def _grab_next_visits_setup(self, swh_scheduler, listed_origins_by_type):
         """Basic origins setup for scheduling policy tests"""
