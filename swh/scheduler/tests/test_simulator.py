@@ -26,7 +26,14 @@ def test_fill_test_data(swh_scheduler):
     assert len(res) == NUM_ORIGINS
 
 
-@pytest.mark.parametrize("policy", ("oldest_scheduled_first",))
+@pytest.mark.parametrize(
+    "policy",
+    (
+        "oldest_scheduled_first",
+        "never_visited_oldest_update_first",
+        "already_visited_order_by_lag",
+    ),
+)
 def test_run_origin_scheduler(swh_scheduler, policy):
     for task_type in TASK_TYPES.values():
         swh_scheduler.create_task_type(task_type)
