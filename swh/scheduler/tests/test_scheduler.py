@@ -939,66 +939,6 @@ class TestScheduler:
         assert swh_scheduler.origin_visit_stats_get([(url, "git")]) == [visit_stats]
         assert swh_scheduler.origin_visit_stats_get([(url, "svn")]) == []
 
-    def test_origin_visit_stats_upsert_messing_with_time(self, swh_scheduler) -> None:
-        url = "interesting-origin"
-
-        # Let's play with dates...
-        date2 = utcnow()
-        date1 = date2 - ONEDAY
-        date0 = date1 - ONEDAY
-        assert date0 < date1 < date2
-
-        snapshot2 = hash_to_bytes("d81cc0710eb6cf9efd5b920a8453e1e07157b6cd")
-        snapshot0 = hash_to_bytes("fffcc0710eb6cf9efd5b920a8453e1e07157bfff")
-        visit_stats0 = OriginVisitStats(
-            url=url,
-            visit_type="git",
-            last_eventful=date2,
-            last_uneventful=None,
-            last_failed=None,
-            last_notfound=None,
-            last_snapshot=snapshot2,
-        )
-        swh_scheduler.origin_visit_stats_upsert([visit_stats0])
-
-        actual_visit_stats0 = swh_scheduler.origin_visit_stats_get([(url, "git")])[0]
-        assert actual_visit_stats0 == visit_stats0
-
-        visit_stats2 = OriginVisitStats(
-            url=url,
-            visit_type="git",
-            last_eventful=None,
-            last_uneventful=date1,
-            last_notfound=None,
-            last_failed=None,
-        )
-        swh_scheduler.origin_visit_stats_upsert([visit_stats2])
-
-        actual_visit_stats2 = swh_scheduler.origin_visit_stats_get([(url, "git")])[0]
-        assert actual_visit_stats2 == attr.evolve(
-            actual_visit_stats0, last_uneventful=date1
-        )
-
-        # a past date, what happens?
-        # date0 < date2 so this ovs should be dismissed
-        # the "eventful" associated snapshot should be dismissed as well
-        visit_stats1 = OriginVisitStats(
-            url=url,
-            visit_type="git",
-            last_eventful=date0,
-            last_uneventful=None,
-            last_failed=None,
-            last_notfound=None,
-            last_snapshot=snapshot0,
-        )
-        swh_scheduler.origin_visit_stats_upsert([visit_stats1])
-
-        actual_visit_stats1 = swh_scheduler.origin_visit_stats_get([(url, "git")])[0]
-
-        assert actual_visit_stats1 == attr.evolve(
-            actual_visit_stats2, last_eventful=date2
-        )
-
     def test_origin_visit_stats_upsert_batch(self, swh_scheduler) -> None:
         """Batch upsert is ok"""
         visit_stats = [

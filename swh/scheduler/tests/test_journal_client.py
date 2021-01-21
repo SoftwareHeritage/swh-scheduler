@@ -581,3 +581,48 @@ def test_journal_client_origin_visit_status_duplicated_messages(swh_scheduler):
     assert swh_scheduler.origin_visit_stats_get([("foo", "git")]) == [
         expected_visit_stats
     ]
+
+
+def test_journal_client_origin_visit_status_several_upsert(swh_scheduler):
+    """A duplicated message must be ignored
+
+    """
+    visit_status1 = {
+        "origin": "foo",
+        "visit": 1,
+        "status": "full",
+        "date": DATE1,
+        "type": "git",
+        "snapshot": hash_to_bytes("aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"),
+    }
+
+    visit_status2 = {
+        "origin": "foo",
+        "visit": 1,
+        "status": "full",
+        "date": DATE2,
+        "type": "git",
+        "snapshot": hash_to_bytes("aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"),
+    }
+
+    process_journal_objects(
+        {"origin_visit_status": [visit_status2]}, scheduler=swh_scheduler
+    )
+
+    process_journal_objects(
+        {"origin_visit_status": [visit_status1]}, scheduler=swh_scheduler
+    )
+
+    expected_visit_stats = OriginVisitStats(
+        url="foo",
+        visit_type="git",
+        last_eventful=DATE1,
+        last_uneventful=DATE2,
+        last_failed=None,
+        last_notfound=None,
+        last_snapshot=hash_to_bytes("aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"),
+    )
+
+    assert swh_scheduler.origin_visit_stats_get([("foo", "git")]) == [
+        expected_visit_stats
+    ]
