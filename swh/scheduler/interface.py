@@ -1,9 +1,11 @@
-# Copyright (C) 2015-2020  The Software Heritage developers
+# Copyright (C) 2015-2021  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-from typing import Any, Dict, Iterable, List, Optional
+
+import datetime
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 from uuid import UUID
 
 from typing_extensions import Protocol, runtime_checkable
@@ -13,7 +15,9 @@ from swh.scheduler.model import (
     ListedOrigin,
     ListedOriginPageToken,
     Lister,
+    OriginVisitStats,
     PaginatedListedOriginList,
+    SchedulerMetrics,
 )
 
 
@@ -259,6 +263,15 @@ class SchedulerInterface(Protocol):
         """Search task run for a task id"""
         ...
 
+    @remote_api_endpoint("lister/get")
+    def get_lister(
+        self, name: str, instance_name: Optional[str] = None
+    ) -> Optional[Lister]:
+        """Retrieve information about the given instance of the lister from the
+        database.
+        """
+        ...
+
     @remote_api_endpoint("lister/get_or_create")
     def get_or_create_lister(
         self, name: str, instance_name: Optional[str] = None
@@ -309,6 +322,67 @@ class SchedulerInterface(Protocol):
         """
         ...
 
+    @remote_api_endpoint("origins/grab_next")
+    def grab_next_visits(
+        self, visit_type: str, count: int, policy: str
+    ) -> List[ListedOrigin]:
+        """Get at most the `count` next origins that need to be visited with
+        the `visit_type` loader according to the given scheduling `policy`.
+
+        This will mark the origins as "being visited" in the listed_origins
+        table, to avoid scheduling multiple visits to the same origin.
+        """
+        ...
+
     @remote_api_endpoint("priority_ratios/get")
     def get_priority_ratios(self):
+        ...
+
+    @remote_api_endpoint("visit_stats/upsert")
+    def origin_visit_stats_upsert(
+        self, origin_visit_stats: Iterable[OriginVisitStats]
+    ) -> None:
+        """Create a new origin visit stats
+        """
+        ...
+
+    @remote_api_endpoint("visit_stats/get")
+    def origin_visit_stats_get(
+        self, ids: Iterable[Tuple[str, str]]
+    ) -> List[OriginVisitStats]:
+        """Retrieve the stats for an origin with a given visit type
+
+        If some visit_stats are not found, they are filtered out of the result. So the
+        output list may be of length inferior to the length of the input list.
+
+        """
+        ...
+
+    @remote_api_endpoint("scheduler_metrics/update")
+    def update_metrics(
+        self,
+        lister_id: Optional[UUID] = None,
+        timestamp: Optional[datetime.datetime] = None,
+    ) -> List[SchedulerMetrics]:
+        """Update the performance metrics of this scheduler instance.
+
+        Returns the updated metrics.
+
+        Args:
+          lister_id: if passed, update the metrics only for this lister instance
+          timestamp: if passed, the date at which we're updating the metrics,
+            defaults to the database NOW()
+        """
+        ...
+
+    @remote_api_endpoint("scheduler_metrics/get")
+    def get_metrics(
+        self, lister_id: Optional[UUID] = None, visit_type: Optional[str] = None
+    ) -> List[SchedulerMetrics]:
+        """Retrieve the performance metrics of this scheduler instance.
+
+        Args:
+          lister_id: filter the metrics for this lister instance only
+          visit_type: filter the metrics for this visit type only
+        """
         ...

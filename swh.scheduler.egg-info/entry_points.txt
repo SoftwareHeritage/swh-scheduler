@@ -1,4 +1,5 @@
 
         [swh.cli.subcommands]
         scheduler=swh.scheduler.cli
+        scheduler-journal=swh.scheduler.cli.journal
     
