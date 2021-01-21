@@ -29,8 +29,13 @@ class SimulationReport:
     visit_runtimes: Dict[Tuple[str, bool], List[float]] = field(default_factory=dict)
     """Collected visit runtimes for each (status, eventful) tuple"""
 
-    metrics: List[Tuple[datetime, List[SchedulerMetrics]]] = field(default_factory=list)
+    scheduler_metrics: List[Tuple[datetime, List[SchedulerMetrics]]] = field(
+        default_factory=list
+    )
     """Collected scheduler metrics for every timestamp"""
+
+    visit_metrics: List[Tuple[datetime, int]] = field(default_factory=list)
+    """Collected visit metrics over time"""
 
     latest_snapshots: Dict[Tuple[str, str], bytes] = field(default_factory=dict)
     """Collected latest snapshots for origins"""
@@ -50,11 +55,14 @@ class SimulationReport:
         self.total_visits += 1
         self.visit_runtimes.setdefault((status, eventful), []).append(duration)
 
-    def record_metrics(self, timestamp: datetime, metrics: List[SchedulerMetrics]):
-        self.metrics.append((timestamp, metrics))
+    def record_metrics(
+        self, timestamp: datetime, scheduler_metrics: List[SchedulerMetrics]
+    ):
+        self.scheduler_metrics.append((timestamp, scheduler_metrics))
+        self.visit_metrics.append((timestamp, self.total_visits))
 
     @property
-    def useless_visits(self):
+    def uneventful_visits(self):
         """Number of uneventful, full visits"""
         return len(self.visit_runtimes.get(("full", False), []))
 
@@ -65,7 +73,7 @@ class SimulationReport:
         )
 
     def metrics_plot(self) -> str:
-        timestamps, metric_lists = zip(*self.metrics)
+        timestamps, metric_lists = zip(*self.scheduler_metrics)
         known = [sum(m.origins_known for m in metrics) for metrics in metric_lists]
         never_visited = [
             sum(m.origins_never_visited for m in metrics) for metrics in metric_lists
@@ -76,6 +84,9 @@ class SimulationReport:
         figure.y_label = "origins"
         figure.scatter(timestamps, known, label="Known origins")
         figure.scatter(timestamps, never_visited, label="Origins never visited")
+
+        visit_timestamps, n_visits = zip(*self.visit_metrics)
+        figure.scatter(visit_timestamps, n_visits, label="Visits over time")
 
         return figure.show(legend=True)
 
@@ -89,7 +100,7 @@ class SimulationReport:
             textwrap.dedent(
                 f"""\
                 Total visits: {self.total_visits}
-                Useless visits: {self.useless_visits}
+                Uneventful visits: {self.uneventful_visits}
                 Eventful visits: {len(full_visits)}
                 Very long running tasks: {long_tasks}
                 Visit time histogram for eventful visits:
