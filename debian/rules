@@ -10,6 +10,11 @@ export PYBUILD_TEST_ARGS= --postgresql-exec $(PG_CTL) -m 'not db and not fs' \
 %:
 	dh $@ --with python3 --buildsystem=pybuild
 
+override_dh_auto_build:
+	rm -rfv $(CURDIR)/swh/scheduler/simulator
+	rm -fv $(CURDIR)/swh/scheduler/tests/test_simulator.py
+	dh_auto_build
+
 override_dh_install:
 	dh_install
 	rm -v $(CURDIR)/debian/python3-*/usr/lib/python*/dist-packages/swh/__init__.py
