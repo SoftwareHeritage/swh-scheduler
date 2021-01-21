@@ -1,14 +1,16 @@
-# Copyright (C) 2015-2020  The Software Heritage developers
+# Copyright (C) 2015-2021  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import datetime
 import json
 import logging
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 from uuid import UUID
 
 import attr
+from psycopg2.errors import CardinalityViolation
 import psycopg2.extras
 import psycopg2.pool
 
@@ -16,12 +18,14 @@ from swh.core.db import BaseDb
 from swh.core.db.common import db_transaction
 from swh.scheduler.utils import utcnow
 
-from .exc import StaleData
+from .exc import SchedulerException, StaleData, UnknownPolicy
 from .model import (
     ListedOrigin,
     ListedOriginPageToken,
     Lister,
+    OriginVisitStats,
     PaginatedListedOriginList,
+    SchedulerMetrics,
 )
 
 logger = logging.getLogger(__name__)
@@ -132,6 +136,31 @@ class SchedulerBackend:
         query = format_query("select {keys} from task_type", self.task_type_keys,)
         cur.execute(query)
         return cur.fetchall()
+
+    @db_transaction()
+    def get_lister(
+        self, name: str, instance_name: Optional[str] = None, db=None, cur=None
+    ) -> Optional[Lister]:
+        """Retrieve information about the given instance of the lister from the
+        database.
+        """
+        if instance_name is None:
+            instance_name = ""
+
+        select_cols = ", ".join(Lister.select_columns())
+
+        query = f"""
+            select {select_cols} from listers
+              where (name, instance_name) = (%s, %s)
+        """
+
+        cur.execute(query, (name, instance_name))
+
+        ret = cur.fetchone()
+        if not ret:
+            return None
+
+        return Lister(**ret)
 
     @db_transaction()
     def get_or_create_lister(
@@ -285,6 +314,71 @@ class SchedulerBackend:
             page_token = None
 
         return PaginatedListedOriginList(origins, page_token)
+
+    @db_transaction()
+    def grab_next_visits(
+        self, visit_type: str, count: int, policy: str, db=None, cur=None,
+    ) -> List[ListedOrigin]:
+        """Get at most the `count` next origins that need to be visited with
+        the `visit_type` loader according to the given scheduling `policy`.
+
+        This will mark the origins as "being visited" in the listed_origins
+        table, to avoid scheduling multiple visits to the same origin.
+        """
+        origin_select_cols = ", ".join(ListedOrigin.select_columns())
+
+        # TODO: filter on last_scheduled "too recent" to avoid always
+        # re-scheduling the same tasks.
+        where_clauses = [
+            "enabled",  # "NOT enabled" = the lister said the origin no longer exists
+            "visit_type = %s",
+        ]
+        if policy == "oldest_scheduled_first":
+            order_by = "origin_visit_stats.last_scheduled NULLS FIRST"
+        else:
+            raise UnknownPolicy(f"Unknown scheduling policy {policy}")
+
+        select_query = f"""
+          SELECT
+            {origin_select_cols}
+          FROM
+            listed_origins
+          LEFT JOIN
+            origin_visit_stats USING (url, visit_type)
+          WHERE
+            {" AND ".join(where_clauses)}
+          ORDER BY
+            {order_by}
+          LIMIT %s
+        """
+
+        query = f"""
+            WITH selected_origins AS (
+               {select_query}
+            ),
+            update_stats AS (
+              INSERT INTO
+                origin_visit_stats (
+                  url, visit_type, last_scheduled
+                )
+              SELECT
+                url, visit_type, now()
+              FROM
+                selected_origins
+              ON CONFLICT (url, visit_type) DO UPDATE
+                SET last_scheduled = GREATEST(
+                  origin_visit_stats.last_scheduled,
+                  EXCLUDED.last_scheduled
+                )
+            )
+            SELECT
+              *
+            FROM
+              selected_origins
+        """
+
+        cur.execute(query, (visit_type, count))
+        return [ListedOrigin(**d) for d in cur]
 
     task_create_keys = [
         "type",
@@ -725,3 +819,138 @@ class SchedulerBackend:
     def get_priority_ratios(self, db=None, cur=None):
         cur.execute("select id, ratio from priority_ratio")
         return {row["id"]: row["ratio"] for row in cur.fetchall()}
+
+    @db_transaction()
+    def origin_visit_stats_upsert(
+        self, origin_visit_stats: Iterable[OriginVisitStats], db=None, cur=None
+    ) -> None:
+        pk_cols = OriginVisitStats.primary_key_columns()
+        insert_cols, insert_meta = OriginVisitStats.insert_columns_and_metavars()
+
+        query = f"""
+            INSERT into origin_visit_stats AS ovi ({", ".join(insert_cols)})
+            VALUES %s
+            ON CONFLICT ({", ".join(pk_cols)}) DO UPDATE
+            SET last_eventful = (
+                    select max(eventful.date) from (values
+                        (excluded.last_eventful),
+                        (ovi.last_eventful)
+                    ) as eventful(date)
+                ),
+                last_uneventful = (
+                    select max(uneventful.date) from (values
+                        (excluded.last_uneventful),
+                        (ovi.last_uneventful)
+                    ) as uneventful(date)
+                ),
+                last_failed = (
+                    select max(failed.date) from (values
+                        (excluded.last_failed),
+                        (ovi.last_failed)
+                    ) as failed(date)
+                ),
+                last_notfound = (
+                    select max(notfound.date) from (values
+                        (excluded.last_notfound),
+                        (ovi.last_notfound)
+                    ) as notfound(date)
+                ),
+                last_snapshot = (select
+                    case
+                      when ovi.last_eventful < excluded.last_eventful then excluded.last_snapshot
+                      else coalesce(ovi.last_snapshot, excluded.last_snapshot)
+                    end
+                )
+        """  # noqa
+
+        try:
+            psycopg2.extras.execute_values(
+                cur=cur,
+                sql=query,
+                argslist=(
+                    attr.asdict(visit_stats) for visit_stats in origin_visit_stats
+                ),
+                template=f"({', '.join(insert_meta)})",
+                page_size=1000,
+                fetch=False,
+            )
+        except CardinalityViolation as e:
+            raise SchedulerException(repr(e))
+
+    @db_transaction()
+    def origin_visit_stats_get(
+        self, ids: Iterable[Tuple[str, str]], db=None, cur=None
+    ) -> List[OriginVisitStats]:
+        if not ids:
+            return []
+        primary_keys = tuple((origin, visit_type) for (origin, visit_type) in ids)
+        query = format_query(
+            """
+            SELECT {keys}
+            FROM (VALUES %s) as stats(url, visit_type)
+            INNER JOIN origin_visit_stats USING (url, visit_type)
+        """,
+            OriginVisitStats.select_columns(),
+        )
+        psycopg2.extras.execute_values(cur=cur, sql=query, argslist=primary_keys)
+        return [OriginVisitStats(**row) for row in cur.fetchall()]
+
+    @db_transaction()
+    def update_metrics(
+        self,
+        lister_id: Optional[UUID] = None,
+        timestamp: Optional[datetime.datetime] = None,
+        db=None,
+        cur=None,
+    ) -> List[SchedulerMetrics]:
+        """Update the performance metrics of this scheduler instance.
+
+        Returns the updated metrics.
+
+        Args:
+          lister_id: if passed, update the metrics only for this lister instance
+          timestamp: if passed, the date at which we're updating the metrics,
+            defaults to the database NOW()
+        """
+        query = format_query(
+            "SELECT {keys} FROM update_metrics(%s, %s)",
+            SchedulerMetrics.select_columns(),
+        )
+        cur.execute(query, (lister_id, timestamp))
+        return [SchedulerMetrics(**row) for row in cur.fetchall()]
+
+    @db_transaction()
+    def get_metrics(
+        self,
+        lister_id: Optional[UUID] = None,
+        visit_type: Optional[str] = None,
+        db=None,
+        cur=None,
+    ) -> List[SchedulerMetrics]:
+        """Retrieve the performance metrics of this scheduler instance.
+
+        Args:
+          lister_id: filter the metrics for this lister instance only
+          visit_type: filter the metrics for this visit type only
+        """
+
+        where_filters = []
+        where_args = []
+        if lister_id:
+            where_filters.append("lister_id = %s")
+            where_args.append(str(lister_id))
+        if visit_type:
+            where_filters.append("visit_type = %s")
+            where_args.append(visit_type)
+
+        where_clause = ""
+        if where_filters:
+            where_clause = f"where {' and '.join(where_filters)}"
+
+        query = format_query(
+            "SELECT {keys} FROM scheduler_metrics %s" % where_clause,
+            SchedulerMetrics.select_columns(),
+        )
+
+        cur.execute(query, tuple(where_args))
+        return [SchedulerMetrics(**row) for row in cur.fetchall()]

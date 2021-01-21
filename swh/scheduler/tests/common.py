@@ -1,4 +1,4 @@
-# Copyright (C) 2017-2019  The Software Heritage developers
+# Copyright (C) 2017-2021  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -8,12 +8,12 @@ import datetime
 
 TEMPLATES = {
     "git": {
-        "type": "update-git",
+        "type": "load-git",
         "arguments": {"args": [], "kwargs": {},},
         "next_run": None,
     },
     "hg": {
-        "type": "update-hg",
+        "type": "load-hg",
         "arguments": {"args": [], "kwargs": {},},
         "next_run": None,
         "policy": "oneshot",
@@ -23,7 +23,7 @@ TEMPLATES = {
 
 TASK_TYPES = {
     "git": {
-        "type": "update-git",
+        "type": "load-git",
         "description": "Update a git repository",
         "backend_name": "swh.loader.git.tasks.UpdateGitRepository",
         "default_interval": datetime.timedelta(days=64),
@@ -35,7 +35,7 @@ TASK_TYPES = {
         "retry_delay": datetime.timedelta(hours=2),
     },
     "hg": {
-        "type": "update-hg",
+        "type": "load-hg",
         "description": "Update a mercurial repository",
         "backend_name": "swh.loader.mercurial.tasks.UpdateHgRepository",
         "default_interval": datetime.timedelta(days=64),

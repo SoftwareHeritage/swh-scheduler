@@ -5,7 +5,7 @@
 
 from datetime import datetime, timezone
 import os
-from typing import List
+from typing import Dict, List
 
 import pytest
 
@@ -28,14 +28,35 @@ def stored_lister(swh_scheduler) -> Lister:
 
 
 @pytest.fixture
-def listed_origins(stored_lister) -> List[ListedOrigin]:
-    """Return a (fixed) set of 1000 listed origins"""
-    return [
-        ListedOrigin(
-            lister_id=stored_lister.id,
-            url=f"https://example.com/{i:04d}.git",
-            visit_type="git",
-            last_update=datetime(2020, 6, 15, 16, 0, 0, i, tzinfo=timezone.utc),
-        )
-        for i in range(1000)
-    ]
+def visit_types() -> List[str]:
+    """Possible visit types in `ListedOrigin`s"""
+    return ["git", "svn"]
+
+
+@pytest.fixture
+def listed_origins_by_type(
+    stored_lister: Lister, visit_types: List[str]
+) -> Dict[str, List[ListedOrigin]]:
+    """A fixed list of `ListedOrigin`s, for each `visit_type`."""
+    count_per_type = 1000
+    assert stored_lister.id
+    return {
+        visit_type: [
+            ListedOrigin(
+                lister_id=stored_lister.id,
+                url=f"https://{visit_type}.example.com/{i:04d}",
+                visit_type=visit_type,
+                last_update=datetime(
+                    2020, 6, 15, 16, 0, 0, j * count_per_type + i, tzinfo=timezone.utc
+                ),
+            )
+            for i in range(count_per_type)
+        ]
+        for j, visit_type in enumerate(visit_types)
+    }
+
+
+@pytest.fixture
+def listed_origins(listed_origins_by_type) -> List[ListedOrigin]:
+    """Return a (fixed) set of listed origins"""
+    return sum(listed_origins_by_type.values(), [])

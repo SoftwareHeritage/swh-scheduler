@@ -1,4 +1,4 @@
-# Copyright (C) 2020  The Software Heritage developers
+# Copyright (C) 2020-2021  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -10,6 +10,12 @@ from uuid import UUID
 import attr
 import attr.converters
 from attrs_strict import type_validator
+
+
+def check_timestamptz(value) -> None:
+    """Checks the date has a timezone."""
+    if value is not None and value.tzinfo is None:
+        raise ValueError("date must be a timezone-aware datetime.")
 
 
 @attr.s
@@ -161,6 +167,15 @@ class ListedOrigin(BaseSchedulerModel):
         metadata={"auto_now": True},
     )
 
+    def as_task_dict(self):
+        return {
+            "type": f"load-{self.visit_type}",
+            "arguments": {
+                "args": [],
+                "kwargs": {"url": self.url, **self.extra_loader_arguments},
+            },
+        }
+
 
 ListedOriginPageToken = Tuple[UUID, str]
 
@@ -191,3 +206,80 @@ class PaginatedListedOriginList(BaseSchedulerModel):
         converter=convert_listed_origin_page_token,
         default=None,
     )
+
+
+@attr.s(frozen=True, slots=True)
+class OriginVisitStats(BaseSchedulerModel):
+    """Represents an aggregated origin visits view.
+    """
+
+    url = attr.ib(
+        type=str, validator=[type_validator()], metadata={"primary_key": True}
+    )
+    visit_type = attr.ib(
+        type=str, validator=[type_validator()], metadata={"primary_key": True}
+    )
+    last_eventful = attr.ib(
+        type=Optional[datetime.datetime], validator=type_validator()
+    )
+    last_uneventful = attr.ib(
+        type=Optional[datetime.datetime], validator=type_validator()
+    )
+    last_failed = attr.ib(type=Optional[datetime.datetime], validator=type_validator())
+    last_notfound = attr.ib(
+        type=Optional[datetime.datetime], validator=type_validator()
+    )
+    last_scheduled = attr.ib(
+        type=Optional[datetime.datetime], validator=[type_validator()], default=None,
+    )
+    last_snapshot = attr.ib(
+        type=Optional[bytes], validator=type_validator(), default=None
+    )
+
+    @last_eventful.validator
+    def check_last_eventful(self, attribute, value):
+        check_timestamptz(value)
+
+    @last_uneventful.validator
+    def check_last_uneventful(self, attribute, value):
+        check_timestamptz(value)
+
+    @last_failed.validator
+    def check_last_failed(self, attribute, value):
+        check_timestamptz(value)
+
+    @last_notfound.validator
+    def check_last_notfound(self, attribute, value):
+        check_timestamptz(value)
+
+
+@attr.s(frozen=True, slots=True)
+class SchedulerMetrics(BaseSchedulerModel):
+    """Metrics for the scheduler, aggregated by (lister_id, visit_type)"""
+
+    lister_id = attr.ib(
+        type=UUID, validator=[type_validator()], metadata={"primary_key": True}
+    )
+    visit_type = attr.ib(
+        type=str, validator=[type_validator()], metadata={"primary_key": True}
+    )
+
+    last_update = attr.ib(
+        type=Optional[datetime.datetime], validator=[type_validator()], default=None,
+    )
+
+    origins_known = attr.ib(type=int, validator=[type_validator()], default=0)
+    """Number of known (enabled or disabled) origins"""
+
+    origins_enabled = attr.ib(type=int, validator=[type_validator()], default=0)
+    """Number of origins that were present in the latest listings"""
+
+    origins_never_visited = attr.ib(type=int, validator=[type_validator()], default=0)
+    """Number of enabled origins that have never been visited
+    (according to the visit cache)"""
+
+    origins_with_pending_changes = attr.ib(
+        type=int, validator=[type_validator()], default=0
+    )
+    """Number of enabled origins with known activity (recorded by a lister)
+    since our last visit"""

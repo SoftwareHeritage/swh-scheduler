@@ -1,4 +1,4 @@
-# Copyright (C) 2017-2019  The Software Heritage developers
+# Copyright (C) 2017-2021  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -8,15 +8,21 @@ import copy
 import datetime
 import inspect
 import random
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 import uuid
 
 import attr
 import pytest
 
-from swh.scheduler.exc import StaleData
+from swh.model.hashutil import hash_to_bytes
+from swh.scheduler.exc import SchedulerException, StaleData, UnknownPolicy
 from swh.scheduler.interface import SchedulerInterface
-from swh.scheduler.model import ListedOrigin, ListedOriginPageToken
+from swh.scheduler.model import (
+    ListedOrigin,
+    ListedOriginPageToken,
+    OriginVisitStats,
+    SchedulerMetrics,
+)
 from swh.scheduler.utils import utcnow
 
 from .common import LISTERS, TASK_TYPES, TEMPLATES, tasks_from_template
@@ -28,6 +34,14 @@ def subdict(d, keys=None, excl=()):
     if keys is None:
         keys = [k for k in d.keys()]
     return {k: d[k] for k in keys if k not in excl}
+
+
+def metrics_sort_key(m: SchedulerMetrics) -> Tuple[uuid.UUID, str]:
+    return (m.lister_id, m.visit_type)
+
+
+def assert_metrics_equal(left, right):
+    assert sorted(left, key=metrics_sort_key) == sorted(right, key=metrics_sort_key)
 
 
 class TestScheduler:
@@ -632,6 +646,21 @@ class TestScheduler:
 
             assert lister == lister_get_again
 
+    def test_get_lister(self, swh_scheduler):
+        for lister_args in LISTERS:
+            assert swh_scheduler.get_lister(**lister_args) is None
+
+        db_listers = []
+        for lister_args in LISTERS:
+            db_listers.append(swh_scheduler.get_or_create_lister(**lister_args))
+
+        for lister, lister_args in zip(db_listers, LISTERS):
+            lister_get_again = swh_scheduler.get_lister(
+                lister.name, lister.instance_name
+            )
+
+            assert lister == lister_get_again
+
     def test_update_lister(self, swh_scheduler, stored_lister):
         lister = attr.evolve(stored_lister, current_state={"updated": "now"})
 
@@ -726,6 +755,405 @@ class TestScheduler:
         assert ret.next_page_token is None
         assert len(ret.origins) == len(listed_origins)
 
+    @pytest.mark.parametrize("policy", ["oldest_scheduled_first"])
+    def test_grab_next_visits(self, swh_scheduler, listed_origins_by_type, policy):
+        NUM_RESULTS = 5
+        # Strict inequality to check that grab_next_visits doesn't return more
+        # results than requested
+        visit_type = next(iter(listed_origins_by_type))
+        assert len(listed_origins_by_type[visit_type]) > NUM_RESULTS
+
+        for origins in listed_origins_by_type.values():
+            swh_scheduler.record_listed_origins(origins)
+
+        before = utcnow()
+        ret = swh_scheduler.grab_next_visits(visit_type, NUM_RESULTS, policy=policy)
+        after = utcnow()
+
+        assert len(ret) == NUM_RESULTS
+        for origin in ret:
+            pk = (origin.url, origin.visit_type)
+            visit_stats = swh_scheduler.origin_visit_stats_get([pk])[0]
+            assert visit_stats is not None
+            assert before <= visit_stats.last_scheduled <= after
+
+    @pytest.mark.parametrize("policy", ["oldest_scheduled_first"])
+    def test_grab_next_visits_underflow(
+        self, swh_scheduler, listed_origins_by_type, policy
+    ):
+        NUM_RESULTS = 5
+        visit_type = next(iter(listed_origins_by_type))
+        assert len(listed_origins_by_type[visit_type]) > NUM_RESULTS
+
+        swh_scheduler.record_listed_origins(
+            listed_origins_by_type[visit_type][:NUM_RESULTS]
+        )
+
+        ret = swh_scheduler.grab_next_visits(visit_type, NUM_RESULTS + 2, policy=policy)
+
+        assert len(ret) == NUM_RESULTS
+
+    def test_grab_next_visits_unknown_policy(self, swh_scheduler):
+        NUM_RESULTS = 5
+        with pytest.raises(UnknownPolicy, match="non_existing_policy"):
+            swh_scheduler.grab_next_visits(
+                "type", NUM_RESULTS, policy="non_existing_policy"
+            )
+
     def _create_task_types(self, scheduler):
         for tt in TASK_TYPES.values():
             scheduler.create_task_type(tt)
+
+    def test_origin_visit_stats_get_empty(self, swh_scheduler) -> None:
+        assert swh_scheduler.origin_visit_stats_get([]) == []
+
+    def test_origin_visit_stats_upsert(self, swh_scheduler) -> None:
+        eventful_date = utcnow()
+        url = "https://github.com/test"
+
+        visit_stats = OriginVisitStats(
+            url=url,
+            visit_type="git",
+            last_eventful=eventful_date,
+            last_uneventful=None,
+            last_failed=None,
+            last_notfound=None,
+        )
+        swh_scheduler.origin_visit_stats_upsert([visit_stats])
+        swh_scheduler.origin_visit_stats_upsert([visit_stats])
+
+        assert swh_scheduler.origin_visit_stats_get([(url, "git")]) == [visit_stats]
+        assert swh_scheduler.origin_visit_stats_get([(url, "svn")]) == []
+
+        uneventful_date = utcnow()
+        visit_stats = OriginVisitStats(
+            url=url,
+            visit_type="git",
+            last_eventful=None,
+            last_uneventful=uneventful_date,
+            last_failed=None,
+            last_notfound=None,
+        )
+        swh_scheduler.origin_visit_stats_upsert([visit_stats])
+
+        uneventful_visits = swh_scheduler.origin_visit_stats_get([(url, "git")])
+
+        expected_visit_stats = OriginVisitStats(
+            url=url,
+            visit_type="git",
+            last_eventful=eventful_date,
+            last_uneventful=uneventful_date,
+            last_failed=None,
+            last_notfound=None,
+        )
+
+        assert uneventful_visits == [expected_visit_stats]
+
+        failed_date = utcnow()
+        visit_stats = OriginVisitStats(
+            url=url,
+            visit_type="git",
+            last_eventful=None,
+            last_uneventful=None,
+            last_failed=failed_date,
+            last_notfound=None,
+        )
+        swh_scheduler.origin_visit_stats_upsert([visit_stats])
+
+        failed_visits = swh_scheduler.origin_visit_stats_get([(url, "git")])
+
+        expected_visit_stats = OriginVisitStats(
+            url=url,
+            visit_type="git",
+            last_eventful=eventful_date,
+            last_uneventful=uneventful_date,
+            last_failed=failed_date,
+            last_notfound=None,
+        )
+
+        assert failed_visits == [expected_visit_stats]
+
+    def test_origin_visit_stats_upsert_with_snapshot(self, swh_scheduler) -> None:
+        eventful_date = utcnow()
+        url = "https://github.com/666/test"
+
+        visit_stats = OriginVisitStats(
+            url=url,
+            visit_type="git",
+            last_eventful=eventful_date,
+            last_uneventful=None,
+            last_failed=None,
+            last_notfound=None,
+            last_snapshot=hash_to_bytes("d81cc0710eb6cf9efd5b920a8453e1e07157b6cd"),
+        )
+        swh_scheduler.origin_visit_stats_upsert([visit_stats])
+
+        assert swh_scheduler.origin_visit_stats_get([(url, "git")]) == [visit_stats]
+        assert swh_scheduler.origin_visit_stats_get([(url, "svn")]) == []
+
+    def test_origin_visit_stats_upsert_messing_with_time(self, swh_scheduler) -> None:
+        url = "interesting-origin"
+
+        # Let's play with dates...
+        date2 = utcnow()
+        date1 = date2 - ONEDAY
+        date0 = date1 - ONEDAY
+        assert date0 < date1 < date2
+
+        snapshot2 = hash_to_bytes("d81cc0710eb6cf9efd5b920a8453e1e07157b6cd")
+        snapshot0 = hash_to_bytes("fffcc0710eb6cf9efd5b920a8453e1e07157bfff")
+        visit_stats0 = OriginVisitStats(
+            url=url,
+            visit_type="git",
+            last_eventful=date2,
+            last_uneventful=None,
+            last_failed=None,
+            last_notfound=None,
+            last_snapshot=snapshot2,
+        )
+        swh_scheduler.origin_visit_stats_upsert([visit_stats0])
+
+        actual_visit_stats0 = swh_scheduler.origin_visit_stats_get([(url, "git")])[0]
+        assert actual_visit_stats0 == visit_stats0
+
+        visit_stats2 = OriginVisitStats(
+            url=url,
+            visit_type="git",
+            last_eventful=None,
+            last_uneventful=date1,
+            last_notfound=None,
+            last_failed=None,
+        )
+        swh_scheduler.origin_visit_stats_upsert([visit_stats2])
+
+        actual_visit_stats2 = swh_scheduler.origin_visit_stats_get([(url, "git")])[0]
+        assert actual_visit_stats2 == attr.evolve(
+            actual_visit_stats0, last_uneventful=date1
+        )
+
+        # a past date, what happens?
+        # date0 < date2 so this ovs should be dismissed
+        # the "eventful" associated snapshot should be dismissed as well
+        visit_stats1 = OriginVisitStats(
+            url=url,
+            visit_type="git",
+            last_eventful=date0,
+            last_uneventful=None,
+            last_failed=None,
+            last_notfound=None,
+            last_snapshot=snapshot0,
+        )
+        swh_scheduler.origin_visit_stats_upsert([visit_stats1])
+
+        actual_visit_stats1 = swh_scheduler.origin_visit_stats_get([(url, "git")])[0]
+
+        assert actual_visit_stats1 == attr.evolve(
+            actual_visit_stats2, last_eventful=date2
+        )
+
+    def test_origin_visit_stats_upsert_batch(self, swh_scheduler) -> None:
+        """Batch upsert is ok"""
+        visit_stats = [
+            OriginVisitStats(
+                url="foo",
+                visit_type="git",
+                last_eventful=utcnow(),
+                last_uneventful=None,
+                last_failed=None,
+                last_notfound=None,
+                last_snapshot=hash_to_bytes("d81cc0710eb6cf9efd5b920a8453e1e07157b6cd"),
+            ),
+            OriginVisitStats(
+                url="bar",
+                visit_type="git",
+                last_eventful=None,
+                last_uneventful=utcnow(),
+                last_notfound=None,
+                last_failed=None,
+                last_snapshot=hash_to_bytes("fffcc0710eb6cf9efd5b920a8453e1e07157bfff"),
+            ),
+        ]
+
+        swh_scheduler.origin_visit_stats_upsert(visit_stats)
+
+        for visit_stat in swh_scheduler.origin_visit_stats_get(
+            [(vs.url, vs.visit_type) for vs in visit_stats]
+        ):
+            assert visit_stat is not None
+
+    def test_origin_visit_stats_upsert_cardinality_failing(self, swh_scheduler) -> None:
+        """Batch upsert does not support altering multiple times the same origin-visit-status
+
+        """
+        with pytest.raises(SchedulerException, match="CardinalityViolation"):
+            swh_scheduler.origin_visit_stats_upsert(
+                [
+                    OriginVisitStats(
+                        url="foo",
+                        visit_type="git",
+                        last_eventful=None,
+                        last_uneventful=utcnow(),
+                        last_notfound=None,
+                        last_failed=None,
+                        last_snapshot=None,
+                    ),
+                    OriginVisitStats(
+                        url="foo",
+                        visit_type="git",
+                        last_eventful=None,
+                        last_uneventful=utcnow(),
+                        last_notfound=None,
+                        last_failed=None,
+                        last_snapshot=None,
+                    ),
+                ]
+            )
+
+    def test_metrics_origins_known(self, swh_scheduler, listed_origins):
+        swh_scheduler.record_listed_origins(listed_origins)
+
+        ret = swh_scheduler.update_metrics()
+
+        assert sum(metric.origins_known for metric in ret) == len(listed_origins)
+
+    def test_metrics_origins_enabled(self, swh_scheduler, listed_origins):
+        swh_scheduler.record_listed_origins(listed_origins)
+        disabled_origin = attr.evolve(listed_origins[0], enabled=False)
+        swh_scheduler.record_listed_origins([disabled_origin])
+
+        ret = swh_scheduler.update_metrics(lister_id=disabled_origin.lister_id)
+        for metric in ret:
+            if metric.visit_type == disabled_origin.visit_type:
+                # We disabled one of these origins
+                assert metric.origins_known - metric.origins_enabled == 1
+            else:
+                # But these are still all enabled
+                assert metric.origins_known == metric.origins_enabled
+
+    def test_metrics_origins_never_visited(self, swh_scheduler, listed_origins):
+        swh_scheduler.record_listed_origins(listed_origins)
+
+        # Pretend that we've recorded a visit on one origin
+        visited_origin = listed_origins[0]
+        swh_scheduler.origin_visit_stats_upsert(
+            [
+                OriginVisitStats(
+                    url=visited_origin.url,
+                    visit_type=visited_origin.visit_type,
+                    last_eventful=utcnow(),
+                    last_uneventful=None,
+                    last_failed=None,
+                    last_notfound=None,
+                    last_snapshot=hash_to_bytes(
+                        "d81cc0710eb6cf9efd5b920a8453e1e07157b6cd"
+                    ),
+                ),
+            ]
+        )
+
+        ret = swh_scheduler.update_metrics(lister_id=visited_origin.lister_id)
+        for metric in ret:
+            if metric.visit_type == visited_origin.visit_type:
+                # We visited one of these origins
+                assert metric.origins_known - metric.origins_never_visited == 1
+            else:
+                # But none of these have been visited
+                assert metric.origins_known == metric.origins_never_visited
+
+    def test_metrics_origins_with_pending_changes(self, swh_scheduler, listed_origins):
+        swh_scheduler.record_listed_origins(listed_origins)
+
+        # Pretend that we've recorded a visit on one origin, in the past with
+        # respect to the "last update" time for the origin
+        visited_origin = listed_origins[0]
+        assert visited_origin.last_update is not None
+        swh_scheduler.origin_visit_stats_upsert(
+            [
+                OriginVisitStats(
+                    url=visited_origin.url,
+                    visit_type=visited_origin.visit_type,
+                    last_eventful=visited_origin.last_update
+                    - datetime.timedelta(days=1),
+                    last_uneventful=None,
+                    last_failed=None,
+                    last_notfound=None,
+                    last_snapshot=hash_to_bytes(
+                        "d81cc0710eb6cf9efd5b920a8453e1e07157b6cd"
+                    ),
+                ),
+            ]
+        )
+
+        ret = swh_scheduler.update_metrics(lister_id=visited_origin.lister_id)
+        for metric in ret:
+            if metric.visit_type == visited_origin.visit_type:
+                # We visited one of these origins, in the past
+                assert metric.origins_with_pending_changes == 1
+            else:
+                # But none of these have been visited
+                assert metric.origins_with_pending_changes == 0
+
+    def test_update_metrics_explicit_lister(self, swh_scheduler, listed_origins):
+        swh_scheduler.record_listed_origins(listed_origins)
+
+        fake_uuid = uuid.uuid4()
+        assert all(fake_uuid != origin.lister_id for origin in listed_origins)
+
+        ret = swh_scheduler.update_metrics(lister_id=fake_uuid)
+
+        assert len(ret) == 0
+
+    def test_update_metrics_explicit_timestamp(self, swh_scheduler, listed_origins):
+        swh_scheduler.record_listed_origins(listed_origins)
+
+        ts = datetime.datetime(2020, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+
+        ret = swh_scheduler.update_metrics(timestamp=ts)
+
+        assert all(metric.last_update == ts for metric in ret)
+
+    def test_update_metrics_twice(self, swh_scheduler, listed_origins):
+        swh_scheduler.record_listed_origins(listed_origins)
+
+        ts = utcnow()
+        ret = swh_scheduler.update_metrics(timestamp=ts)
+        assert all(metric.last_update == ts for metric in ret)
+
+        second_ts = ts + datetime.timedelta(seconds=1)
+        ret = swh_scheduler.update_metrics(timestamp=second_ts)
+        assert all(metric.last_update == second_ts for metric in ret)
+
+    def test_get_metrics(self, swh_scheduler, listed_origins):
+        swh_scheduler.record_listed_origins(listed_origins)
+        updated = swh_scheduler.update_metrics()
+
+        retrieved = swh_scheduler.get_metrics()
+        assert_metrics_equal(updated, retrieved)
+
+    def test_get_metrics_by_lister(self, swh_scheduler, listed_origins):
+        lister_id = listed_origins[0].lister_id
+        assert lister_id is not None
+
+        swh_scheduler.record_listed_origins(listed_origins)
+        updated = swh_scheduler.update_metrics()
+
+        retrieved = swh_scheduler.get_metrics(lister_id=lister_id)
+        assert len(retrieved) > 0
+
+        assert_metrics_equal(
+            [metric for metric in updated if metric.lister_id == lister_id], retrieved
+        )
+
+    def test_get_metrics_by_visit_type(self, swh_scheduler, listed_origins):
+        visit_type = listed_origins[0].visit_type
+        assert visit_type is not None
+
+        swh_scheduler.record_listed_origins(listed_origins)
+        updated = swh_scheduler.update_metrics()
+
+        retrieved = swh_scheduler.get_metrics(visit_type=visit_type)
+        assert len(retrieved) > 0
+
+        assert_metrics_equal(
+            [metric for metric in updated if metric.visit_type == visit_type], retrieved
+        )
