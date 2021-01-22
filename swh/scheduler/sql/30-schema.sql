@@ -187,7 +187,27 @@ comment on column origin_visit_stats.last_snapshot is 'sha1_git of the last visi
 
 
 create materialized view origins_to_schedule
-  as select lister_id, url, visit_type, last_scheduled, last_update, last_eventful, last_uneventful, last_failed, last_notfound, last_snapshot
+  as select
+    lister_id,
+    url,
+    visit_type,
+    last_scheduled,
+    last_update,
+    last_eventful,
+    last_uneventful,
+    last_failed,
+    last_notfound,
+    last_snapshot,
+    greatest(
+      last_eventful,
+      last_uneventful,
+      last_failed,
+      last_notfound
+    ) as last_visit,
+    greatest(
+      last_eventful,
+      last_uneventful
+    ) as last_successful_visit
   from listed_origins
   left join origin_visit_stats using (url, visit_type)
   where

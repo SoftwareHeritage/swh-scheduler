@@ -352,12 +352,10 @@ class SchedulerBackend:
         # ago (it probably means we've lost them in flight somewhere).
         where_clauses.append(
             """origins_to_schedule.last_scheduled IS NULL
-            OR origins_to_schedule.last_scheduled < GREATEST(
-              %s - '7 day'::interval,
-              origins_to_schedule.last_eventful,
-              origins_to_schedule.last_uneventful,
-              origins_to_schedule.last_failed,
-              origins_to_schedule.last_notfound
+            OR origins_to_schedule.last_scheduled < %s - '7 day'::interval
+            OR (
+              origins_to_schedule.last_scheduled - origins_to_schedule.last_visit
+              < '0'::interval
             )
         """
         )
@@ -367,13 +365,13 @@ class SchedulerBackend:
         # view is outdated
         where_clauses.append(
             """origin_visit_stats.last_scheduled IS NULL
-            OR origin_visit_stats.last_scheduled < GREATEST(
-              %s - '7 day'::interval,
+            OR origin_visit_stats.last_scheduled < %s - '7 day'::interval
+            OR origin_visit_stats.last_scheduled - GREATEST(
               origin_visit_stats.last_eventful,
               origin_visit_stats.last_uneventful,
               origin_visit_stats.last_failed,
               origin_visit_stats.last_notfound
-            )
+            ) < '0'::interval
         """
         )
         query_args.append(timestamp)
@@ -385,8 +383,8 @@ class SchedulerBackend:
             where_clauses.append("origins_to_schedule.last_snapshot IS NULL")
 
             # order by increasing last_update (oldest first)
-            where_clauses.append("listed_origins.last_update IS NOT NULL")
-            order_by = "listed_origins.last_update"
+            where_clauses.append("origins_to_schedule.last_update IS NOT NULL")
+            order_by = "origins_to_schedule.last_update"
         elif policy == "already_visited_order_by_lag":
             # TODO: store "visit lag" in a materialized view?
 
@@ -398,20 +396,15 @@ class SchedulerBackend:
             where_clauses.append(
                 """
               origins_to_schedule.last_update
-              > GREATEST(
-                origins_to_schedule.last_eventful,
-                origins_to_schedule.last_uneventful
-              )
+              - origins_to_schedule.last_successful_visit
+              > '0'::interval
             """
             )
 
             # order by decreasing visit lag
             order_by = """\
               origins_to_schedule.last_update
-              - GREATEST(
-                origins_to_schedule.last_eventful,
-                origins_to_schedule.last_uneventful
-              )
+              - origins_to_schedule.last_successful_visit
               DESC
             """
         else:
