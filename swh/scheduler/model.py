@@ -145,7 +145,7 @@ class ListedOrigin(BaseSchedulerModel):
         type=str, validator=[type_validator()], metadata={"primary_key": True}
     )
     extra_loader_arguments = attr.ib(
-        type=Dict[str, str], validator=[type_validator()], factory=dict
+        type=Dict[str, Any], validator=[type_validator()], factory=dict
     )
 
     last_update = attr.ib(
