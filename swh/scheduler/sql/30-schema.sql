@@ -186,6 +186,14 @@ comment on column origin_visit_stats.last_scheduled is 'Time when this origin wa
 comment on column origin_visit_stats.last_snapshot is 'sha1_git of the last visit snapshot';
 
 
+create materialized view origins_to_schedule
+  as select lister_id, url, visit_type, last_scheduled, last_update, last_eventful, last_uneventful, last_failed, last_notfound, last_snapshot
+  from listed_origins
+  left join origin_visit_stats using (url, visit_type)
+  where
+    enabled -- "NOT enabled" = the lister said the origin no longer exists
+;
+
 create table scheduler_metrics (
   lister_id uuid not null references listers(id),
   visit_type text not null,

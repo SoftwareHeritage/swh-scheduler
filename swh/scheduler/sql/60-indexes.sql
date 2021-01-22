@@ -21,3 +21,7 @@ create index on listed_origins (url, visit_type);
 -- visit stats
 create index on origin_visit_stats (url, visit_type);
 -- XXX probably add indexes on most (visit_type, last_xxx) couples
+
+-- for the "oldest_scheduled_first" policy
+create index origins_to_schedule__oldest_scheduled_first
+  on origins_to_schedule (visit_type, last_scheduled NULLS FIRST);
