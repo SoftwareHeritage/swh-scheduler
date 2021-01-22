@@ -90,31 +90,33 @@ class SimulationReport:
 
         return figure.show(legend=True)
 
-    def format(self):
+    def format(self, with_plots=True):
         full_visits = self.visit_runtimes.get(("full", True), [])
-        histogram = self.runtime_histogram("full", True)
-        plot = self.metrics_plot()
         long_tasks = sum(runtime > self.DURATION_THRESHOLD for runtime in full_visits)
 
-        return (
-            textwrap.dedent(
-                f"""\
+        output = textwrap.dedent(
+            f"""\
                 Total visits: {self.total_visits}
                 Uneventful visits: {self.uneventful_visits}
                 Eventful visits: {len(full_visits)}
                 Very long running tasks: {long_tasks}
-                Visit time histogram for eventful visits:
                 """
-            )
-            + histogram
-            + "\n"
-            + textwrap.dedent(
-                """\
-                Metrics over time:
-                """
-            )
-            + plot
         )
+        if with_plots:
+            histogram = self.runtime_histogram("full", True)
+            plot = self.metrics_plot()
+            output += (
+                "Visit time histogram for eventful visits:"
+                + histogram
+                + "\n"
+                + textwrap.dedent(
+                    """\
+                    Metrics over time:
+                    """
+                )
+                + plot
+            )
+        return output
 
 
 @dataclass

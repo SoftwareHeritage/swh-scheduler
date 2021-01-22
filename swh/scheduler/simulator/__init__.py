@@ -160,4 +160,4 @@ def run(
         print("total simulated time:", end_time - start_time)
         metrics = env.scheduler.update_metrics(timestamp=end_time)
         env.report.record_metrics(end_time, metrics)
-        print(env.report.format())
+        return env.report
