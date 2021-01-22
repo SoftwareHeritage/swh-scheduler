@@ -57,8 +57,11 @@ def fill_test_data_command(ctx, num_origins):
     "showplots",
     help="Show results as plots (with plotille)",
 )
+@click.option(
+    "--csv", "-o", "csvfile", type=click.File("w"), help="Export results in a CSV file"
+)
 @click.pass_context
-def run_command(ctx, scheduler, policy, runtime, showplots):
+def run_command(ctx, scheduler, policy, runtime, showplots, csvfile):
     """Run the scheduler simulator.
 
     By default, the simulation runs forever. You can cap the simulated runtime
@@ -80,3 +83,5 @@ def run_command(ctx, scheduler, policy, runtime, showplots):
     )
 
     print(report.format(with_plots=showplots))
+    if csvfile is not None:
+        report.metrics_csv(csvfile)

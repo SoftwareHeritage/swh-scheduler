@@ -3,6 +3,8 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import io
+
 import pytest
 
 from swh.core.api.classes import stream_results
@@ -62,3 +64,6 @@ def test_run_task_scheduler(swh_scheduler):
     # just check these SimulationReport methods do not crash
     assert report.format(with_plots=True)
     assert report.format(with_plots=False)
+    fobj = io.StringIO()
+    report.metrics_csv(fobj=fobj)
+    assert fobj.getvalue()

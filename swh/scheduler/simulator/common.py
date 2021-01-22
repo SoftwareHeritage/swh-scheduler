@@ -3,10 +3,11 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import csv
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 import textwrap
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, TextIO, Tuple
 import uuid
 
 import plotille
@@ -32,7 +33,11 @@ class SimulationReport:
     scheduler_metrics: List[Tuple[datetime, List[SchedulerMetrics]]] = field(
         default_factory=list
     )
-    """Collected scheduler metrics for every timestamp"""
+    """Collected scheduler metrics
+
+    This is a list of couples (timestamp, [SchedulerMetrics,]): the list of
+    scheduler metrics collected at given timestamp.
+    """
 
     visit_metrics: List[Tuple[datetime, int]] = field(default_factory=list)
     """Collected visit metrics over time"""
@@ -89,6 +94,33 @@ class SimulationReport:
         figure.scatter(visit_timestamps, n_visits, label="Visits over time")
 
         return figure.show(legend=True)
+
+    def metrics_csv(self, fobj: TextIO) -> None:
+        """Export scheduling metrics in a csv file"""
+        csv_writer = csv.writer(fobj)
+        csv_writer.writerow(
+            [
+                "timestamp",
+                "known_origins",
+                "enabled_origins",
+                "never_visited_origins",
+                "origins_with_pending_changes",
+            ]
+        )
+
+        timestamps, metric_lists = zip(*self.scheduler_metrics)
+        known = (sum(m.origins_known for m in metrics) for metrics in metric_lists)
+        enabled = (sum(m.origins_enabled for m in metrics) for metrics in metric_lists)
+        never_visited = (
+            sum(m.origins_never_visited for m in metrics) for metrics in metric_lists
+        )
+        pending_changes = (
+            sum(m.origins_with_pending_changes for m in metrics)
+            for metrics in metric_lists
+        )
+        csv_writer.writerows(
+            zip(timestamps, known, enabled, never_visited, pending_changes)
+        )
 
     def format(self, with_plots=True):
         full_visits = self.visit_runtimes.get(("full", True), [])
