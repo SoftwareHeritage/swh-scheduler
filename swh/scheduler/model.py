@@ -4,7 +4,7 @@
 # See top-level LICENSE file for more information
 
 import datetime
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 from uuid import UUID
 
 import attr
@@ -145,7 +145,7 @@ class ListedOrigin(BaseSchedulerModel):
         type=str, validator=[type_validator()], metadata={"primary_key": True}
     )
     extra_loader_arguments = attr.ib(
-        type=Dict[str, str], validator=[type_validator()], factory=dict
+        type=Dict[str, Any], validator=[type_validator()], factory=dict
     )
 
     last_update = attr.ib(
@@ -175,37 +175,6 @@ class ListedOrigin(BaseSchedulerModel):
                 "kwargs": {"url": self.url, **self.extra_loader_arguments},
             },
         }
-
-
-ListedOriginPageToken = Tuple[UUID, str]
-
-
-def convert_listed_origin_page_token(
-    input: Union[None, ListedOriginPageToken, List[Union[UUID, str]]]
-) -> Optional[ListedOriginPageToken]:
-    if input is None:
-        return None
-
-    if isinstance(input, tuple):
-        return input
-
-    x, y = input
-    assert isinstance(x, UUID)
-    assert isinstance(y, str)
-    return (x, y)
-
-
-@attr.s
-class PaginatedListedOriginList(BaseSchedulerModel):
-    """A list of listed origins, with a continuation token"""
-
-    origins = attr.ib(type=List[ListedOrigin], validator=[type_validator()])
-    next_page_token = attr.ib(
-        type=Optional[ListedOriginPageToken],
-        validator=[type_validator()],
-        converter=convert_listed_origin_page_token,
-        default=None,
-    )
 
 
 @attr.s(frozen=True, slots=True)

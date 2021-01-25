@@ -5,20 +5,32 @@
 
 
 import datetime
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 from uuid import UUID
 
 from typing_extensions import Protocol, runtime_checkable
 
 from swh.core.api import remote_api_endpoint
-from swh.scheduler.model import (
-    ListedOrigin,
-    ListedOriginPageToken,
-    Lister,
-    OriginVisitStats,
-    PaginatedListedOriginList,
-    SchedulerMetrics,
-)
+from swh.core.api.classes import PagedResult
+from swh.scheduler.model import ListedOrigin, Lister, OriginVisitStats, SchedulerMetrics
+
+ListedOriginPageToken = Tuple[str, str]
+
+
+class PaginatedListedOriginList(PagedResult[ListedOrigin, ListedOriginPageToken]):
+    """A list of listed origins, with a continuation token"""
+
+    def __init__(
+        self,
+        results: List[ListedOrigin],
+        next_page_token: Union[None, ListedOriginPageToken, List[str]],
+    ):
+        parsed_next_page_token: Optional[Tuple[str, str]] = None
+        if next_page_token is not None:
+            if len(next_page_token) != 2:
+                raise TypeError("Expected Tuple[str, str] or list of size 2.")
+            parsed_next_page_token = tuple(next_page_token)  # type: ignore
+        super().__init__(results, parsed_next_page_token)
 
 
 @runtime_checkable

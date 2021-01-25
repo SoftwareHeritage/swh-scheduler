@@ -17,14 +17,21 @@ def simulator():
 
 
 @simulator.command("fill-test-data")
+@click.option(
+    "--num-origins",
+    "-n",
+    type=int,
+    default=100000,
+    help="Number of listed origins to add",
+)
 @click.pass_context
-def fill_test_data_command(ctx):
+def fill_test_data_command(ctx, num_origins):
     """Fill the scheduler with test data for simulation purposes."""
     from swh.scheduler.simulator import fill_test_data
 
-    click.echo("Filling test data...")
+    click.echo(f"Filling {num_origins:,} listed origins data...")
     start = time.monotonic()
-    fill_test_data(ctx.obj["scheduler"])
+    fill_test_data(ctx.obj["scheduler"], num_origins=num_origins)
     runtime = time.monotonic() - start
     click.echo(f"Completed in {runtime:.2f} seconds")
 
