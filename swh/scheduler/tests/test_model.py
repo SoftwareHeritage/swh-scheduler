@@ -106,11 +106,13 @@ def test_listed_origin_as_task_dict():
         "arguments": {"args": [], "kwargs": {"url": "http://example.com/"}},
     }
 
+    loader_args = {"foo": "bar", "baz": {"foo": "bar"}}
+
     origin_w_args = model.ListedOrigin(
         lister_id=uuid.uuid4(),
         url="http://example.com/svn/",
         visit_type="svn",
-        extra_loader_arguments={"foo": "bar"},
+        extra_loader_arguments=loader_args,
     )
 
     task_w_args = origin_w_args.as_task_dict()
@@ -118,6 +120,6 @@ def test_listed_origin_as_task_dict():
         "type": "load-svn",
         "arguments": {
             "args": [],
-            "kwargs": {"url": "http://example.com/svn/", "foo": "bar"},
+            "kwargs": {"url": "http://example.com/svn/", **loader_args},
         },
     }

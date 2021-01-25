@@ -16,13 +16,8 @@ import pytest
 
 from swh.model.hashutil import hash_to_bytes
 from swh.scheduler.exc import SchedulerException, StaleData, UnknownPolicy
-from swh.scheduler.interface import SchedulerInterface
-from swh.scheduler.model import (
-    ListedOrigin,
-    ListedOriginPageToken,
-    OriginVisitStats,
-    SchedulerMetrics,
-)
+from swh.scheduler.interface import ListedOriginPageToken, SchedulerInterface
+from swh.scheduler.model import ListedOrigin, OriginVisitStats, SchedulerMetrics
 from swh.scheduler.utils import utcnow
 
 from .common import LISTERS, TASK_TYPES, TEMPLATES, tasks_from_template
@@ -713,9 +708,9 @@ class TestScheduler:
             )
 
             assert ret.next_page_token is None
-            assert len(ret.origins) == 1
-            assert ret.origins[0].lister_id == origin.lister_id
-            assert ret.origins[0].url == origin.url
+            assert len(ret.results) == 1
+            assert ret.results[0].lister_id == origin.lister_id
+            assert ret.results[0].url == origin.url
 
     @pytest.mark.parametrize("num_origins,limit", [(20, 6), (5, 42), (20, 20)])
     def test_get_listed_origins_limit(
@@ -736,7 +731,7 @@ class TestScheduler:
                 limit=limit,
                 page_token=next_page_token,
             )
-            returned_origins.extend(ret.origins)
+            returned_origins.extend(ret.results)
             next_page_token = ret.next_page_token
             if next_page_token is None:
                 break
@@ -753,7 +748,7 @@ class TestScheduler:
 
         ret = swh_scheduler.get_listed_origins(limit=len(listed_origins) + 1)
         assert ret.next_page_token is None
-        assert len(ret.origins) == len(listed_origins)
+        assert len(ret.results) == len(listed_origins)
 
     def _grab_next_visits_setup(self, swh_scheduler, listed_origins_by_type):
         """Basic origins setup for scheduling policy tests"""
@@ -823,6 +818,80 @@ class TestScheduler:
             visit_type=visit_type,
             policy="oldest_scheduled_first",
             expected=expected,
+        )
+
+    def test_grab_next_visits_never_visited_oldest_update_first(
+        self, swh_scheduler, listed_origins_by_type,
+    ):
+        visit_type, origins = self._grab_next_visits_setup(
+            swh_scheduler, listed_origins_by_type
+        )
+
+        # Update known origins with a `last_update` field that we control
+        base_date = datetime.datetime(2020, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+        updated_origins = [
+            attr.evolve(origin, last_update=base_date - datetime.timedelta(seconds=i))
+            for i, origin in enumerate(origins)
+        ]
+        updated_origins = swh_scheduler.record_listed_origins(updated_origins)
+
+        # We expect to retrieve origins with the oldest update date, that is
+        # origins at the end of our updated_origins list.
+        expected_origins = sorted(updated_origins, key=lambda o: o.last_update)
+
+        self._check_grab_next_visit(
+            swh_scheduler,
+            visit_type=visit_type,
+            policy="never_visited_oldest_update_first",
+            expected=expected_origins,
+        )
+
+    def test_grab_next_visits_already_visited_order_by_lag(
+        self, swh_scheduler, listed_origins_by_type,
+    ):
+        visit_type, origins = self._grab_next_visits_setup(
+            swh_scheduler, listed_origins_by_type
+        )
+
+        # Update known origins with a `last_update` field that we control
+        base_date = datetime.datetime(2020, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+        updated_origins = [
+            attr.evolve(origin, last_update=base_date - datetime.timedelta(seconds=i))
+            for i, origin in enumerate(origins)
+        ]
+        updated_origins = swh_scheduler.record_listed_origins(updated_origins)
+
+        # Update the visit stats with a known visit at a controlled date for
+        # half the origins.  Pick the date in the middle of the
+        # updated_origins' `last_update` range
+        visit_date = updated_origins[len(updated_origins) // 2].last_update
+        visited_origins = updated_origins[::2]
+        visit_stats = [
+            OriginVisitStats(
+                url=origin.url,
+                visit_type=origin.visit_type,
+                last_snapshot=hash_to_bytes("d81cc0710eb6cf9efd5b920a8453e1e07157b6cd"),
+                last_eventful=visit_date,
+                last_uneventful=None,
+                last_failed=None,
+                last_notfound=None,
+            )
+            for origin in visited_origins
+        ]
+        swh_scheduler.origin_visit_stats_upsert(visit_stats)
+
+        # We expect to retrieve visited origins with the largest lag, but only
+        # those which haven't been visited since their last update
+        expected_origins = sorted(
+            [origin for origin in visited_origins if origin.last_update > visit_date],
+            key=lambda o: visit_date - o.last_update,
+        )
+
+        self._check_grab_next_visit(
+            swh_scheduler,
+            visit_type=visit_type,
+            policy="already_visited_order_by_lag",
+            expected=expected_origins,
         )
 
     def test_grab_next_visits_underflow(self, swh_scheduler, listed_origins_by_type):

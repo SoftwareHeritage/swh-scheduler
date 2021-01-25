@@ -29,11 +29,15 @@ logger = logging.getLogger(__name__)
 def update_metrics_process(
     env: Environment, update_interval: int
 ) -> Generator[Event, None, None]:
-    """Update the scheduler metrics every `update_interval` seconds, and add
-    them to the SimulationReport"""
+    """Update the scheduler metrics every `update_interval` (simulated) seconds,
+    and add them to the SimulationReport
+    """
+    t0 = env.time
     while True:
         metrics = env.scheduler.update_metrics(timestamp=env.time)
         env.report.record_metrics(env.time, metrics)
+        dt = env.time - t0
+        logger.info("time:%s visits:%s", dt, env.report.total_visits)
         yield env.timeout(update_interval)
 
 
