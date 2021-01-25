@@ -19,14 +19,8 @@ from swh.core.db.common import db_transaction
 from swh.scheduler.utils import utcnow
 
 from .exc import SchedulerException, StaleData, UnknownPolicy
-from .model import (
-    ListedOrigin,
-    ListedOriginPageToken,
-    Lister,
-    OriginVisitStats,
-    PaginatedListedOriginList,
-    SchedulerMetrics,
-)
+from .interface import ListedOriginPageToken, PaginatedListedOriginList
+from .model import ListedOrigin, Lister, OriginVisitStats, SchedulerMetrics
 
 logger = logging.getLogger(__name__)
 
@@ -309,7 +303,7 @@ class SchedulerBackend:
         origins = [ListedOrigin(**d) for d in cur]
 
         if len(origins) == limit:
-            page_token = (origins[-1].lister_id, origins[-1].url)
+            page_token = (str(origins[-1].lister_id), origins[-1].url)
         else:
             page_token = None
 
@@ -335,6 +329,40 @@ class SchedulerBackend:
         ]
         if policy == "oldest_scheduled_first":
             order_by = "origin_visit_stats.last_scheduled NULLS FIRST"
+        elif policy == "never_visited_oldest_update_first":
+            # never visited origins have a NULL last_snapshot
+            where_clauses.append("origin_visit_stats.last_snapshot IS NULL")
+
+            # order by increasing last_update (oldest first)
+            where_clauses.append("listed_origins.last_update IS NOT NULL")
+            order_by = "listed_origins.last_update"
+        elif policy == "already_visited_order_by_lag":
+            # TODO: store "visit lag" in a materialized view?
+
+            # visited origins have a NOT NULL last_snapshot
+            where_clauses.append("origin_visit_stats.last_snapshot IS NOT NULL")
+
+            # ignore origins we have visited after the known last update
+            where_clauses.append("listed_origins.last_update IS NOT NULL")
+            where_clauses.append(
+                """
+              listed_origins.last_update
+              > GREATEST(
+                origin_visit_stats.last_eventful,
+                origin_visit_stats.last_uneventful
+              )
+            """
+            )
+
+            # order by decreasing visit lag
+            order_by = """\
+              listed_origins.last_update
+              - GREATEST(
+                origin_visit_stats.last_eventful,
+                origin_visit_stats.last_uneventful
+              )
+              DESC
+            """
         else:
             raise UnknownPolicy(f"Unknown scheduling policy {policy}")
 
