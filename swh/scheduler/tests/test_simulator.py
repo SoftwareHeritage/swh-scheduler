@@ -52,9 +52,13 @@ def test_run_task_scheduler(swh_scheduler):
         swh_scheduler.create_task_type(task_type)
 
     simulator.fill_test_data(swh_scheduler, num_origins=NUM_ORIGINS)
-    simulator.run(
+    report = simulator.run(
         swh_scheduler,
         scheduler_type="task_scheduler",
         policy=None,
         runtime=TEST_RUNTIME,
     )
+
+    # just check these SimulationReport methods do not crash
+    assert report.format(with_plots=True)
+    assert report.format(with_plots=False)
