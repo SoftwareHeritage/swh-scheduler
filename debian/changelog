@@ -1,3 +1,15 @@
+swh-scheduler (0.10.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.10.0     - (tagged by Nicolas Dandrimont
+    <nicolas@dandrimont.eu> on 2021-02-03 22:53:20 +0100)
+  * Upstream changes:     - Release swh.scheduler 0.10.0     - Eagerly
+    acknowledge celery tasks     - Loads of simulator improvements     -
+    grab_next_visits:     - clean up query building     - account for
+    schedule time to avoid rescheduling visits too fast     - allow
+    overriding the scheduling timestamp for the simulator
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 03 Feb 2021 22:10:13 +0000
+
 swh-scheduler (0.9.2-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.9.2     - (tagged by Antoine Lambert
