@@ -764,7 +764,7 @@ class TestScheduler:
         """Calls grab_next_visits with the passed policy, and check that all
         the origins returned are the expected ones (in the same order), and
         that no extra origins are returned. Also checks the origin visits have
-        been marked as scheduled."""
+        been marked as scheduled, and are only re-scheduled a week later"""
         assert len(expected) != 0
 
         before = utcnow()
@@ -784,6 +784,25 @@ class TestScheduler:
         for visit_stats in visit_stats_list:
             # Check that last_scheduled got updated
             assert before <= visit_stats.last_scheduled <= after
+
+        # They should not be scheduled again
+        ret = swh_scheduler.grab_next_visits(
+            visit_type=visit_type, count=len(expected) + 1, policy=policy,
+        )
+        assert ret == [], "grab_next_visits returned already-scheduled origins"
+
+        # But a week later, they should
+        ret = swh_scheduler.grab_next_visits(
+            visit_type=visit_type,
+            count=len(expected) + 1,
+            policy=policy,
+            timestamp=after + datetime.timedelta(days=7),
+        )
+        # We need to sort them because their 'last_scheduled' field is updated to
+        # exactly the same value, so the order is not deterministic
+        assert sorted(ret) == sorted(
+            expected
+        ), "grab_next_visits didn't reschedule visits after a week"
 
     def test_grab_next_visits_oldest_scheduled_first(
         self, swh_scheduler, listed_origins_by_type,
