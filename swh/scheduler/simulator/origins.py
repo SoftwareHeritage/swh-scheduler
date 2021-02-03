@@ -4,23 +4,65 @@
 # See top-level LICENSE file for more information
 
 """This module implements a model of the frequency of updates of an origin
-and how long it takes to load it."""
+and how long it takes to load it.
 
-from datetime import timedelta
+For each origin, a commit frequency is chosen deterministically based on the
+hash of its URL and assume all origins were created on an arbitrary epoch.
+From this we compute a number of commits, that is the product of these two.
+
+And the run time of a load task is approximated as proportional to the number
+of commits since the previous visit of the origin (possibly 0)."""
+
+from datetime import datetime, timedelta, timezone
 import hashlib
 import logging
-import os
-from typing import Iterator, Optional, Tuple
+from typing import Dict, Generator, Iterator, List, Optional, Tuple
+import uuid
 
 import attr
 from simpy import Event
 
 from swh.model.model import OriginVisitStatus
-from swh.scheduler.model import OriginVisitStats
+from swh.scheduler.model import ListedOrigin
 
 from .common import Environment, Queue, Task, TaskEvent
 
 logger = logging.getLogger(__name__)
+
+
+_nb_generated_origins = 0
+_visit_times: Dict[Tuple[str, str], datetime] = {}
+"""Cache of the time of the last visit of (visit_type, origin_url),
+to spare an SQL query (high latency)."""
+
+
+def generate_listed_origin(
+    lister_id: uuid.UUID, now: Optional[datetime] = None
+) -> ListedOrigin:
+    """Returns a globally unique new origin. Seed the `last_update` value
+    according to the OriginModel and the passed timestamp.
+
+    Arguments:
+      lister: instance of the lister that generated this origin
+      now: time of listing, to emulate last_update (defaults to :func:`datetime.now`)
+    """
+    global _nb_generated_origins
+    _nb_generated_origins += 1
+    assert _nb_generated_origins < 10 ** 6, "Too many origins!"
+
+    if now is None:
+        now = datetime.now(tz=timezone.utc)
+
+    url = f"https://example.com/{_nb_generated_origins:06d}.git"
+    visit_type = "git"
+    origin = OriginModel(visit_type, url)
+
+    return ListedOrigin(
+        lister_id=lister_id,
+        url=url,
+        visit_type=visit_type,
+        last_update=origin.get_last_update(now),
+    )
 
 
 class OriginModel:
@@ -32,6 +74,9 @@ class OriginModel:
 
     PER_COMMIT_RUN_TIME = 0.1
     """Run time per commit"""
+
+    EPOCH = datetime(2015, 9, 1, 0, 0, 0, tzinfo=timezone.utc)
+    """The origin of all origins (at least according to Software Heritage)"""
 
     def __init__(self, type: str, origin: str):
         self.type = type
@@ -56,32 +101,91 @@ class OriginModel:
         return ten_y ** (bucket / num_buckets)
         # return 1 + (ten_y - 1) * (bucket / (num_buckets - 1))
 
-    def load_task_characteristics(
-        self, env: Environment, stats: Optional[OriginVisitStats]
-    ) -> Tuple[float, bool, str]:
-        """Returns the (run_time, eventfulness, end_status) of the next
-        origin visit."""
-        if stats and stats.last_eventful:
-            time_since_last_successful_run = env.time - stats.last_eventful
-        else:
-            time_since_last_successful_run = timedelta(days=365)
+    def get_last_update(self, now: datetime) -> datetime:
+        """Get the last_update value for this origin.
 
-        seconds_between_commits = self.seconds_between_commits()
-        logger.debug(
-            "Interval between commits: %s", timedelta(seconds=seconds_between_commits)
+        We assume that the origin had its first commit at `EPOCH`, and that one
+        commit happened every `self.seconds_between_commits()`. This returns
+        the last commit date before or equal to `now`.
+        """
+        _, time_since_last_commit = divmod(
+            (now - self.EPOCH).total_seconds(), self.seconds_between_commits()
         )
 
+        return now - timedelta(seconds=time_since_last_commit)
+
+    def get_current_snapshot_id(self, now: datetime) -> bytes:
+        """Get the current snapshot for this origin.
+
+        To generate a snapshot id, we calculate the number of commits since the
+        EPOCH, and hash it alongside the origin type and url.
+        """
+        commits_since_epoch, _ = divmod(
+            (now - self.EPOCH).total_seconds(), self.seconds_between_commits()
+        )
+        return hashlib.sha1(
+            f"{self.type} {self.origin} {commits_since_epoch}".encode()
+        ).digest()
+
+    def load_task_characteristics(
+        self, now: datetime
+    ) -> Tuple[float, str, Optional[bytes]]:
+        """Returns the (run_time, end_status, snapshot id) of the next
+        origin visit."""
+        current_snapshot = self.get_current_snapshot_id(now)
+
+        key = (self.type, self.origin)
+        last_visit = _visit_times.get(key, now - timedelta(days=365))
+        time_since_last_successful_run = now - last_visit
+
+        _visit_times[key] = now
+
+        seconds_between_commits = self.seconds_between_commits()
         seconds_since_last_successful = time_since_last_successful_run.total_seconds()
-        if seconds_since_last_successful < seconds_between_commits:
-            # No commits since last visit => uneventful
-            return (self.MIN_RUN_TIME, False, "full")
+        n_commits = int(seconds_since_last_successful / seconds_between_commits)
+        logger.debug(
+            "%s characteristics %s origin=%s: Interval: %s, n_commits: %s",
+            now,
+            self.type,
+            self.origin,
+            timedelta(seconds=seconds_between_commits),
+            n_commits,
+        )
+
+        run_time = self.MIN_RUN_TIME + self.PER_COMMIT_RUN_TIME * n_commits
+        if run_time > self.MAX_RUN_TIME:
+            # Long visits usually fail
+            return (self.MAX_RUN_TIME, "partial", None)
         else:
-            n_commits = seconds_since_last_successful / seconds_between_commits
-            run_time = self.MIN_RUN_TIME + self.PER_COMMIT_RUN_TIME * n_commits
-            if run_time > self.MAX_RUN_TIME:
-                return (self.MAX_RUN_TIME, False, "partial")
-            else:
-                return (run_time, True, "full")
+            return (run_time, "full", current_snapshot)
+
+
+def lister_process(
+    env: Environment, lister_id: uuid.UUID
+) -> Generator[Event, Event, None]:
+    """Every hour, generate new origins and update the `last_update` field for
+    the ones this process generated in the past"""
+    NUM_NEW_ORIGINS = 100
+
+    origins: List[ListedOrigin] = []
+
+    while True:
+        updated_origins = []
+        for origin in origins:
+            model = OriginModel(origin.visit_type, origin.url)
+            updated_origins.append(
+                attr.evolve(origin, last_update=model.get_last_update(env.time))
+            )
+
+        origins = updated_origins
+        origins.extend(
+            generate_listed_origin(lister_id, now=env.time)
+            for _ in range(NUM_NEW_ORIGINS)
+        )
+
+        env.scheduler.record_listed_origins(origins)
+
+        yield env.timeout(3600)
 
 
 def load_task_process(
@@ -92,13 +196,6 @@ def load_task_process(
 
     Uses the `load_task_duration` function to determine its run time.
     """
-    # This is cheating; actual tasks access the state from the storage, not the
-    # scheduler
-    pk = task.origin, task.visit_type
-    visit_stats = env.scheduler.origin_visit_stats_get([pk])
-    stats: Optional[OriginVisitStats] = visit_stats[0] if len(visit_stats) > 0 else None
-    last_snapshot = stats.last_snapshot if stats else None
-
     status = OriginVisitStatus(
         origin=task.origin,
         visit=42,
@@ -107,24 +204,24 @@ def load_task_process(
         date=env.time,
         snapshot=None,
     )
-    origin_model = OriginModel(task.visit_type, task.origin)
-    (run_time, eventful, end_status) = origin_model.load_task_characteristics(
-        env, stats
-    )
     logger.debug("%s task %s origin=%s: Start", env.time, task.visit_type, task.origin)
     yield status_queue.put(TaskEvent(task=task, status=status))
+
+    origin_model = OriginModel(task.visit_type, task.origin)
+    (run_time, end_status, snapshot) = origin_model.load_task_characteristics(env.time)
     yield env.timeout(run_time)
+
     logger.debug("%s task %s origin=%s: End", env.time, task.visit_type, task.origin)
 
-    new_snapshot = os.urandom(20) if eventful else last_snapshot
     yield status_queue.put(
         TaskEvent(
             task=task,
             status=attr.evolve(
-                status, status=end_status, date=env.time, snapshot=new_snapshot
+                status, status=end_status, date=env.time, snapshot=snapshot
             ),
-            eventful=eventful,
         )
     )
 
-    env.report.record_visit(run_time, eventful, end_status)
+    env.report.record_visit(
+        (task.visit_type, task.origin), run_time, end_status, snapshot
+    )

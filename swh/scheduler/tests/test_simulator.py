@@ -3,6 +3,8 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import io
+
 import pytest
 
 from swh.core.api.classes import stream_results
@@ -26,7 +28,14 @@ def test_fill_test_data(swh_scheduler):
     assert len(res) == NUM_ORIGINS
 
 
-@pytest.mark.parametrize("policy", ("oldest_scheduled_first",))
+@pytest.mark.parametrize(
+    "policy",
+    (
+        "oldest_scheduled_first",
+        "never_visited_oldest_update_first",
+        "already_visited_order_by_lag",
+    ),
+)
 def test_run_origin_scheduler(swh_scheduler, policy):
     for task_type in TASK_TYPES.values():
         swh_scheduler.create_task_type(task_type)
@@ -45,9 +54,16 @@ def test_run_task_scheduler(swh_scheduler):
         swh_scheduler.create_task_type(task_type)
 
     simulator.fill_test_data(swh_scheduler, num_origins=NUM_ORIGINS)
-    simulator.run(
+    report = simulator.run(
         swh_scheduler,
         scheduler_type="task_scheduler",
         policy=None,
         runtime=TEST_RUNTIME,
     )
+
+    # just check these SimulationReport methods do not crash
+    assert report.format(with_plots=True)
+    assert report.format(with_plots=False)
+    fobj = io.StringIO()
+    report.metrics_csv(fobj=fobj)
+    assert fobj.getvalue()

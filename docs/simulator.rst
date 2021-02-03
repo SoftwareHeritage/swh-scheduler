@@ -63,3 +63,18 @@ beforehand:
    # Run the simulator itself, interacting with the scheduler database you've
    # just seeded.
    swh scheduler -d "dbname=$PGDATABASE" simulator run --scheduler origin_scheduler
+
+
+Origin model
+------------
+
+The origin model is how we represent the behaviors of origins: when they are
+created/discovered, how many commits they get and when, and when they fail to load.
+
+For now it is only a simple approximation designed to exercise simple cases:
+origin creation/discovery, a continuous stream of commits, and failure if they have
+too many commits to load at once.
+For details, see :py:`swh.scheduler.simulator.origins`.
+
+To keep the simulation fast enough, each origin's state is kept in memory, so the
+simulator process will linearly increase in memory usage as it runs.

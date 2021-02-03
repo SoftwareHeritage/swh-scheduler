@@ -17,11 +17,10 @@ from typing import Dict, Generator, Optional
 from simpy import Event
 
 from swh.scheduler.interface import SchedulerInterface
-from swh.scheduler.model import ListedOrigin
 
 from . import origin_scheduler, task_scheduler
 from .common import Environment, Queue, SimulationReport, Task
-from .origins import load_task_process
+from .origins import generate_listed_origin, lister_process, load_task_process
 
 logger = logging.getLogger(__name__)
 
@@ -105,21 +104,18 @@ def setup(
             worker_name = f"worker-{visit_type}-{i}"
             env.process(worker_process(env, worker_name, task_queue, status_queue))
 
+    lister = env.scheduler.get_or_create_lister(name="example")
+    assert lister.id
+    env.process(lister_process(env, lister.id))
+
 
 def fill_test_data(scheduler: SchedulerInterface, num_origins: int = 100000):
     """Fills the database with mock data to test the simulator."""
     stored_lister = scheduler.get_or_create_lister(name="example")
     assert stored_lister.id is not None
 
-    origins = [
-        ListedOrigin(
-            lister_id=stored_lister.id,
-            url=f"https://example.com/{i:04d}.git",
-            visit_type="git",
-            last_update=datetime(2020, 6, 15, 16, 0, 0, i, tzinfo=timezone.utc),
-        )
-        for i in range(num_origins)
-    ]
+    # Generate 'num_origins' new origins
+    origins = [generate_listed_origin(stored_lister.id) for _ in range(num_origins)]
     scheduler.record_listed_origins(origins)
 
     scheduler.create_tasks(
@@ -164,4 +160,4 @@ def run(
         print("total simulated time:", end_time - start_time)
         metrics = env.scheduler.update_metrics(timestamp=end_time)
         env.report.record_metrics(end_time, metrics)
-        print(env.report.format())
+        return env.report
