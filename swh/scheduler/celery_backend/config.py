@@ -286,9 +286,9 @@ CELERY_DEFAULT_CONFIG = dict(
     task_serializer="msgpack",
     # Result serialization format
     result_serializer="msgpack",
-    # Late ack means the task messages will be acknowledged after the task has
-    # been executed, not just before, which is the default behavior.
-    task_acks_late=True,
+    # Acknowledge tasks as soon as they're received. We can do this as we have
+    # external monitoring to decide if we need to retry tasks.
+    task_acks_late=False,
     # A string identifying the default serialization method to use.
     # Can be pickle (default), json, yaml, msgpack or any custom serialization
     # methods that have been registered with kombu.serialization.registry
