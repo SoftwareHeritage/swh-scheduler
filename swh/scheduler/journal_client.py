@@ -80,6 +80,10 @@ def process_journal_objects(
             visit_stats_d["last_notfound"] = max_date(
                 msg_dict["date"], visit_stats_d.get("last_notfound")
             )
+        elif msg_dict["status"] == "failed":
+            visit_stats_d["last_failed"] = max_date(
+                msg_dict["date"], visit_stats_d.get("last_failed")
+            )
         elif msg_dict["snapshot"] is None:
             visit_stats_d["last_failed"] = max_date(
                 msg_dict["date"], visit_stats_d.get("last_failed")

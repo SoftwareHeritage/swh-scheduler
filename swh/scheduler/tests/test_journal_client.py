@@ -214,6 +214,44 @@ def test_journal_client_origin_visit_status_from_journal_last_failed(swh_schedul
     ]
 
 
+def test_journal_client_origin_visit_status_from_journal_last_failed2(swh_scheduler):
+    visit_statuses = [
+        {
+            "origin": "bar",
+            "visit": 2,
+            "status": "failed",
+            "date": DATE1,
+            "type": "git",
+            "snapshot": hash_to_bytes("d81cc0710eb6cf9efd5b920a8453e1e07157b6cd"),
+        },
+        {
+            "origin": "bar",
+            "visit": 3,
+            "status": "failed",
+            "date": DATE2,
+            "type": "git",
+            "snapshot": None,
+        },
+    ]
+
+    process_journal_objects(
+        {"origin_visit_status": visit_statuses}, scheduler=swh_scheduler
+    )
+
+    actual_origin_visit_stats = swh_scheduler.origin_visit_stats_get([("bar", "git")])
+    assert actual_origin_visit_stats == [
+        OriginVisitStats(
+            url="bar",
+            visit_type="git",
+            last_eventful=None,
+            last_uneventful=None,
+            last_failed=DATE2,
+            last_notfound=None,
+            last_snapshot=None,
+        )
+    ]
+
+
 def test_journal_client_origin_visit_status_from_journal_last_eventful(swh_scheduler):
     visit_statuses = [
         {
