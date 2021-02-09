@@ -6,6 +6,7 @@
 import datetime
 import functools
 from itertools import permutations
+from unittest.mock import Mock
 
 import pytest
 
@@ -67,6 +68,9 @@ def test_journal_client_origin_visit_status_from_journal_ignored_status(swh_sche
     """Only final statuses (full, partial) are important, the rest remain ignored.
 
     """
+    # Trace method calls on the swh_scheduler
+    swh_scheduler = Mock(wraps=swh_scheduler)
+
     visit_statuses = [
         {
             "origin": "foo",
@@ -90,11 +94,33 @@ def test_journal_client_origin_visit_status_from_journal_ignored_status(swh_sche
         {"origin_visit_status": visit_statuses}, scheduler=swh_scheduler
     )
 
-    # Ensure those visit status are ignored
-    actual_origin_visit_stats = swh_scheduler.origin_visit_stats_get(
-        [(vs["origin"], vs["type"]) for vs in visit_statuses]
+    # All messages have been ignored: no stats have been upserted
+    swh_scheduler.origin_visit_stats_upsert.assert_not_called()
+
+
+def test_journal_client_ignore_missing_type(swh_scheduler):
+    """Ignore statuses with missing type key"""
+    # Trace method calls on the swh_scheduler
+    swh_scheduler = Mock(wraps=swh_scheduler)
+
+    date = utcnow()
+    snapshot = hash_to_bytes("dddcc0710eb6cf9efd5b920a8453e1e07157bddd")
+    visit_statuses = [
+        {
+            "origin": "foo",
+            "visit": 1,
+            "status": "full",
+            "date": date,
+            "snapshot": snapshot,
+        },
+    ]
+
+    process_journal_objects(
+        {"origin_visit_status": visit_statuses}, scheduler=swh_scheduler
     )
-    assert actual_origin_visit_stats == []
+
+    # The message has been ignored: no stats have been upserted
+    swh_scheduler.origin_visit_stats_upsert.assert_not_called()
 
 
 def test_journal_client_origin_visit_status_from_journal_last_notfound(swh_scheduler):

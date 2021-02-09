@@ -42,8 +42,13 @@ def process_journal_objects(
     assert msg_type in messages, f"Expected {msg_type} messages"
 
     interesting_messages = [
-        msg for msg in messages[msg_type] if msg["status"] not in ("created", "ongoing")
+        msg
+        for msg in messages[msg_type]
+        if "type" in msg and msg["status"] not in ("created", "ongoing")
     ]
+
+    if not interesting_messages:
+        return
 
     origin_visit_stats: Dict[Tuple[str, str], Dict] = {
         (visit_stats.url, visit_stats.visit_type): attr.asdict(visit_stats)
