@@ -19,18 +19,11 @@ def max_date(*dates: Optional[datetime]) -> datetime:
 
     At least one date must be not None.
     """
-    datesok: Tuple[datetime, ...] = tuple(d for d in dates if d is not None)
-    if not datesok:
+    filtered_dates = [d for d in dates if d is not None]
+    if not filtered_dates:
         raise ValueError("At least one date should be a valid datetime")
 
-    maxdate = datesok[0]
-    if len(datesok) == 1:
-        return maxdate
-
-    for d in datesok[1:]:
-        maxdate = max(d, maxdate)
-
-    return maxdate
+    return max(filtered_dates)
 
 
 def process_journal_objects(
