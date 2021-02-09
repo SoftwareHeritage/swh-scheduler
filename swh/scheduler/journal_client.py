@@ -120,12 +120,14 @@ def process_journal_objects(
                     ):
                         # we receive an old message which is an earlier "eventful" event
                         # than what we had, we consider the last_eventful event as
-                        # actually an uneventful event. The true eventful message is the
-                        # current one
-                        visit_stats_d["last_uneventful"] = visit_stats_d[
-                            "last_eventful"
-                        ]
-                        visit_stats_d["last_eventful"] = current_status_date
+                        # actually an uneventful event.
+                        # The last uneventful visit remains the most recent:
+                        # max, previously computed
+                        visit_stats_d["last_uneventful"] = latest_recorded_visit_date
+                        # The eventful visit remains the oldest one: min
+                        visit_stats_d["last_eventful"] = min(
+                            visit_stats_d["last_eventful"], current_status_date
+                        )
                     elif (
                         latest_recorded_visit_date
                         and current_status_date == latest_recorded_visit_date

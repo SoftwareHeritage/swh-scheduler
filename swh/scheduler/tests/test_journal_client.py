@@ -26,6 +26,7 @@ def test_journal_client_origin_visit_status_from_journal_fail(swh_scheduler):
 
 
 ONE_DAY = datetime.timedelta(days=1)
+ONE_YEAR = datetime.timedelta(days=366)
 
 DATE3 = utcnow()
 DATE2 = DATE3 - ONE_DAY
@@ -662,5 +663,64 @@ def test_journal_client_origin_visit_status_several_upsert(swh_scheduler):
     )
 
     assert swh_scheduler.origin_visit_stats_get([("foo", "git")]) == [
+        expected_visit_stats
+    ]
+
+
+VISIT_STATUSES_SAME_SNAPSHOT = [
+    {**ovs, "date": DATE1 + n * ONE_YEAR}
+    for n, ovs in enumerate(
+        [
+            {
+                "origin": "cavabarder",
+                "type": "hg",
+                "visit": 3,
+                "status": "full",
+                "snapshot": hash_to_bytes("aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"),
+            },
+            {
+                "origin": "cavabarder",
+                "type": "hg",
+                "visit": 4,
+                "status": "full",
+                "snapshot": hash_to_bytes("aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"),
+            },
+            {
+                "origin": "cavabarder",
+                "type": "hg",
+                "visit": 4,
+                "status": "full",
+                "snapshot": hash_to_bytes("aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"),
+            },
+        ]
+    )
+]
+
+
+@pytest.mark.parametrize(
+    "visit_statuses",
+    permutations(VISIT_STATUSES_SAME_SNAPSHOT, len(VISIT_STATUSES_SAME_SNAPSHOT)),
+)
+def test_journal_client_origin_visit_statuses_same_snapshot_permutation(
+    visit_statuses, swh_scheduler
+):
+    """Ensure out of order topic subscription ends up in the same final state
+
+    """
+    process_journal_objects(
+        {"origin_visit_status": visit_statuses}, scheduler=swh_scheduler
+    )
+
+    expected_visit_stats = OriginVisitStats(
+        url="cavabarder",
+        visit_type="hg",
+        last_eventful=DATE1,
+        last_uneventful=DATE1 + 2 * ONE_YEAR,
+        last_failed=None,
+        last_notfound=None,
+        last_snapshot=hash_to_bytes("aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"),
+    )
+
+    assert swh_scheduler.origin_visit_stats_get([("cavabarder", "hg")]) == [
         expected_visit_stats
     ]
