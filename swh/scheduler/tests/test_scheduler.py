@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import uuid
 
 import attr
+from psycopg2.extras import execute_values
 import pytest
 
 from swh.model.hashutil import hash_to_bytes
@@ -942,6 +943,31 @@ class TestScheduler:
 
     def test_origin_visit_stats_get_empty(self, swh_scheduler) -> None:
         assert swh_scheduler.origin_visit_stats_get([]) == []
+
+    def test_origin_visit_stats_get_pagination(self, swh_scheduler) -> None:
+        page_size = inspect.signature(execute_values).parameters["page_size"].default
+
+        visit_stats = [
+            OriginVisitStats(
+                url=f"https://example.com/origin-{i:03d}",
+                visit_type="git",
+                last_eventful=utcnow(),
+                last_uneventful=None,
+                last_failed=None,
+                last_notfound=None,
+            )
+            for i in range(
+                page_size + 1
+            )  # Ensure overflow of the psycopg2.extras.execute_values page_size
+        ]
+
+        swh_scheduler.origin_visit_stats_upsert(visit_stats)
+
+        assert set(
+            swh_scheduler.origin_visit_stats_get(
+                [(ovs.url, ovs.visit_type) for ovs in visit_stats]
+            )
+        ) == set(visit_stats)
 
     def test_origin_visit_stats_upsert(self, swh_scheduler) -> None:
         eventful_date = utcnow()

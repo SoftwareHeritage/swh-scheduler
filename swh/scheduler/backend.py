@@ -934,8 +934,10 @@ class SchedulerBackend:
         """,
             OriginVisitStats.select_columns(),
         )
-        psycopg2.extras.execute_values(cur=cur, sql=query, argslist=primary_keys)
-        return [OriginVisitStats(**row) for row in cur.fetchall()]
+        rows = psycopg2.extras.execute_values(
+            cur=cur, sql=query, argslist=primary_keys, fetch=True
+        )
+        return [OriginVisitStats(**row) for row in rows]
 
     @db_transaction()
     def update_metrics(
