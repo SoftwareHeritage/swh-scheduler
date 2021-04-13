@@ -658,6 +658,45 @@ class SchedulerBackend:
         logger.debug("GRAB %s => %s" % (task_type, cur.rowcount))
         return cur.fetchall()
 
+    @db_transaction()
+    def peek_ready_priority_tasks(
+        self,
+        task_type: str,
+        timestamp: Optional[datetime.datetime] = None,
+        num_tasks: Optional[int] = None,
+        db=None,
+        cur=None,
+    ) -> List[Dict]:
+        if timestamp is None:
+            timestamp = utcnow()
+
+        cur.execute(
+            """select * from swh_scheduler_peek_any_ready_priority_tasks(
+                %s, %s, %s :: bigint)""",
+            (task_type, timestamp, num_tasks),
+        )
+        logger.debug("PEEK %s => %s", task_type, cur.rowcount)
+        return cur.fetchall()
+
+    @db_transaction()
+    def grab_ready_priority_tasks(
+        self,
+        task_type: str,
+        timestamp: Optional[datetime.datetime] = None,
+        num_tasks: Optional[int] = None,
+        db=None,
+        cur=None,
+    ) -> List[Dict]:
+        if timestamp is None:
+            timestamp = utcnow()
+        cur.execute(
+            """select * from swh_scheduler_grab_any_ready_priority_tasks(
+                 %s, %s, %s :: bigint)""",
+            (task_type, timestamp, num_tasks),
+        )
+        logger.debug("GRAB %s => %s", task_type, cur.rowcount)
+        return cur.fetchall()
+
     task_run_create_keys = ["task", "backend_id", "scheduled", "metadata"]
 
     @db_transaction()

@@ -58,6 +58,8 @@ def test_site_map(flask_app_client):
             "task/get",
             "task/grab_ready",
             "task/peek_ready",
+            "task/grab_ready_with_priority",
+            "task/peek_ready_with_priority",
             "task/search",
             "task/set_status",
             "task_run/end",

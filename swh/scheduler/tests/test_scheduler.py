@@ -21,7 +21,13 @@ from swh.scheduler.interface import ListedOriginPageToken, SchedulerInterface
 from swh.scheduler.model import ListedOrigin, OriginVisitStats, SchedulerMetrics
 from swh.scheduler.utils import utcnow
 
-from .common import LISTERS, TASK_TYPES, TEMPLATES, tasks_from_template
+from .common import (
+    LISTERS,
+    TASK_TYPES,
+    TEMPLATES,
+    tasks_from_template,
+    tasks_with_priority_from_template,
+)
 
 ONEDAY = datetime.timedelta(days=1)
 
@@ -291,6 +297,39 @@ class TestScheduler:
             del grabbed["status"]
             assert peeked == grabbed
             assert peeked["priority"] == grabbed["priority"]
+
+    def test_grab_ready_priority_tasks(self, swh_scheduler):
+        """check the grab and peek priority tasks endpoint behave as expected"""
+        self._create_task_types(swh_scheduler)
+        t = utcnow()
+        task_type = TEMPLATES["git"]["type"]
+        num_tasks = 100
+        # Create tasks with and without priorities
+        tasks0 = tasks_with_priority_from_template(
+            TEMPLATES["git"], t, num_tasks, "high",
+        )
+        tasks1 = tasks_with_priority_from_template(
+            TEMPLATES["hg"], t, num_tasks, "low",
+        )
+        tasks2 = tasks_with_priority_from_template(
+            TEMPLATES["hg"], t, num_tasks, "normal",
+        )
+        tasks = tasks0 + tasks1 + tasks2
+
+        random.shuffle(tasks)
+        swh_scheduler.create_tasks(tasks)
+
+        ready_tasks = swh_scheduler.peek_ready_priority_tasks(task_type, num_tasks=50)
+        grabbed_tasks = swh_scheduler.grab_ready_priority_tasks(task_type, num_tasks=50)
+
+        for peeked, grabbed in zip(ready_tasks, grabbed_tasks):
+            assert peeked["status"] == "next_run_not_scheduled"
+            del peeked["status"]
+            assert grabbed["status"] == "next_run_scheduled"
+            del grabbed["status"]
+            assert peeked == grabbed
+            assert peeked["priority"] == grabbed["priority"]
+            assert peeked["priority"] is not None
 
     def test_get_tasks(self, swh_scheduler):
         self._create_task_types(swh_scheduler)
