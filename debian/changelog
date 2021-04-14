@@ -1,3 +1,18 @@
+swh-scheduler (0.11.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.11.0     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2021-04-14 18:15:53
+    +0200)
+  * Upstream changes:     - v0.11.0     - separate-queues backend: Open
+    endpoints to peek/grab tasks with any priority     - Make
+    origin_visit_stats_get return results from all pages     - journal
+    client: Filter out status messages without type     - Simplify
+    max_date()     - journal_client: Fix date computations for
+    (un)eventful visits     - journal_client: Deal with failed status
+    message
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 14 Apr 2021 16:19:31 +0000
+
 swh-scheduler (0.10.0-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.10.0     - (tagged by Nicolas Dandrimont
