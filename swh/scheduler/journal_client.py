@@ -19,18 +19,11 @@ def max_date(*dates: Optional[datetime]) -> datetime:
 
     At least one date must be not None.
     """
-    datesok: Tuple[datetime, ...] = tuple(d for d in dates if d is not None)
-    if not datesok:
+    filtered_dates = [d for d in dates if d is not None]
+    if not filtered_dates:
         raise ValueError("At least one date should be a valid datetime")
 
-    maxdate = datesok[0]
-    if len(datesok) == 1:
-        return maxdate
-
-    for d in datesok[1:]:
-        maxdate = max(d, maxdate)
-
-    return maxdate
+    return max(filtered_dates)
 
 
 def process_journal_objects(
@@ -49,8 +42,13 @@ def process_journal_objects(
     assert msg_type in messages, f"Expected {msg_type} messages"
 
     interesting_messages = [
-        msg for msg in messages[msg_type] if msg["status"] not in ("created", "ongoing")
+        msg
+        for msg in messages[msg_type]
+        if "type" in msg and msg["status"] not in ("created", "ongoing")
     ]
+
+    if not interesting_messages:
+        return
 
     origin_visit_stats: Dict[Tuple[str, str], Dict] = {
         (visit_stats.url, visit_stats.visit_type): attr.asdict(visit_stats)
@@ -79,6 +77,10 @@ def process_journal_objects(
         if msg_dict["status"] == "not_found":
             visit_stats_d["last_notfound"] = max_date(
                 msg_dict["date"], visit_stats_d.get("last_notfound")
+            )
+        elif msg_dict["status"] == "failed":
+            visit_stats_d["last_failed"] = max_date(
+                msg_dict["date"], visit_stats_d.get("last_failed")
             )
         elif msg_dict["snapshot"] is None:
             visit_stats_d["last_failed"] = max_date(
@@ -116,12 +118,14 @@ def process_journal_objects(
                     ):
                         # we receive an old message which is an earlier "eventful" event
                         # than what we had, we consider the last_eventful event as
-                        # actually an uneventful event. The true eventful message is the
-                        # current one
-                        visit_stats_d["last_uneventful"] = visit_stats_d[
-                            "last_eventful"
-                        ]
-                        visit_stats_d["last_eventful"] = current_status_date
+                        # actually an uneventful event.
+                        # The last uneventful visit remains the most recent:
+                        # max, previously computed
+                        visit_stats_d["last_uneventful"] = latest_recorded_visit_date
+                        # The eventful visit remains the oldest one: min
+                        visit_stats_d["last_eventful"] = min(
+                            visit_stats_d["last_eventful"], current_status_date
+                        )
                     elif (
                         latest_recorded_visit_date
                         and current_status_date == latest_recorded_visit_date

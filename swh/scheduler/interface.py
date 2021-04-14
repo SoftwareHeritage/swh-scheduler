@@ -166,6 +166,47 @@ class SchedulerInterface(Protocol):
         """
         ...
 
+    @remote_api_endpoint("task/peek_ready_with_priority")
+    def peek_ready_priority_tasks(
+        self,
+        task_type: str,
+        timestamp: Optional[datetime.datetime] = None,
+        num_tasks: Optional[int] = None,
+    ) -> List[Dict]:
+        """Fetch list of tasks (with any priority) ready to be scheduled.
+
+        Args:
+            task_type: filtering task per their type
+            timestamp: peek tasks that need to be executed before that timestamp
+            num_tasks: only peek at num_tasks tasks (with no priority)
+
+        Returns:
+            a list of tasks
+
+        """
+        ...
+
+    @remote_api_endpoint("task/grab_ready_with_priority")
+    def grab_ready_priority_tasks(
+        self,
+        task_type: str,
+        timestamp: Optional[datetime.datetime] = None,
+        num_tasks: Optional[int] = None,
+    ) -> List[Dict]:
+        """Fetch and schedule the list of tasks (with any priority) ready to be scheduled.
+
+        Args:
+            task_type: filtering task per their type
+            timestamp: grab tasks that need to be executed
+                before that timestamp
+            num_tasks: only grab num_tasks tasks (with no priority)
+
+        Returns:
+            a list of tasks
+
+        """
+        ...
+
     @remote_api_endpoint("task_run/schedule_one")
     def schedule_task_run(self, task_id, backend_id, metadata=None, timestamp=None):
         """Mark a given task as scheduled, adding a task_run entry in the database.
