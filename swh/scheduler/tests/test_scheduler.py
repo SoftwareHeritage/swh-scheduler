@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import uuid
 
 import attr
+from psycopg2.extras import execute_values
 import pytest
 
 from swh.model.hashutil import hash_to_bytes
@@ -20,7 +21,13 @@ from swh.scheduler.interface import ListedOriginPageToken, SchedulerInterface
 from swh.scheduler.model import ListedOrigin, OriginVisitStats, SchedulerMetrics
 from swh.scheduler.utils import utcnow
 
-from .common import LISTERS, TASK_TYPES, TEMPLATES, tasks_from_template
+from .common import (
+    LISTERS,
+    TASK_TYPES,
+    TEMPLATES,
+    tasks_from_template,
+    tasks_with_priority_from_template,
+)
 
 ONEDAY = datetime.timedelta(days=1)
 
@@ -290,6 +297,39 @@ class TestScheduler:
             del grabbed["status"]
             assert peeked == grabbed
             assert peeked["priority"] == grabbed["priority"]
+
+    def test_grab_ready_priority_tasks(self, swh_scheduler):
+        """check the grab and peek priority tasks endpoint behave as expected"""
+        self._create_task_types(swh_scheduler)
+        t = utcnow()
+        task_type = TEMPLATES["git"]["type"]
+        num_tasks = 100
+        # Create tasks with and without priorities
+        tasks0 = tasks_with_priority_from_template(
+            TEMPLATES["git"], t, num_tasks, "high",
+        )
+        tasks1 = tasks_with_priority_from_template(
+            TEMPLATES["hg"], t, num_tasks, "low",
+        )
+        tasks2 = tasks_with_priority_from_template(
+            TEMPLATES["hg"], t, num_tasks, "normal",
+        )
+        tasks = tasks0 + tasks1 + tasks2
+
+        random.shuffle(tasks)
+        swh_scheduler.create_tasks(tasks)
+
+        ready_tasks = swh_scheduler.peek_ready_priority_tasks(task_type, num_tasks=50)
+        grabbed_tasks = swh_scheduler.grab_ready_priority_tasks(task_type, num_tasks=50)
+
+        for peeked, grabbed in zip(ready_tasks, grabbed_tasks):
+            assert peeked["status"] == "next_run_not_scheduled"
+            del peeked["status"]
+            assert grabbed["status"] == "next_run_scheduled"
+            del grabbed["status"]
+            assert peeked == grabbed
+            assert peeked["priority"] == grabbed["priority"]
+            assert peeked["priority"] is not None
 
     def test_get_tasks(self, swh_scheduler):
         self._create_task_types(swh_scheduler)
@@ -942,6 +982,31 @@ class TestScheduler:
 
     def test_origin_visit_stats_get_empty(self, swh_scheduler) -> None:
         assert swh_scheduler.origin_visit_stats_get([]) == []
+
+    def test_origin_visit_stats_get_pagination(self, swh_scheduler) -> None:
+        page_size = inspect.signature(execute_values).parameters["page_size"].default
+
+        visit_stats = [
+            OriginVisitStats(
+                url=f"https://example.com/origin-{i:03d}",
+                visit_type="git",
+                last_eventful=utcnow(),
+                last_uneventful=None,
+                last_failed=None,
+                last_notfound=None,
+            )
+            for i in range(
+                page_size + 1
+            )  # Ensure overflow of the psycopg2.extras.execute_values page_size
+        ]
+
+        swh_scheduler.origin_visit_stats_upsert(visit_stats)
+
+        assert set(
+            swh_scheduler.origin_visit_stats_get(
+                [(ovs.url, ovs.visit_type) for ovs in visit_stats]
+            )
+        ) == set(visit_stats)
 
     def test_origin_visit_stats_upsert(self, swh_scheduler) -> None:
         eventful_date = utcnow()

@@ -5,6 +5,7 @@
 
 import copy
 import datetime
+from typing import Dict, List
 
 TEMPLATES = {
     "git": {
@@ -49,21 +50,30 @@ TASK_TYPES = {
 }
 
 
-def tasks_from_template(template, max_timestamp, num, num_priority=0, priorities=None):
+def _task_from_template(
+    template: Dict, next_run: datetime.datetime, priority: str, *args, **kwargs
+) -> Dict:
+    ret = copy.deepcopy(template)
+    ret["next_run"] = next_run
+    if priority:
+        ret["priority"] = priority
+    if args:
+        ret["arguments"]["args"] = list(args)
+    if kwargs:
+        ret["arguments"]["kwargs"] = kwargs
+    return ret
+
+
+def tasks_from_template(
+    template: Dict,
+    max_timestamp: datetime.datetime,
+    num: int,
+    num_priority: int = 0,
+    priorities: Dict = {},
+) -> List[Dict]:
     """Build tasks from template
 
     """
-
-    def _task_from_template(template, next_run, priority, *args, **kwargs):
-        ret = copy.deepcopy(template)
-        ret["next_run"] = next_run
-        if priority:
-            ret["priority"] = priority
-        if args:
-            ret["arguments"]["args"] = list(args)
-        if kwargs:
-            ret["arguments"]["kwargs"] = kwargs
-        return ret
 
     def _pop_priority(priorities):
         if not priorities:
@@ -92,6 +102,24 @@ def tasks_from_template(template, max_timestamp, num, num_priority=0, priorities
             )
         )
     return tasks
+
+
+def tasks_with_priority_from_template(
+    template: Dict, max_timestamp: datetime.datetime, num: int, priority: str
+) -> List[Dict]:
+    """Build tasks with priority from template
+
+    """
+    return [
+        _task_from_template(
+            template,
+            max_timestamp - datetime.timedelta(microseconds=i),
+            priority,
+            "argument-%03d" % i,
+            **{"kwarg%03d" % i: "bogus-kwarg"},
+        )
+        for i in range(num)
+    ]
 
 
 LISTERS = (
