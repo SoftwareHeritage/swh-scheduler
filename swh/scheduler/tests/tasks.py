@@ -1,12 +1,18 @@
-# Copyright (C) 2018-2019  The Software Heritage developers
+# Copyright (C) 2018-2021  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
 from celery import group, shared_task
 
+TASK_PING = "swh.scheduler.tests.tasks.ping"
+TASK_MULTIPING = "swh.scheduler.tests.tasks.multiping"
+TASK_ERROR = "swh.scheduler.tests.tasks.error"
+TASK_ADD = "swh.scheduler.tests.tasks.add"
+TASK_ECHO = "swh.scheduler.tests.tasks.echo"
 
-@shared_task(name="swh.scheduler.tests.tasks.ping", bind=True)
+
+@shared_task(name=TASK_PING, bind=True)
 def ping(self, **kw):
     # check this is a SWHTask
     assert hasattr(self, "log")
@@ -18,7 +24,7 @@ def ping(self, **kw):
     return "OK"
 
 
-@shared_task(name="swh.scheduler.tests.tasks.multiping", bind=True)
+@shared_task(name=TASK_MULTIPING, bind=True)
 def multiping(self, n=10):
     promise = group(ping.s(i=i) for i in range(n))()
     self.log.debug("%s OK (spawned %s subtasks)" % (self.name, n))
@@ -26,17 +32,17 @@ def multiping(self, n=10):
     return promise.id
 
 
-@shared_task(name="swh.scheduler.tests.tasks.error")
+@shared_task(name=TASK_ERROR)
 def not_implemented():
     raise NotImplementedError("Nope")
 
 
-@shared_task(name="swh.scheduler.tests.tasks.add")
+@shared_task(name=TASK_ADD)
 def add(x, y):
     return x + y
 
 
-@shared_task(name="swh.scheduler.tests.tasks.echo")
+@shared_task(name=TASK_ECHO)
 def echo(**kw):
     "Does nothing, just return the given kwargs dict"
     return kw
