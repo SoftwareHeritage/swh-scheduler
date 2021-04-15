@@ -47,8 +47,8 @@ def scheduler_journal_client_process(
     env: Environment, status_queue: Queue
 ) -> Generator[Event, TaskEvent, None]:
     """Scheduler journal client. Every once in a while, pulls
-    `OriginVisitStatus`es from the status_queue to update the scheduler
-    origin_visit_stats table."""
+    :class:`OriginVisitStatuses <swh.model.model.OriginVisitStatus>`
+    from the status_queue to update the scheduler origin_visit_stats table."""
     BATCH_SIZE = 100
 
     statuses: List[Dict[str, Any]] = []

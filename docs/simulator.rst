@@ -74,7 +74,7 @@ created/discovered, how many commits they get and when, and when they fail to lo
 For now it is only a simple approximation designed to exercise simple cases:
 origin creation/discovery, a continuous stream of commits, and failure if they have
 too many commits to load at once.
-For details, see :py:`swh.scheduler.simulator.origins`.
+For details, see :py:mod:`swh.scheduler.simulator.origins`.
 
 To keep the simulation fast enough, each origin's state is kept in memory, so the
 simulator process will linearly increase in memory usage as it runs.

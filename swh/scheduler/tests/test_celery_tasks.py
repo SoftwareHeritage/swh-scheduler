@@ -1,3 +1,10 @@
+# Copyright (C) 2019-2021 The Software Heritage developers
+# See the AUTHORS file at the top-level directory of this distribution
+# License: GNU General Public License version 3, or any later version
+# See top-level LICENSE file for more information
+
+"""Module in charge of testing the scheduler runner module"""
+
 from itertools import count
 from time import sleep
 
@@ -70,20 +77,93 @@ def test_scheduler_fixture(
         AsyncResult(id=task["backend_id"]).get()
 
 
-def test_task_return_value(
+def test_run_ready_task_standard(
     swh_scheduler_celery_app, swh_scheduler_celery_worker, swh_scheduler
 ):
-    task_type = swh_scheduler.get_task_type("swh-test-add")
+    """Ensure scheduler runner schedules tasks ready for scheduling"""
+    task_type_name, backend_name = "swh-test-add", "swh.scheduler.tests.tasks.add"
+    task_type = swh_scheduler.get_task_type(task_type_name)
     assert task_type
-    assert task_type["backend_name"] == "swh.scheduler.tests.tasks.add"
+    assert task_type["backend_name"] == backend_name
 
-    swh_scheduler.create_tasks([create_task_dict("swh-test-add", "oneshot", 12, 30)])
+    task_inputs = [
+        ("oneshot", (12, 30)),
+        ("oneshot", (20, 10)),
+        ("recurring", (30, 10)),
+    ]
+
+    tasks = swh_scheduler.create_tasks(
+        create_task_dict(task_type_name, policy, *args)
+        for (policy, args) in task_inputs
+    )
+
+    assert len(tasks) == len(task_inputs)
+
+    task_ids = set()
+    for task in tasks:
+        assert task["status"] == "next_run_not_scheduled"
+        assert task["priority"] is None
+        task_ids.add(task["id"])
 
     backend_tasks = run_ready_tasks(swh_scheduler, swh_scheduler_celery_app)
-    assert len(backend_tasks) == 1
-    task = backend_tasks[0]
-    value = AsyncResult(id=task["backend_id"]).get()
-    assert value == 42
+    assert len(backend_tasks) == len(tasks)
+
+    scheduled_tasks = swh_scheduler.search_tasks(task_type=task_type_name)
+    assert len(scheduled_tasks) == len(tasks)
+    for task in scheduled_tasks:
+        assert task["status"] == "next_run_scheduled"
+        assert task["id"] in task_ids
+
+    for i, (_, args) in enumerate(task_inputs):
+        # take one of the task and read it from the queue backend
+        task = backend_tasks[i]
+        value = AsyncResult(id=task["backend_id"]).get()
+        assert value == sum(args)
+
+
+def test_run_ready_task_with_priority(
+    swh_scheduler_celery_app, swh_scheduler_celery_worker, swh_scheduler
+):
+    """Ensure scheduler runner schedules priority tasks ready for scheduling"""
+    task_type_name, backend_name = "swh-test-add", "swh.scheduler.tests.tasks.add"
+    task_type = swh_scheduler.get_task_type(task_type_name)
+    assert task_type
+    assert task_type["backend_name"] == backend_name
+
+    task_inputs = [
+        ("oneshot", (10, 22), "low"),
+        ("oneshot", (20, 10), "normal"),
+        ("recurring", (30, 10), "high"),
+    ]
+
+    tasks = swh_scheduler.create_tasks(
+        create_task_dict(task_type_name, policy, *args, priority=priority)
+        for (policy, args, priority) in task_inputs
+    )
+
+    assert len(tasks) == len(task_inputs)
+
+    task_ids = set()
+    for task in tasks:
+        assert task["status"] == "next_run_not_scheduled"
+        assert task["priority"] is not None
+        task_ids.add(task["id"])
+
+    backend_tasks = run_ready_tasks(swh_scheduler, swh_scheduler_celery_app)
+    assert len(backend_tasks) == len(tasks)
+
+    scheduled_tasks = swh_scheduler.search_tasks(task_type=task_type_name)
+    assert len(scheduled_tasks) == len(tasks)
+    for task in scheduled_tasks:
+        assert task["status"] == "next_run_scheduled"
+        assert task["id"] in task_ids
+
+    # TODO: Make the worker consume those messages so this can go green
+    # for i, (_, args, _) in enumerate(task_inputs):
+    #     # take one of the task and read it from the queue backend
+    #     task = backend_tasks[i]
+    #     value = AsyncResult(id=task["backend_id"]).get()
+    #     assert value == sum(args)
 
 
 def test_task_exception(
