@@ -116,6 +116,7 @@ swh/scheduler/tests/test_cli_journal.py
 swh/scheduler/tests/test_cli_origin.py
 swh/scheduler/tests/test_cli_task_type.py
 swh/scheduler/tests/test_common.py
+swh/scheduler/tests/test_config.py
 swh/scheduler/tests/test_init.py
 swh/scheduler/tests/test_journal_client.py
 swh/scheduler/tests/test_model.py

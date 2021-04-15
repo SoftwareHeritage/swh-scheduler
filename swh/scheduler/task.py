@@ -28,6 +28,10 @@ class SWHTask(celery.app.task.Task):
     _statsd = None
     _log = None
 
+    reject_on_worker_lost = None
+    """Inherited from :class:`celery.app.task.Task`, but we need to override
+    its docstring because it uses a custom ReST role"""
+
     @property
     def statsd(self):
         if self._statsd:
