@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2020  The Software Heritage developers
+# Copyright (C) 2018-2021  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -8,9 +8,6 @@ from __future__ import annotations
 from importlib import import_module
 from typing import TYPE_CHECKING, Any, Dict
 import warnings
-
-# Percentage of tasks with priority to schedule
-PRIORITY_SLOT = 0.6
 
 DEFAULT_CONFIG = {
     "scheduler": (
@@ -24,23 +21,6 @@ CONFIG = {}  # type: Dict[str, Any]
 
 if TYPE_CHECKING:
     from swh.scheduler.interface import SchedulerInterface
-
-
-def compute_nb_tasks_from(num_tasks):
-    """Compute and returns the tuple, number of tasks without priority,
-       number of tasks with priority.
-
-    Args:
-        num_tasks (int):
-
-    Returns:
-        tuple number of tasks without priority (int), number of tasks with
-        priority (int)
-
-    """
-    if not num_tasks:
-        return None, None
-    return (int((1 - PRIORITY_SLOT) * num_tasks), int(PRIORITY_SLOT * num_tasks))
 
 
 BACKEND_TYPES: Dict[str, str] = {

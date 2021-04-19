@@ -133,40 +133,42 @@ class SchedulerInterface(Protocol):
 
     @remote_api_endpoint("task/peek_ready")
     def peek_ready_tasks(
-        self, task_type, timestamp=None, num_tasks=None, num_tasks_priority=None,
-    ):
-        """Fetch the list of ready tasks
+        self,
+        task_type: str,
+        timestamp: Optional[datetime.datetime] = None,
+        num_tasks: Optional[int] = None,
+    ) -> List[Dict]:
+        """Fetch the list of tasks (with no priority) to be scheduled.
 
         Args:
-            task_type (str): filtering task per their type
-            timestamp (datetime.datetime): peek tasks that need to be executed
+            task_type: filtering task per their type
+            timestamp: peek tasks that need to be executed
                 before that timestamp
-            num_tasks (int): only peek at num_tasks tasks (with no priority)
-            num_tasks_priority (int): only peek at num_tasks_priority
-                                      tasks (with priority)
+            num_tasks: only peek at num_tasks tasks (with no priority)
 
         Returns:
-            a list of tasks
+            the list of tasks which would be scheduled
 
         """
         ...
 
     @remote_api_endpoint("task/grab_ready")
     def grab_ready_tasks(
-        self, task_type, timestamp=None, num_tasks=None, num_tasks_priority=None,
-    ):
-        """Fetch the list of ready tasks, and mark them as scheduled
+        self,
+        task_type: str,
+        timestamp: Optional[datetime.datetime] = None,
+        num_tasks: Optional[int] = None,
+    ) -> List[Dict]:
+        """Fetch and schedule the list of tasks (with no priority) ready to be scheduled.
 
         Args:
-            task_type (str): filtering task per their type
-            timestamp (datetime.datetime): grab tasks that need to be executed
+            task_type: filtering task per their type
+            timestamp: grab tasks that need to be executed
                 before that timestamp
-            num_tasks (int): only grab num_tasks tasks (with no priority)
-            num_tasks_priority (int): only grab oneshot num_tasks tasks (with
-                                      priorities)
+            num_tasks: only grab num_tasks tasks (with no priority)
 
         Returns:
-            a list of tasks
+            the list of scheduled tasks
 
         """
         ...
@@ -401,10 +403,6 @@ class SchedulerInterface(Protocol):
           timestamp: the mocked timestamp at which we're recording that the visits are
             being scheduled (defaults to the current time)
         """
-        ...
-
-    @remote_api_endpoint("priority_ratios/get")
-    def get_priority_ratios(self):
         ...
 
     @remote_api_endpoint("visit_stats/upsert")

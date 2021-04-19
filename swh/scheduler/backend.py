@@ -597,34 +597,19 @@ class SchedulerBackend:
     @db_transaction()
     def peek_ready_tasks(
         self,
-        task_type,
-        timestamp=None,
-        num_tasks=None,
-        num_tasks_priority=None,
+        task_type: str,
+        timestamp: Optional[datetime.datetime] = None,
+        num_tasks: Optional[int] = None,
         db=None,
         cur=None,
-    ):
-        """Fetch the list of ready tasks
-
-        Args:
-            task_type (str): filtering task per their type
-            timestamp (datetime.datetime): peek tasks that need to be executed
-                before that timestamp
-            num_tasks (int): only peek at num_tasks tasks (with no priority)
-            num_tasks_priority (int): only peek at num_tasks_priority
-                                      tasks (with priority)
-
-        Returns:
-            a list of tasks
-
-        """
+    ) -> List[Dict]:
         if timestamp is None:
             timestamp = utcnow()
 
         cur.execute(
-            """select * from swh_scheduler_peek_ready_tasks(
-                %s, %s, %s :: bigint, %s :: bigint)""",
-            (task_type, timestamp, num_tasks, num_tasks_priority),
+            """select * from swh_scheduler_peek_no_priority_tasks(
+                %s, %s, %s :: bigint)""",
+            (task_type, timestamp, num_tasks),
         )
         logger.debug("PEEK %s => %s" % (task_type, cur.rowcount))
         return cur.fetchall()
@@ -632,33 +617,18 @@ class SchedulerBackend:
     @db_transaction()
     def grab_ready_tasks(
         self,
-        task_type,
-        timestamp=None,
-        num_tasks=None,
-        num_tasks_priority=None,
+        task_type: str,
+        timestamp: Optional[datetime.datetime] = None,
+        num_tasks: Optional[int] = None,
         db=None,
         cur=None,
-    ):
-        """Fetch the list of ready tasks, and mark them as scheduled
-
-        Args:
-            task_type (str): filtering task per their type
-            timestamp (datetime.datetime): grab tasks that need to be executed
-                before that timestamp
-            num_tasks (int): only grab num_tasks tasks (with no priority)
-            num_tasks_priority (int): only grab oneshot num_tasks tasks (with
-                                      priorities)
-
-        Returns:
-            a list of tasks
-
-        """
+    ) -> List[Dict]:
         if timestamp is None:
             timestamp = utcnow()
         cur.execute(
             """select * from swh_scheduler_grab_ready_tasks(
-                 %s, %s, %s :: bigint, %s :: bigint)""",
-            (task_type, timestamp, num_tasks, num_tasks_priority),
+                 %s, %s, %s :: bigint)""",
+            (task_type, timestamp, num_tasks),
         )
         logger.debug("GRAB %s => %s" % (task_type, cur.rowcount))
         return cur.fetchall()
@@ -925,11 +895,6 @@ class SchedulerBackend:
             args.append(limit)
         cur.execute(query, args)
         return cur.fetchall()
-
-    @db_transaction()
-    def get_priority_ratios(self, db=None, cur=None):
-        cur.execute("select id, ratio from priority_ratio")
-        return {row["id"]: row["ratio"] for row in cur.fetchall()}
 
     @db_transaction()
     def origin_visit_stats_upsert(
