@@ -27,27 +27,20 @@ def test_tasks_from_template_no_priority():
 
 
 def test_tasks_from_template_priority():
-    nb_tasks_no_priority = 3
-    nb_tasks_priority = 10
     template = TEMPLATES["hg"]
-    priorities = {
-        "high": 0.5,
-        "normal": 0.3,
-        "low": 0.2,
+    num_priorities = {
+        None: 3,
+        "high": 5,
+        "normal": 3,
+        "low": 2,
     }
 
     next_run = datetime.datetime.utcnow()
-    tasks = tasks_from_template(
-        template,
-        next_run,
-        nb_tasks_no_priority,
-        num_priority=nb_tasks_priority,
-        priorities=priorities,
-    )
+    tasks = tasks_from_template(template, next_run, num_priorities=num_priorities,)
 
-    assert len(tasks) == nb_tasks_no_priority + nb_tasks_priority
+    assert len(tasks) == sum(num_priorities.values())
 
-    repartition_priority = {k: 0 for k in priorities.keys()}
+    repartition_priority = {k: 0 for k in num_priorities}
     for i, t in enumerate(tasks):
         assert t["type"] == template["type"]
         assert t["arguments"] is not None
@@ -56,10 +49,7 @@ def test_tasks_from_template_priority():
         assert len(t["arguments"]["kwargs"].keys()) == 1
         assert t["next_run"] == next_run - datetime.timedelta(microseconds=i)
         priority = t.get("priority")
-        if priority:
-            assert priority in priorities
-            repartition_priority[priority] += 1
+        assert priority in num_priorities
+        repartition_priority[priority] += 1
 
-    assert repartition_priority == {
-        k: v * nb_tasks_priority for k, v in priorities.items()
-    }
+    assert repartition_priority == num_priorities
