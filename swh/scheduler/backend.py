@@ -494,7 +494,12 @@ class SchedulerBackend:
 
     @db_transaction()
     def set_status_tasks(
-        self, task_ids, status="disabled", next_run=None, db=None, cur=None
+        self,
+        task_ids: List[int],
+        status: str = "disabled",
+        next_run: Optional[datetime.datetime] = None,
+        db=None,
+        cur=None,
     ):
         """Set the tasks' status whose ids are listed.
 
@@ -503,7 +508,7 @@ class SchedulerBackend:
         if not task_ids:
             return
         query = ["UPDATE task SET status = %s"]
-        args = [status]
+        args: List[Any] = [status]
         if next_run:
             query.append(", next_run = %s")
             args.append(next_run)

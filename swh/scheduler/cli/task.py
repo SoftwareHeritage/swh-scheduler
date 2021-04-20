@@ -1,19 +1,23 @@
-# Copyright (C) 2016-2020  The Software Heritage developers
+# Copyright (C) 2016-2021  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
+
+from __future__ import annotations
 
 # WARNING: do not import unnecessary things here to keep cli startup time under
 # control
 import locale
 import logging
-from typing import TYPE_CHECKING, Any, Dict, Iterator, Optional
+from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional
 
 import click
 
 from . import cli
 
 if TYPE_CHECKING:
+    import datetime
+
     # importing swh.storage.interface triggers the load of 300+ modules, so...
     from swh.model.model import Origin
     from swh.storage.interface import StorageInterface
@@ -561,7 +565,7 @@ def list_tasks(
     help="Re spawn the selected tasks at this date",
 )
 @click.pass_context
-def respawn_tasks(ctx, task_ids, next_run):
+def respawn_tasks(ctx, task_ids: List[str], next_run: datetime.datetime):
     """Respawn tasks.
 
     Respawn tasks given by their ids (see the 'task list' command to
@@ -580,10 +584,12 @@ def respawn_tasks(ctx, task_ids, next_run):
         next_run = utcnow()
     output = []
 
+    task_ids_int = [int(id_) for id_ in task_ids]
+
     scheduler.set_status_tasks(
-        task_ids, status="next_run_not_scheduled", next_run=next_run
+        task_ids_int, status="next_run_not_scheduled", next_run=next_run
     )
-    output.append("Respawn tasks %s\n" % (task_ids,))
+    output.append("Respawn tasks %s\n" % (task_ids_int,))
 
     click.echo("\n".join(output))
 

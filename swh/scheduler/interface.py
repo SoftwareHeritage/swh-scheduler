@@ -94,7 +94,12 @@ class SchedulerInterface(Protocol):
         ...
 
     @remote_api_endpoint("task/set_status")
-    def set_status_tasks(self, task_ids, status="disabled", next_run=None):
+    def set_status_tasks(
+        self,
+        task_ids: List[int],
+        status: str = "disabled",
+        next_run: Optional[datetime.datetime] = None,
+    ):
         """Set the tasks' status whose ids are listed.
 
         If given, also set the next_run date.
