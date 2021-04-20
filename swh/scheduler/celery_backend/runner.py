@@ -78,7 +78,7 @@ def run_ready_tasks(backend: SchedulerInterface, app) -> List[Dict]:
             if num_tasks > min(MAX_NUM_TASKS, max_queue_length) // 5:
                 # Only grab num_tasks tasks with no priority
                 grabbed_tasks = backend.grab_ready_tasks(
-                    task_type_name, num_tasks=num_tasks, num_tasks_priority=0
+                    task_type_name, num_tasks=num_tasks
                 )
                 if grabbed_tasks:
                     pending_tasks.extend(grabbed_tasks)

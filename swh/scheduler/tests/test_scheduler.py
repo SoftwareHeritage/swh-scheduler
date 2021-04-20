@@ -31,6 +31,9 @@ from .common import (
 
 ONEDAY = datetime.timedelta(days=1)
 
+# for compatibility purpose with existing test code
+PRIORITY_RATIO = {"high": 0.6, "normal": 0.3, "low": 0.2}
+
 
 def subdict(d, keys=None, excl=()):
     if keys is None:
@@ -77,13 +80,6 @@ class TestScheduler:
 
         assert missing_methods == []
 
-    def test_get_priority_ratios(self, swh_scheduler):
-        assert swh_scheduler.get_priority_ratios() == {
-            "high": 0.5,
-            "normal": 0.3,
-            "low": 0.2,
-        }
-
     def test_add_task_type(self, swh_scheduler):
         tt = TASK_TYPES["git"]
         swh_scheduler.create_task_type(tt)
@@ -108,7 +104,6 @@ class TestScheduler:
         assert tt2 in actual_task_types
 
     def test_create_tasks(self, swh_scheduler):
-        priority_ratio = self._priority_ratio(swh_scheduler)
         self._create_task_types(swh_scheduler)
         num_tasks_priority = 100
         tasks_1 = tasks_from_template(TEMPLATES["git"], utcnow(), 100)
@@ -117,7 +112,7 @@ class TestScheduler:
             utcnow(),
             100,
             num_tasks_priority,
-            priorities=priority_ratio,
+            priorities=PRIORITY_RATIO,
         )
         tasks = tasks_1 + tasks_2
 
@@ -161,7 +156,7 @@ class TestScheduler:
 
         assert dict(actual_priorities) == {
             priority: int(ratio * num_tasks_priority)
-            for priority, ratio in priority_ratio.items()
+            for priority, ratio in PRIORITY_RATIO.items()
         }
 
     def test_peek_ready_tasks_no_priority(self, swh_scheduler):
@@ -205,11 +200,8 @@ class TestScheduler:
             assert ready_task["next_run"] <= max_ts
             assert ready_task in ready_tasks[: limit // 3]
 
-    def _priority_ratio(self, swh_scheduler):
-        return swh_scheduler.get_priority_ratios()
-
-    def test_peek_ready_tasks_mixed_priorities(self, swh_scheduler):
-        priority_ratio = self._priority_ratio(swh_scheduler)
+    def test_peek_ready_tasks_returns_only_no_priority_tasks(self, swh_scheduler):
+        """Peek ready tasks only return standard tasks (no priority)"""
         self._create_task_types(swh_scheduler)
         t = utcnow()
         task_type = TEMPLATES["git"]["type"]
@@ -221,52 +213,28 @@ class TestScheduler:
             t,
             num=num_tasks_no_priority,
             num_priority=num_tasks_priority,
-            priorities=priority_ratio,
+            priorities=PRIORITY_RATIO,
         )
+
+        count_priority = 0
+        for task in tasks:
+            count_priority += 0 if task.get("priority") is None else 1
+
+        assert count_priority > 0, "Some created tasks should have some priority"
 
         random.shuffle(tasks)
         swh_scheduler.create_tasks(tasks)
 
-        # take all available tasks
+        # take all available no priority tasks
         ready_tasks = swh_scheduler.peek_ready_tasks(task_type)
 
-        assert len(ready_tasks) == len(tasks)
-        assert num_tasks_priority + num_tasks_no_priority == len(ready_tasks)
+        assert len(ready_tasks) == len(tasks) - count_priority
 
-        count_tasks_per_priority = defaultdict(int)
+        # No read task should have any priority
         for task in ready_tasks:
-            priority = task.get("priority")
-            if priority:
-                count_tasks_per_priority[priority] += 1
-
-        assert dict(count_tasks_per_priority) == {
-            priority: int(ratio * num_tasks_priority)
-            for priority, ratio in priority_ratio.items()
-        }
-
-        # Only get some ready tasks
-        num_tasks = random.randrange(5, 5 + num_tasks_no_priority // 2)
-        num_tasks_priority = random.randrange(5, num_tasks_priority // 2)
-        ready_tasks_limited = swh_scheduler.peek_ready_tasks(
-            task_type, num_tasks=num_tasks, num_tasks_priority=num_tasks_priority
-        )
-
-        count_tasks_per_priority = defaultdict(int)
-        for task in ready_tasks_limited:
-            priority = task.get("priority")
-            count_tasks_per_priority[priority] += 1
-
-        import math
-
-        for priority, ratio in priority_ratio.items():
-            expected_count = math.ceil(ratio * num_tasks_priority)
-            actual_prio = count_tasks_per_priority[priority]
-            assert actual_prio == expected_count or actual_prio == expected_count + 1
-
-        assert count_tasks_per_priority[None] == num_tasks
+            assert task.get("priority") is None
 
     def test_grab_ready_tasks(self, swh_scheduler):
-        priority_ratio = self._priority_ratio(swh_scheduler)
         self._create_task_types(swh_scheduler)
         t = utcnow()
         task_type = TEMPLATES["git"]["type"]
@@ -278,17 +246,13 @@ class TestScheduler:
             t,
             num=num_tasks_no_priority,
             num_priority=num_tasks_priority,
-            priorities=priority_ratio,
+            priorities=PRIORITY_RATIO,
         )
         random.shuffle(tasks)
         swh_scheduler.create_tasks(tasks)
 
-        first_ready_tasks = swh_scheduler.peek_ready_tasks(
-            task_type, num_tasks=10, num_tasks_priority=10
-        )
-        grabbed_tasks = swh_scheduler.grab_ready_tasks(
-            task_type, num_tasks=10, num_tasks_priority=10
-        )
+        first_ready_tasks = swh_scheduler.peek_ready_tasks(task_type, num_tasks=50)
+        grabbed_tasks = swh_scheduler.grab_ready_tasks(task_type, num_tasks=50)
 
         for peeked, grabbed in zip(first_ready_tasks, grabbed_tasks):
             assert peeked["status"] == "next_run_not_scheduled"
@@ -296,7 +260,9 @@ class TestScheduler:
             assert grabbed["status"] == "next_run_scheduled"
             del grabbed["status"]
             assert peeked == grabbed
-            assert peeked["priority"] == grabbed["priority"]
+            priority = grabbed["priority"]
+            assert priority == peeked["priority"]
+            assert priority is None
 
     def test_grab_ready_priority_tasks(self, swh_scheduler):
         """check the grab and peek priority tasks endpoint behave as expected"""
