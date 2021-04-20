@@ -1,3 +1,15 @@
+swh-scheduler (0.13.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.13.0     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2021-04-20 11:46:51
+    +0200)
+  * Upstream changes:     - v0.13.0     - scheduler: Clean up
+    priority/ratio task dead code     - Parse task_ids before calling
+    set_status_tasks.     - tests: Complete checks on message with
+    priority consumption
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 20 Apr 2021 09:51:00 +0000
+
 swh-scheduler (0.12.0-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.12.0     - (tagged by Antoine R. Dumont
