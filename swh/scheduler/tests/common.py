@@ -5,7 +5,7 @@
 
 import copy
 import datetime
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 TEMPLATES = {
     "git": {
@@ -51,7 +51,11 @@ TASK_TYPES = {
 
 
 def _task_from_template(
-    template: Dict, next_run: datetime.datetime, priority: str, *args, **kwargs
+    template: Dict,
+    next_run: datetime.datetime,
+    priority: Optional[str],
+    *args,
+    **kwargs,
 ) -> Dict:
     ret = copy.deepcopy(template)
     ret["next_run"] = next_run
@@ -67,40 +71,30 @@ def _task_from_template(
 def tasks_from_template(
     template: Dict,
     max_timestamp: datetime.datetime,
-    num: int,
-    num_priority: int = 0,
-    priorities: Dict = {},
+    num: Optional[int] = None,
+    priority: Optional[str] = None,
+    num_priorities: Dict[Optional[str], int] = {},
 ) -> List[Dict]:
-    """Build tasks from template
+    """Build ``num`` tasks from template
 
     """
-
-    def _pop_priority(priorities):
-        if not priorities:
-            return None
-        for priority, remains in priorities.items():
-            if remains > 0:
-                priorities[priority] = remains - 1
-                return priority
-        return None
-
-    if num_priority and priorities:
-        priorities = {
-            priority: ratio * num_priority for priority, ratio in priorities.items()
-        }
-
-    tasks = []
-    for i in range(num + num_priority):
-        priority = _pop_priority(priorities)
-        tasks.append(
-            _task_from_template(
-                template,
-                max_timestamp - datetime.timedelta(microseconds=i),
-                priority,
-                "argument-%03d" % i,
-                **{"kwarg%03d" % i: "bogus-kwarg"},
+    assert bool(num) != bool(num_priorities), "mutually exclusive"
+    if not num_priorities:
+        assert num is not None  # to please mypy
+        num_priorities = {None: num}
+    tasks: List[Dict] = []
+    for (priority, num) in num_priorities.items():
+        for _ in range(num):
+            i = len(tasks)
+            tasks.append(
+                _task_from_template(
+                    template,
+                    max_timestamp - datetime.timedelta(microseconds=i),
+                    priority,
+                    "argument-%03d" % i,
+                    **{"kwarg%03d" % i: "bogus-kwarg"},
+                )
             )
-        )
     return tasks
 
 

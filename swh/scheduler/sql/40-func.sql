@@ -67,8 +67,7 @@ select * from task
         and status = 'next_run_not_scheduled'
         and priority is null
   order by next_run
-  limit num_tasks
-  for update skip locked;
+  limit num_tasks;
 $$;
 
 comment on function swh_scheduler_peek_no_priority_tasks (text, timestamptz, bigint)
@@ -98,8 +97,7 @@ as $$
         and t.status = 'next_run_not_scheduled'
         and t.priority = task_priority
   order by t.next_run
-  limit num_tasks_priority
-  for update skip locked;
+  limit num_tasks_priority;
 $$;
 
 comment on function swh_scheduler_peek_tasks_with_priority(text, timestamptz, bigint, task_priority)
@@ -137,8 +135,7 @@ as $$
         and t.status = 'next_run_not_scheduled'
         and t.priority is not null
   order by t.next_run
-  limit num_tasks
-  for update skip locked;
+  limit num_tasks;
 $$;
 
 comment on function swh_scheduler_peek_any_ready_priority_tasks(text, timestamptz, bigint)
