@@ -234,6 +234,8 @@ class TestScheduler:
 
         first_ready_tasks = swh_scheduler.peek_ready_tasks(task_type, num_tasks=50)
         grabbed_tasks = swh_scheduler.grab_ready_tasks(task_type, num_tasks=50)
+        first_ready_tasks.sort(key=lambda task: task["arguments"]["args"][0])
+        grabbed_tasks.sort(key=lambda task: task["arguments"]["args"][0])
 
         for peeked, grabbed in zip(first_ready_tasks, grabbed_tasks):
             assert peeked["status"] == "next_run_not_scheduled"
@@ -268,6 +270,8 @@ class TestScheduler:
 
         ready_tasks = swh_scheduler.peek_ready_priority_tasks(task_type, num_tasks=50)
         grabbed_tasks = swh_scheduler.grab_ready_priority_tasks(task_type, num_tasks=50)
+        ready_tasks.sort(key=lambda task: task["arguments"]["args"][0])
+        grabbed_tasks.sort(key=lambda task: task["arguments"]["args"][0])
 
         for peeked, grabbed in zip(ready_tasks, grabbed_tasks):
             assert peeked["status"] == "next_run_not_scheduled"
