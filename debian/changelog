@@ -1,3 +1,11 @@
+swh-scheduler (0.14.2-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.14.2     - (tagged by Valentin Lorentz
+    <vlorentz@softwareheritage.org> on 2021-05-06 17:09:00 +0200)
+  * Upstream changes:     - v0.14.2     - * Fix flaky tests
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 06 May 2021 15:13:11 +0000
+
 swh-scheduler (0.14.1-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.14.1     - (tagged by Antoine R. Dumont
