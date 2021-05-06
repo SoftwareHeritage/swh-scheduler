@@ -24,7 +24,7 @@ TASK_NAMES = ["ping", "multiping", "add", "error", "echo"]
 
 postgresql_scheduler = postgresql_fact(
     "postgresql_proc",
-    db_name="scheduler",
+    dbname="scheduler",
     dump_files=os.path.join(SQL_DIR, "*.sql"),
     no_truncate_tables={"dbversion", "priority_ratio"},
 )
