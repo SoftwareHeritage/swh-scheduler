@@ -31,8 +31,7 @@ from .common import (
 
 ONEDAY = datetime.timedelta(days=1)
 
-# for compatibility purpose with existing test code
-PRIORITY_RATIO = {"high": 0.6, "normal": 0.3, "low": 0.2}
+NUM_PRIORITY_TASKS = {None: 100, "high": 60, "normal": 30, "low": 20}
 
 
 def subdict(d, keys=None, excl=()):
@@ -105,19 +104,15 @@ class TestScheduler:
 
     def test_create_tasks(self, swh_scheduler):
         self._create_task_types(swh_scheduler)
-        num_tasks_priority = 100
-        tasks_1 = tasks_from_template(TEMPLATES["git"], utcnow(), 100)
+        num_git = 100
+        tasks_1 = tasks_from_template(TEMPLATES["git"], utcnow(), num_git)
         tasks_2 = tasks_from_template(
-            TEMPLATES["hg"],
-            utcnow(),
-            100,
-            num_tasks_priority,
-            priorities=PRIORITY_RATIO,
+            TEMPLATES["hg"], utcnow(), num_priorities=NUM_PRIORITY_TASKS
         )
         tasks = tasks_1 + tasks_2
 
         # tasks are returned only once with their ids
-        ret1 = swh_scheduler.create_tasks(tasks + tasks_1 + tasks_2)
+        ret1 = swh_scheduler.create_tasks(tasks + tasks)
         set_ret1 = set([t["id"] for t in ret1])
 
         # creating the same set result in the same ids
@@ -139,8 +134,7 @@ class TestScheduler:
             assert task["current_interval"] == task_type["default_interval"]
             assert task["policy"] == orig_task.get("policy", "recurring")
             priority = task.get("priority")
-            if priority:
-                actual_priorities[priority] += 1
+            actual_priorities[priority] += 1
 
             assert task["retries_left"] == (task_type["num_retries"] or 0)
             ids.add(task["id"])
@@ -154,10 +148,9 @@ class TestScheduler:
                 del task["priority"]
                 assert task == orig_task
 
-        assert dict(actual_priorities) == {
-            priority: int(ratio * num_tasks_priority)
-            for priority, ratio in PRIORITY_RATIO.items()
-        }
+        expected_priorities = NUM_PRIORITY_TASKS.copy()
+        expected_priorities[None] += num_git
+        assert dict(actual_priorities) == expected_priorities
 
     def test_peek_ready_tasks_no_priority(self, swh_scheduler):
         self._create_task_types(swh_scheduler)
@@ -205,15 +198,9 @@ class TestScheduler:
         self._create_task_types(swh_scheduler)
         t = utcnow()
         task_type = TEMPLATES["git"]["type"]
-        num_tasks_priority = 100
-        num_tasks_no_priority = 100
         # Create tasks with and without priorities
         tasks = tasks_from_template(
-            TEMPLATES["git"],
-            t,
-            num=num_tasks_no_priority,
-            num_priority=num_tasks_priority,
-            priorities=PRIORITY_RATIO,
+            TEMPLATES["git"], t, num_priorities=NUM_PRIORITY_TASKS,
         )
 
         count_priority = 0
@@ -238,15 +225,9 @@ class TestScheduler:
         self._create_task_types(swh_scheduler)
         t = utcnow()
         task_type = TEMPLATES["git"]["type"]
-        num_tasks_priority = 100
-        num_tasks_no_priority = 100
         # Create tasks with and without priorities
         tasks = tasks_from_template(
-            TEMPLATES["git"],
-            t,
-            num=num_tasks_no_priority,
-            num_priority=num_tasks_priority,
-            priorities=PRIORITY_RATIO,
+            TEMPLATES["git"], t, num_priorities=NUM_PRIORITY_TASKS
         )
         random.shuffle(tasks)
         swh_scheduler.create_tasks(tasks)

@@ -10,7 +10,7 @@ psycopg2
 pyyaml
 setuptools
 typing-extensions
-swh.core[db,http]>=0.5
+swh.core[db,http]>=0.14.0
 swh.storage>=0.11.1
 
 [journal]
