@@ -333,6 +333,7 @@ class SchedulerBackend:
         timestamp: Optional[datetime.datetime] = None,
         scheduled_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=7),
         failed_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=14),
+        notfound_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=31),
         db=None,
         cur=None,
     ) -> List[ListedOrigin]:
@@ -378,6 +379,15 @@ class SchedulerBackend:
             )
             query_args.append(timestamp)
             query_args.append(failed_cooldown)
+
+        if notfound_cooldown:
+            # Don't retry not found origins too often
+            where_clauses.append(
+                "origin_visit_stats.last_notfound is null "
+                "or origin_visit_stats.last_notfound < %s - %s"
+            )
+            query_args.append(timestamp)
+            query_args.append(notfound_cooldown)
 
         if policy == "oldest_scheduled_first":
             order_by = "origin_visit_stats.last_scheduled NULLS FIRST"

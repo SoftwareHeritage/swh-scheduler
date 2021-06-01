@@ -870,7 +870,7 @@ class TestScheduler:
             expected=expected,
         )
 
-    @pytest.mark.parametrize("which_cooldown", ("scheduled", "failed"))
+    @pytest.mark.parametrize("which_cooldown", ("scheduled", "failed", "notfound"))
     @pytest.mark.parametrize("cooldown", (7, 15))
     def test_grab_next_visits_cooldowns(
         self, swh_scheduler, listed_origins_by_type, which_cooldown, cooldown,
@@ -887,7 +887,7 @@ class TestScheduler:
 
         # Mark all the visits as `{which_cooldown}` (scheduled, failed or notfound) on
         # the `after` timestamp
-        ovs_args = {"last_failed": None, "last_scheduled": None}
+        ovs_args = {"last_failed": None, "last_notfound": None, "last_scheduled": None}
         ovs_args[f"last_{which_cooldown}"] = after
 
         visit_stats = [
@@ -897,7 +897,6 @@ class TestScheduler:
                 last_snapshot=None,
                 last_eventful=None,
                 last_uneventful=None,
-                last_notfound=None,
                 **ovs_args,
             )
             for i, origin in enumerate(origins)
@@ -908,6 +907,7 @@ class TestScheduler:
         cooldown_args = {
             "scheduled_cooldown": None,
             "failed_cooldown": None,
+            "notfound_cooldown": None,
         }
         cooldown_args[f"{which_cooldown}_cooldown"] = cooldown_td
 
