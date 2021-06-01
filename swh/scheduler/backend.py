@@ -346,6 +346,7 @@ class SchedulerBackend:
         scheduled_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=7),
         failed_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=14),
         not_found_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=31),
+        tablesample: Optional[float] = None,
         db=None,
         cur=None,
     ) -> List[ListedOrigin]:
@@ -450,12 +451,18 @@ class SchedulerBackend:
         else:
             raise UnknownPolicy(f"Unknown scheduling policy {policy}")
 
+        if tablesample:
+            table = "listed_origins tablesample SYSTEM (%s)"
+            query_args.insert(0, tablesample)
+        else:
+            table = "listed_origins"
+
         # fmt: off
         common_table_expressions.insert(0, ("selected_origins", f"""
             SELECT
               {origin_select_cols}, next_visit_queue_position
             FROM
-              listed_origins
+              {table}
             LEFT JOIN
               origin_visit_stats USING (url, visit_type)
             WHERE

@@ -398,6 +398,7 @@ class SchedulerInterface(Protocol):
         scheduled_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=7),
         failed_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=14),
         not_found_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=31),
+        tablesample: Optional[float] = None,
     ) -> List[ListedOrigin]:
         """Get at most the `count` next origins that need to be visited with
         the `visit_type` loader according to the given scheduling `policy`.
@@ -417,6 +418,8 @@ class SchedulerInterface(Protocol):
             failed origin
           not_found_cooldown: the minimal interval before which we can reschedule a
             not_found origin
+          tablesample: the percentage of the table on which we run the query
+            (None: no sampling)
         """
         ...
 
