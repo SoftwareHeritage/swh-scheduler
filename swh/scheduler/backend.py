@@ -429,7 +429,16 @@ class SchedulerBackend:
             )
         elif policy == "origins_without_last_update":
             where_clauses.append("last_update IS NULL")
-            order_by = "origin_visit_stats.next_visit_queue_position nulls first"
+            order_by = ", ".join(
+                [
+                    # By default, sort using the queue position. If the queue
+                    # position is null, then the origin has never been visited,
+                    # which we want to handle first
+                    "origin_visit_stats.next_visit_queue_position nulls first",
+                    # Schedule unknown origins in the order we've seen them
+                    "listed_origins.first_seen",
+                ]
+            )
 
             # fmt: off
 
