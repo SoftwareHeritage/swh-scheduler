@@ -155,10 +155,30 @@ def schedule_next(ctx, policy: str, type: str, count: int):
 @click.option(
     "--tablesample", help="Table sampling percentage", type=float,
 )
+@click.option(
+    "--only-enabled/--only-disabled",
+    "enabled",
+    is_flag=True,
+    default=True,
+    help="""Determine whether we want to scheduled enabled or disabled origins. As default, we
+            want to reasonably deal with enabled origins. For some edge case though, we
+            might want the disabled ones.""",
+)
+@click.option(
+    "--lister-uuid",
+    default=None,
+    help="Limit origins to those listed from such lister",
+)
 @click.argument("type", type=str)
 @click.pass_context
 def send_to_celery(
-    ctx, policy: str, queue: Optional[str], tablesample: Optional[float], type: str
+    ctx,
+    policy: str,
+    queue: Optional[str],
+    tablesample: Optional[float],
+    type: str,
+    enabled: bool,
+    lister_uuid: Optional[str] = None,
 ):
     """Send the next origin visits of the TYPE loader to celery, filling the queue."""
     from kombu.utils.uuid import uuid
@@ -176,7 +196,12 @@ def send_to_celery(
 
     click.echo(f"{num_tasks} slots available in celery queue")
     origins = scheduler.grab_next_visits(
-        type, num_tasks, policy=policy, tablesample=tablesample
+        type,
+        num_tasks,
+        policy=policy,
+        tablesample=tablesample,
+        enabled=enabled,
+        lister_uuid=lister_uuid,
     )
 
     click.echo(f"{len(origins)} visits to send to celery")

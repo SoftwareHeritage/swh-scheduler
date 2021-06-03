@@ -342,6 +342,8 @@ class SchedulerBackend:
         visit_type: str,
         count: int,
         policy: str,
+        enabled: bool = True,
+        lister_uuid: Optional[str] = None,
         timestamp: Optional[datetime.datetime] = None,
         scheduled_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=7),
         failed_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=14),
@@ -363,7 +365,7 @@ class SchedulerBackend:
         common_table_expressions: List[Tuple[str, str]] = []
 
         # "NOT enabled" = the lister said the origin no longer exists
-        where_clauses.append("enabled")
+        where_clauses.append("enabled" if enabled else "not enabled")
 
         # Only schedule visits of the given type
         where_clauses.append("visit_type = %s")
@@ -465,6 +467,10 @@ class SchedulerBackend:
             query_args.insert(0, tablesample)
         else:
             table = "listed_origins"
+
+        if lister_uuid:
+            where_clauses.append("lister_id = %s")
+            query_args.append(lister_uuid)
 
         # fmt: off
         common_table_expressions.insert(0, ("selected_origins", f"""
