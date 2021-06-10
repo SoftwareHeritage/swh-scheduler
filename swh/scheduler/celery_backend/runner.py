@@ -10,6 +10,7 @@ from kombu.utils.uuid import uuid
 
 from swh.core.statsd import statsd
 from swh.scheduler import get_scheduler
+from swh.scheduler.celery_backend.config import get_available_slots
 from swh.scheduler.interface import SchedulerInterface
 from swh.scheduler.utils import utcnow
 
@@ -19,7 +20,12 @@ logger = logging.getLogger(__name__)
 MAX_NUM_TASKS = 10000
 
 
-def run_ready_tasks(backend: SchedulerInterface, app) -> List[Dict]:
+def run_ready_tasks(
+    backend: SchedulerInterface,
+    app,
+    task_types: List[Dict] = [],
+    with_priority: bool = False,
+) -> List[Dict]:
     """Schedule tasks ready to be scheduled.
 
     This lookups any tasks per task type and mass schedules those accordingly (send
@@ -32,6 +38,11 @@ def run_ready_tasks(backend: SchedulerInterface, app) -> List[Dict]:
     Args:
         backend: scheduler backend to interact with (read/update tasks)
         app (App): Celery application to send tasks to
+        task_types: The list of task types dict to iterate over. By default, empty.
+          When empty, the full list of task types referenced in the scheduler will be
+          used.
+        with_priority: If True, only tasks with priority set will be fetched and
+          scheduled. By default, False.
 
     Returns:
         A list of dictionaries::
@@ -51,62 +62,55 @@ def run_ready_tasks(backend: SchedulerInterface, app) -> List[Dict]:
     """
     all_backend_tasks: List[Dict] = []
     while True:
-        task_types = {}
+        if not task_types:
+            task_types = backend.get_task_types()
+        task_types_d = {}
         pending_tasks = []
-        for task_type in backend.get_task_types():
+        for task_type in task_types:
             task_type_name = task_type["type"]
-            task_types[task_type_name] = task_type
+            task_types_d[task_type_name] = task_type
             max_queue_length = task_type["max_queue_length"]
             if max_queue_length is None:
                 max_queue_length = 0
             backend_name = task_type["backend_name"]
-            if max_queue_length:
-                try:
-                    queue_length = app.get_queue_length(backend_name)
-                except ValueError:
-                    queue_length = None
 
-                if queue_length is None:
-                    # Running without RabbitMQ (probably a test env).
-                    num_tasks = MAX_NUM_TASKS
-                else:
-                    num_tasks = min(max_queue_length - queue_length, MAX_NUM_TASKS)
-            else:
-                num_tasks = MAX_NUM_TASKS
-            # only pull tasks if the buffer is at least 1/5th empty (= 80%
-            # full), to help postgresql use properly indexed queries.
-            if num_tasks > min(MAX_NUM_TASKS, max_queue_length) // 5:
-                # Only grab num_tasks tasks with no priority
-                grabbed_tasks = backend.grab_ready_tasks(
-                    task_type_name, num_tasks=num_tasks
+            if with_priority:
+                # grab max_queue_length (or 10) potential tasks with any priority for
+                # the same type (limit the result to avoid too long running queries)
+                grabbed_priority_tasks = backend.grab_ready_priority_tasks(
+                    task_type_name, num_tasks=max_queue_length or 10
                 )
-                if grabbed_tasks:
-                    pending_tasks.extend(grabbed_tasks)
+                if grabbed_priority_tasks:
+                    pending_tasks.extend(grabbed_priority_tasks)
                     logger.info(
-                        "Grabbed %s tasks %s", len(grabbed_tasks), task_type_name
+                        "Grabbed %s tasks %s (priority)",
+                        len(grabbed_priority_tasks),
+                        task_type_name,
                     )
                     statsd.increment(
                         "swh_scheduler_runner_scheduled_task_total",
-                        len(grabbed_tasks),
+                        len(grabbed_priority_tasks),
                         tags={"task_type": task_type_name},
                     )
-            # grab max_queue_length (or 10) potential tasks with any priority for the
-            # same type (limit the result to avoid too long running queries)
-            grabbed_priority_tasks = backend.grab_ready_priority_tasks(
-                task_type_name, num_tasks=max_queue_length or 10
-            )
-            if grabbed_priority_tasks:
-                pending_tasks.extend(grabbed_priority_tasks)
-                logger.info(
-                    "Grabbed %s tasks %s (priority)",
-                    len(grabbed_priority_tasks),
-                    task_type_name,
-                )
-                statsd.increment(
-                    "swh_scheduler_runner_scheduled_task_total",
-                    len(grabbed_priority_tasks),
-                    tags={"task_type": task_type_name},
-                )
+            else:
+                num_tasks = get_available_slots(app, backend_name, max_queue_length)
+                # only pull tasks if the buffer is at least 1/5th empty (= 80%
+                # full), to help postgresql use properly indexed queries.
+                if num_tasks > min(MAX_NUM_TASKS, max_queue_length) // 5:
+                    # Only grab num_tasks tasks with no priority
+                    grabbed_tasks = backend.grab_ready_tasks(
+                        task_type_name, num_tasks=num_tasks
+                    )
+                    if grabbed_tasks:
+                        pending_tasks.extend(grabbed_tasks)
+                        logger.info(
+                            "Grabbed %s tasks %s", len(grabbed_tasks), task_type_name
+                        )
+                        statsd.increment(
+                            "swh_scheduler_runner_scheduled_task_total",
+                            len(grabbed_tasks),
+                            tags={"task_type": task_type_name},
+                        )
 
         if not pending_tasks:
             return all_backend_tasks
@@ -117,7 +121,7 @@ def run_ready_tasks(backend: SchedulerInterface, app) -> List[Dict]:
             args = task["arguments"]["args"]
             kwargs = task["arguments"]["kwargs"]
 
-            backend_name = task_types[task["type"]]["backend_name"]
+            backend_name = task_types_d[task["type"]]["backend_name"]
             backend_id = uuid()
             celery_tasks.append(
                 (

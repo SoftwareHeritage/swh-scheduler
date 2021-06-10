@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2019  The Software Heritage developers
+# Copyright (C) 2016-2021  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -23,8 +23,24 @@ from . import cli
         "executed. Set to 0 (default) for a one shot."
     ),
 )
+@click.option(
+    "--task-type",
+    "task_type_names",
+    multiple=True,
+    default=[],
+    help="Task type names (e.g load-git, load-hg, list-github-full, ...) to schedule.",
+)
+@click.option(
+    "--with-priority/--without-priority",
+    is_flag=True,
+    default=False,
+    help=(
+        "Determine if those tasks should be the ones with priority or not."
+        "By default, this deals with tasks without any priority."
+    ),
+)
 @click.pass_context
-def runner(ctx, period):
+def runner(ctx, period, task_type_names, with_priority):
     """Starts a swh-scheduler runner service.
 
     This process is responsible for checking for ready-to-run tasks and
@@ -32,17 +48,25 @@ def runner(ctx, period):
     from swh.scheduler.celery_backend.config import build_app
     from swh.scheduler.celery_backend.runner import run_ready_tasks
 
-    app = build_app(ctx.obj["config"].get("celery"))
+    config = ctx.obj["config"]
+    app = build_app(config.get("celery"))
     app.set_current()
 
     logger = logging.getLogger(__name__ + ".runner")
     scheduler = ctx.obj["scheduler"]
     logger.debug("Scheduler %s" % scheduler)
+    task_types = []
+    for task_type_name in task_type_names:
+        task_type = scheduler.get_task_type(task_type_name)
+        if not task_type:
+            raise ValueError(f"Unknown {task_type_name}")
+        task_types.append(task_type)
+
     try:
         while True:
             logger.debug("Run ready tasks")
             try:
-                ntasks = len(run_ready_tasks(scheduler, app))
+                ntasks = len(run_ready_tasks(scheduler, app, task_types, with_priority))
                 if ntasks:
                     logger.info("Scheduled %s tasks", ntasks)
             except Exception:

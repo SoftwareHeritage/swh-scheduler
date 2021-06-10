@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2019  The Software Heritage developers
+# Copyright (C) 2015-2021  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -8,7 +8,7 @@ import logging
 import os
 from time import monotonic as _monotonic
 import traceback
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 import urllib.parse
 
 from celery import Celery
@@ -223,6 +223,27 @@ def get_queue_length(app, queue_name):
     stats = get_queue_stats(app, queue_name)
     if stats:
         return stats.get("messages")
+
+
+MAX_NUM_TASKS = 10000
+
+
+def get_available_slots(app, queue_name: str, max_length: Optional[int]):
+    """Get the number of tasks that can be sent to `queue_name`, when
+    the queue is limited to `max_length`."""
+
+    if not max_length:
+        return MAX_NUM_TASKS
+
+    try:
+        queue_length = get_queue_length(app, queue_name)
+        # Clamp the return value to MAX_NUM_TASKS
+        max_val = min(max_length - queue_length, MAX_NUM_TASKS)
+    except (ValueError, TypeError):
+        # Unknown queue length, just schedule all the tasks
+        max_val = MAX_NUM_TASKS
+
+    return max_val
 
 
 def register_task_class(app, name, cls):
