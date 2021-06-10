@@ -1,13 +1,14 @@
 attrs
 attrs-strict
 celery!=5.0.3,>=4.3
-Click
+click
 elasticsearch>5.4
 flask
 humanize
 pika>=1.1.0
 psycopg2
 pyyaml
+requests
 setuptools
 typing-extensions
 swh.core[db,http]>=0.14.0
@@ -26,6 +27,10 @@ pytest-mock
 celery>=4.3
 hypothesis>=3.11.0
 swh.lister
+types-click
+types-flask
+types-pyyaml
+types-requests
 swh.journal
 plotille
 simpy<4,>=3

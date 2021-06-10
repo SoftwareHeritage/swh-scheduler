@@ -179,7 +179,9 @@ def test_run_ready_task_with_priority(
         assert task["priority"] is not None
         task_ids.add(task["id"])
 
-    backend_tasks = run_ready_tasks(swh_scheduler, swh_scheduler_celery_app)
+    backend_tasks = run_ready_tasks(
+        swh_scheduler, swh_scheduler_celery_app, task_types=[], with_priority=True
+    )
     assert len(backend_tasks) == len(tasks)
 
     scheduled_tasks = swh_scheduler.search_tasks(task_type=task_type_name)

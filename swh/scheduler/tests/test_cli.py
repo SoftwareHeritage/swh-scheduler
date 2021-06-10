@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2020  The Software Heritage developers
+# Copyright (C) 2019-2021  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -6,6 +6,7 @@
 import datetime
 from itertools import islice
 import logging
+import random
 import re
 import tempfile
 from unittest.mock import patch
@@ -793,3 +794,65 @@ Done.
     # Check tasks
     tasks = swh_scheduler.search_tasks()
     _assert_origin_tasks_contraints(tasks, max_task_size, nb_origins, expected_origins)
+
+
+def test_cli_task_runner_unknown_task_types(swh_scheduler, storage):
+    """When passing at least one unknown task type, the runner should fail."""
+
+    task_types = swh_scheduler.get_task_types()
+    task_type_names = [t["type"] for t in task_types]
+    known_task_type = random.choice(task_type_names)
+    unknown_task_type = "unknown-task-type"
+    assert unknown_task_type not in task_type_names
+
+    with pytest.raises(ValueError, match="Unknown"):
+        invoke(
+            swh_scheduler,
+            False,
+            [
+                "start-runner",
+                "--task-type",
+                known_task_type,
+                "--task-type",
+                unknown_task_type,
+            ],
+        )
+
+
+@pytest.mark.parametrize("flag_priority", ["--with-priority", "--without-priority"])
+def test_cli_task_runner_with_known_tasks(
+    swh_scheduler, storage, caplog, flag_priority
+):
+    """Trigger runner with known tasks runs smoothly."""
+
+    task_types = swh_scheduler.get_task_types()
+    task_type_names = [t["type"] for t in task_types]
+    task_type_name = random.choice(task_type_names)
+    task_type_name2 = random.choice(task_type_names)
+
+    # The runner will just iterate over the following known tasks and do noop. We are
+    # just checking the runner does not explode here.
+    result = invoke(
+        swh_scheduler,
+        False,
+        [
+            "start-runner",
+            flag_priority,
+            "--task-type",
+            task_type_name,
+            "--task-type",
+            task_type_name2,
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+
+
+def test_cli_task_runner_no_task(swh_scheduler, storage):
+    """Trigger runner with no parameter should run as before."""
+
+    # The runner will just iterate over the existing tasks from the scheduler and do
+    # noop. We are just checking the runner does not explode here.
+    result = invoke(swh_scheduler, False, ["start-runner",],)
+
+    assert result.exit_code == 0, result.output

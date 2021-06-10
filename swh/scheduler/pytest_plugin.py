@@ -69,6 +69,7 @@ def swh_scheduler_celery_app():
         task_cls="swh.scheduler.task:SWHTask",
         config={
             "accept_content": ["application/x-msgpack", "application/json"],
+            "broker_url": "memory://guest@localhost//",
             "task_serializer": "msgpack",
             "result_serializer": "json",
         },
