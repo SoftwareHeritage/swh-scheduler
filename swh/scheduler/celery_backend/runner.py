@@ -10,6 +10,7 @@ from kombu.utils.uuid import uuid
 
 from swh.core.statsd import statsd
 from swh.scheduler import get_scheduler
+from swh.scheduler.celery_backend.config import get_available_slots
 from swh.scheduler.interface import SchedulerInterface
 from swh.scheduler.utils import utcnow
 
@@ -60,19 +61,7 @@ def run_ready_tasks(backend: SchedulerInterface, app) -> List[Dict]:
             if max_queue_length is None:
                 max_queue_length = 0
             backend_name = task_type["backend_name"]
-            if max_queue_length:
-                try:
-                    queue_length = app.get_queue_length(backend_name)
-                except ValueError:
-                    queue_length = None
-
-                if queue_length is None:
-                    # Running without RabbitMQ (probably a test env).
-                    num_tasks = MAX_NUM_TASKS
-                else:
-                    num_tasks = min(max_queue_length - queue_length, MAX_NUM_TASKS)
-            else:
-                num_tasks = MAX_NUM_TASKS
+            num_tasks = get_available_slots(app, backend_name, max_queue_length)
             # only pull tasks if the buffer is at least 1/5th empty (= 80%
             # full), to help postgresql use properly indexed queries.
             if num_tasks > min(MAX_NUM_TASKS, max_queue_length) // 5:
