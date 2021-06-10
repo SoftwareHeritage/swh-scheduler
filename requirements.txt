@@ -5,15 +5,13 @@
 attrs
 attrs-strict
 celery >= 4.3, != 5.0.3
-Click
+click
 elasticsearch > 5.4
 flask
 humanize
 pika >= 1.1.0
 psycopg2
 pyyaml
+requests
 setuptools
 typing-extensions
-
-# test dependencies
-# hypothesis

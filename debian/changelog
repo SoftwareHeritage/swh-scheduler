@@ -1,8 +1,15 @@
-swh-scheduler (0.14.2-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-scheduler (0.15.0-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 0.15.0     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2021-06-10 16:09:06
+    +0200)
+  * Upstream changes:     - v0.15.0     - separate-runner runner:
+    Separate scheduling tasks with and without priority concern     -
+    Refactor and extract a get_available_slots utility     - Add typing
+    stubs dependencies for mypy>0.900     - pytest_plugin: Explicitly
+    set hostname in broker_url for celery TestApp
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 06 May 2021 15:15:12 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 10 Jun 2021 14:48:52 +0000
 
 swh-scheduler (0.14.2-1~swh1) unstable-swh; urgency=medium
 
