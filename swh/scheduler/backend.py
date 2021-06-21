@@ -331,6 +331,7 @@ class SchedulerBackend:
         count: int,
         policy: str,
         timestamp: Optional[datetime.datetime] = None,
+        scheduled_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=7),
         db=None,
         cur=None,
     ) -> List[ListedOrigin]:
@@ -350,21 +351,23 @@ class SchedulerBackend:
         where_clauses.append("visit_type = %s")
         query_args.append(visit_type)
 
-        # Don't re-schedule visits if they're already scheduled but we haven't
-        # recorded a result yet, unless they've been scheduled more than a week
-        # ago (it probably means we've lost them in flight somewhere).
-        where_clauses.append(
-            """origin_visit_stats.last_scheduled IS NULL
-            OR origin_visit_stats.last_scheduled < GREATEST(
-              %s - '7 day'::interval,
-              origin_visit_stats.last_eventful,
-              origin_visit_stats.last_uneventful,
-              origin_visit_stats.last_failed,
-              origin_visit_stats.last_notfound
+        if scheduled_cooldown:
+            # Don't re-schedule visits if they're already scheduled but we haven't
+            # recorded a result yet, unless they've been scheduled more than a week
+            # ago (it probably means we've lost them in flight somewhere).
+            where_clauses.append(
+                """origin_visit_stats.last_scheduled IS NULL
+                OR origin_visit_stats.last_scheduled < GREATEST(
+                  %s - %s,
+                  origin_visit_stats.last_eventful,
+                  origin_visit_stats.last_uneventful,
+                  origin_visit_stats.last_failed,
+                  origin_visit_stats.last_notfound
+                )
+            """
             )
-        """
-        )
-        query_args.append(timestamp)
+            query_args.append(timestamp)
+            query_args.append(scheduled_cooldown)
 
         if policy == "oldest_scheduled_first":
             order_by = "origin_visit_stats.last_scheduled NULLS FIRST"

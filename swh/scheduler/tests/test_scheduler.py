@@ -760,11 +760,20 @@ class TestScheduler:
 
         return visit_type, recorded_origins
 
-    def _check_grab_next_visit(self, swh_scheduler, visit_type, policy, expected):
-        """Calls grab_next_visits with the passed policy, and check that all
-        the origins returned are the expected ones (in the same order), and
-        that no extra origins are returned. Also checks the origin visits have
-        been marked as scheduled, and are only re-scheduled a week later"""
+    def _check_grab_next_visit_basic(
+        self, swh_scheduler, visit_type, policy, expected, **kwargs
+    ):
+        """Calls grab_next_visits with the passed policy, and check that:
+
+         - all the origins returned are the expected ones (in the same order)
+         - no extra origins are returned
+         - the last_scheduled field has been set properly.
+
+        Pass the extra keyword arguments to the calls to grab_next_visits.
+
+        Returns a timestamp greater than all `last_scheduled` values for the grabbed
+        visits.
+        """
         assert len(expected) != 0
 
         before = utcnow()
@@ -773,6 +782,7 @@ class TestScheduler:
             # Request one more than expected to check that no extra origin is returned
             count=len(expected) + 1,
             policy=policy,
+            **kwargs,
         )
         after = utcnow()
 
@@ -787,11 +797,24 @@ class TestScheduler:
 
         # They should not be scheduled again
         ret = swh_scheduler.grab_next_visits(
-            visit_type=visit_type, count=len(expected) + 1, policy=policy,
+            visit_type=visit_type, count=len(expected) + 1, policy=policy, **kwargs
         )
         assert ret == [], "grab_next_visits returned already-scheduled origins"
 
-        # But a week later, they should
+        return after
+
+    def _check_grab_next_visit(
+        self, swh_scheduler, visit_type, policy, expected, **kwargs
+    ):
+        """Run the same check as _check_grab_next_visit_basic, but also checks the
+        origin visits have been marked as scheduled, and are only re-scheduled a
+        week later
+        """
+
+        after = self._check_grab_next_visit_basic(
+            swh_scheduler, visit_type, policy, expected, **kwargs
+        )
+        # But a week, later, they should
         ret = swh_scheduler.grab_next_visits(
             visit_type=visit_type,
             count=len(expected) + 1,
@@ -804,8 +827,8 @@ class TestScheduler:
             expected
         ), "grab_next_visits didn't reschedule visits after a week"
 
-    def test_grab_next_visits_oldest_scheduled_first(
-        self, swh_scheduler, listed_origins_by_type,
+    def _prepare_oldest_scheduled_first_origins(
+        self, swh_scheduler, listed_origins_by_type
     ):
         visit_type, origins = self._grab_next_visits_setup(
             swh_scheduler, listed_origins_by_type
@@ -832,12 +855,58 @@ class TestScheduler:
         # as well as those with the oldest values (i.e. the last ones), in order.
         expected = [origins[0]] + origins[1:][::-1]
 
+        return visit_type, origins, expected
+
+    def test_grab_next_visits_oldest_scheduled_first(
+        self, swh_scheduler, listed_origins_by_type,
+    ):
+        visit_type, origins, expected = self._prepare_oldest_scheduled_first_origins(
+            swh_scheduler, listed_origins_by_type
+        )
         self._check_grab_next_visit(
             swh_scheduler,
             visit_type=visit_type,
             policy="oldest_scheduled_first",
             expected=expected,
         )
+
+    @pytest.mark.parametrize("cooldown", (7, 15))
+    def test_grab_next_visits_oldest_scheduled_first_scheduled_cooldown(
+        self, swh_scheduler, listed_origins_by_type, cooldown
+    ):
+        visit_type, origins, expected = self._prepare_oldest_scheduled_first_origins(
+            swh_scheduler, listed_origins_by_type
+        )
+        after = self._check_grab_next_visit_basic(
+            swh_scheduler,
+            visit_type=visit_type,
+            policy="oldest_scheduled_first",
+            expected=expected,
+        )
+
+        cooldown_td = datetime.timedelta(days=cooldown)
+
+        ret = swh_scheduler.grab_next_visits(
+            visit_type=visit_type,
+            count=len(expected) + 1,
+            policy="oldest_scheduled_first",
+            timestamp=after + cooldown_td - datetime.timedelta(seconds=1),
+            scheduled_cooldown=cooldown_td,
+        )
+
+        assert ret == [], "Scheduled cooldown ignored"
+
+        ret = swh_scheduler.grab_next_visits(
+            visit_type=visit_type,
+            count=len(expected) + 1,
+            policy="oldest_scheduled_first",
+            timestamp=after + cooldown_td + datetime.timedelta(seconds=1),
+            scheduled_cooldown=cooldown_td,
+        )
+
+        assert sorted(ret) == sorted(
+            expected
+        ), "grab_next_visits didn't reschedule visits after the configured cooldown"
 
     def test_grab_next_visits_never_visited_oldest_update_first(
         self, swh_scheduler, listed_origins_by_type,
