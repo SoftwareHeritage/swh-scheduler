@@ -870,9 +870,10 @@ class TestScheduler:
             expected=expected,
         )
 
+    @pytest.mark.parametrize("which_cooldown", ("scheduled", "failed"))
     @pytest.mark.parametrize("cooldown", (7, 15))
-    def test_grab_next_visits_oldest_scheduled_first_scheduled_cooldown(
-        self, swh_scheduler, listed_origins_by_type, cooldown
+    def test_grab_next_visits_cooldowns(
+        self, swh_scheduler, listed_origins_by_type, which_cooldown, cooldown,
     ):
         visit_type, origins, expected = self._prepare_oldest_scheduled_first_origins(
             swh_scheduler, listed_origins_by_type
@@ -884,24 +885,48 @@ class TestScheduler:
             expected=expected,
         )
 
+        # Mark all the visits as `{which_cooldown}` (scheduled, failed or notfound) on
+        # the `after` timestamp
+        ovs_args = {"last_failed": None, "last_scheduled": None}
+        ovs_args[f"last_{which_cooldown}"] = after
+
+        visit_stats = [
+            OriginVisitStats(
+                url=origin.url,
+                visit_type=origin.visit_type,
+                last_snapshot=None,
+                last_eventful=None,
+                last_uneventful=None,
+                last_notfound=None,
+                **ovs_args,
+            )
+            for i, origin in enumerate(origins)
+        ]
+        swh_scheduler.origin_visit_stats_upsert(visit_stats)
+
         cooldown_td = datetime.timedelta(days=cooldown)
+        cooldown_args = {
+            "scheduled_cooldown": None,
+            "failed_cooldown": None,
+        }
+        cooldown_args[f"{which_cooldown}_cooldown"] = cooldown_td
 
         ret = swh_scheduler.grab_next_visits(
             visit_type=visit_type,
             count=len(expected) + 1,
             policy="oldest_scheduled_first",
             timestamp=after + cooldown_td - datetime.timedelta(seconds=1),
-            scheduled_cooldown=cooldown_td,
+            **cooldown_args,
         )
 
-        assert ret == [], "Scheduled cooldown ignored"
+        assert ret == [], f"{which_cooldown}_cooldown ignored"
 
         ret = swh_scheduler.grab_next_visits(
             visit_type=visit_type,
             count=len(expected) + 1,
             policy="oldest_scheduled_first",
             timestamp=after + cooldown_td + datetime.timedelta(seconds=1),
-            scheduled_cooldown=cooldown_td,
+            **cooldown_args,
         )
 
         assert sorted(ret) == sorted(
