@@ -132,6 +132,21 @@ class SchedulerBackend:
         return cur.fetchall()
 
     @db_transaction()
+    def get_listers(self, db=None, cur=None) -> List[Lister]:
+        """Retrieve information about all listers from the database.
+        """
+
+        select_cols = ", ".join(Lister.select_columns())
+
+        query = f"""
+            select {select_cols} from listers
+        """
+
+        cur.execute(query)
+
+        return [Lister(**ret) for ret in cur.fetchall()]
+
+    @db_transaction()
     def get_lister(
         self, name: str, instance_name: Optional[str] = None, db=None, cur=None
     ) -> Optional[Lister]:
