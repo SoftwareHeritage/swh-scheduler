@@ -1,3 +1,11 @@
+swh-scheduler (0.16.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.16.0     - (tagged by Antoine Lambert
+    <anlambert@softwareheritage.org> on 2021-06-22 17:35:55 +0200)
+  * Upstream changes:     - version 0.16.0
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 22 Jun 2021 15:39:45 +0000
+
 swh-scheduler (0.15.0-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.15.0     - (tagged by Antoine R. Dumont
