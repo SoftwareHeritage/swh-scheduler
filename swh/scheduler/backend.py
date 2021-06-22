@@ -132,6 +132,21 @@ class SchedulerBackend:
         return cur.fetchall()
 
     @db_transaction()
+    def get_listers(self, db=None, cur=None) -> List[Lister]:
+        """Retrieve information about all listers from the database.
+        """
+
+        select_cols = ", ".join(Lister.select_columns())
+
+        query = f"""
+            select {select_cols} from listers
+        """
+
+        cur.execute(query)
+
+        return [Lister(**ret) for ret in cur.fetchall()]
+
+    @db_transaction()
     def get_lister(
         self, name: str, instance_name: Optional[str] = None, db=None, cur=None
     ) -> Optional[Lister]:
@@ -319,19 +334,6 @@ class SchedulerBackend:
         db=None,
         cur=None,
     ) -> List[ListedOrigin]:
-        """Get at most the `count` next origins that need to be visited with
-        the `visit_type` loader according to the given scheduling `policy`.
-
-        This will mark the origins as scheduled in the origin_visit_stats
-        table, to avoid scheduling multiple visits to the same origin.
-
-        Arguments:
-          visit_type: type of visits to schedule
-          count: number of visits to schedule
-          policy: the scheduling policy used to select which visits to schedule
-          timestamp: the mocked timestamp at which we're recording that the visits are
-            being scheduled (defaults to the current time)
-        """
         if timestamp is None:
             timestamp = utcnow()
 
