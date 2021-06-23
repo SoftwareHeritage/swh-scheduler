@@ -928,16 +928,17 @@ class SchedulerBackend:
         pk_cols = OriginVisitStats.primary_key_columns()
         insert_cols, insert_meta = OriginVisitStats.insert_columns_and_metavars()
 
+        upsert_cols = [col for col in insert_cols if col not in pk_cols]
+        upsert_set = ", ".join(
+            f"{col} = coalesce(EXCLUDED.{col}, ovi.{col})" for col in upsert_cols
+        )
+
         query = f"""
             INSERT into origin_visit_stats AS ovi ({", ".join(insert_cols)})
             VALUES %s
             ON CONFLICT ({", ".join(pk_cols)}) DO UPDATE
-            SET last_eventful = coalesce(excluded.last_eventful, ovi.last_eventful),
-                last_uneventful = coalesce(excluded.last_uneventful, ovi.last_uneventful),
-                last_failed = coalesce(excluded.last_failed, ovi.last_failed),
-                last_notfound = coalesce(excluded.last_notfound, ovi.last_notfound),
-                last_snapshot = coalesce(excluded.last_snapshot, ovi.last_snapshot)
-        """  # noqa
+            SET {upsert_set}
+        """
 
         try:
             psycopg2.extras.execute_values(
