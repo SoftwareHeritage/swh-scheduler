@@ -147,6 +147,8 @@ def test_journal_client_origin_visit_status_from_journal_last_notfound(swh_sched
             last_failed=None,
             last_notfound=visit_status["date"],
             last_snapshot=None,
+            next_visit_queue_position=None,
+            next_position_offset=5,
         )
     ]
 
@@ -183,6 +185,8 @@ def test_journal_client_origin_visit_status_from_journal_last_notfound(swh_sched
             last_failed=None,
             last_notfound=DATE3,
             last_snapshot=None,
+            next_visit_queue_position=None,
+            next_position_offset=7,
         )
     ]
 
@@ -237,6 +241,8 @@ def test_journal_client_origin_visit_status_from_journal_last_failed(swh_schedul
             last_failed=DATE3,
             last_notfound=None,
             last_snapshot=None,
+            next_visit_queue_position=None,
+            next_position_offset=7,
         )
     ]
 
@@ -275,6 +281,8 @@ def test_journal_client_origin_visit_status_from_journal_last_failed2(swh_schedu
             last_failed=DATE2,
             last_notfound=None,
             last_snapshot=None,
+            next_visit_queue_position=None,
+            next_position_offset=6,
         )
     ]
 
@@ -329,6 +337,8 @@ def test_journal_client_origin_visit_status_from_journal_last_eventful(swh_sched
             last_failed=None,
             last_notfound=None,
             last_snapshot=hash_to_bytes("dddcc0710eb6cf9efd5b920a8453e1e07157bddd"),
+            next_visit_queue_position=None,
+            next_position_offset=0,
         )
     ]
 
@@ -354,6 +364,8 @@ def test_journal_client_origin_visit_status_from_journal_last_uneventful(swh_sch
                 last_failed=DATE2,
                 last_notfound=DATE1,
                 last_snapshot=visit_status["snapshot"],
+                next_visit_queue_position=None,
+                next_position_offset=4,
             )
         ]
     )
@@ -374,6 +386,8 @@ def test_journal_client_origin_visit_status_from_journal_last_uneventful(swh_sch
             last_failed=DATE2,
             last_notfound=DATE1,
             last_snapshot=visit_status["snapshot"],
+            next_visit_queue_position=None,
+            next_position_offset=5,  # uneventful so visit less often
         )
     ]
 
@@ -434,6 +448,8 @@ def test_journal_client_origin_visit_status_permutation0(visit_statuses, swh_sch
         last_failed=None,
         last_notfound=None,
         last_snapshot=hash_to_bytes("d81cc0710eb6cf9efd5b920a8453e1e07157b6cd"),
+        next_visit_queue_position=None,
+        next_position_offset=5,  # uneventful, visit origin less often in the future
     )
 
     assert swh_scheduler.origin_visit_stats_get([("foo", "git")]) == [
@@ -647,7 +663,7 @@ def test_journal_client_origin_visit_status_duplicated_messages(swh_scheduler):
 
 
 def test_journal_client_origin_visit_status_several_upsert(swh_scheduler):
-    """A duplicated message must be ignored
+    """An old message updates old information
 
     """
     visit_status1 = {
@@ -676,18 +692,18 @@ def test_journal_client_origin_visit_status_several_upsert(swh_scheduler):
         {"origin_visit_status": [visit_status1]}, scheduler=swh_scheduler
     )
 
-    expected_visit_stats = OriginVisitStats(
-        url="foo",
-        visit_type="git",
-        last_eventful=DATE1,
-        last_uneventful=DATE2,
-        last_failed=None,
-        last_notfound=None,
-        last_snapshot=hash_to_bytes("aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"),
-    )
-
     assert swh_scheduler.origin_visit_stats_get([("foo", "git")]) == [
-        expected_visit_stats
+        OriginVisitStats(
+            url="foo",
+            visit_type="git",
+            last_eventful=DATE1,
+            last_uneventful=DATE2,
+            last_failed=None,
+            last_notfound=None,
+            last_snapshot=hash_to_bytes("aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"),
+            next_visit_queue_position=None,
+            next_position_offset=5,
+        )
     ]
 
 
@@ -735,16 +751,16 @@ def test_journal_client_origin_visit_statuses_same_snapshot_permutation(
         {"origin_visit_status": visit_statuses}, scheduler=swh_scheduler
     )
 
-    expected_visit_stats = OriginVisitStats(
-        url="cavabarder",
-        visit_type="hg",
-        last_eventful=DATE1,
-        last_uneventful=DATE1 + 2 * ONE_YEAR,
-        last_failed=None,
-        last_notfound=None,
-        last_snapshot=hash_to_bytes("aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"),
-    )
-
     assert swh_scheduler.origin_visit_stats_get([("cavabarder", "hg")]) == [
-        expected_visit_stats
+        OriginVisitStats(
+            url="cavabarder",
+            visit_type="hg",
+            last_eventful=DATE1,
+            last_uneventful=DATE1 + 2 * ONE_YEAR,
+            last_failed=None,
+            last_notfound=None,
+            last_snapshot=hash_to_bytes("aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"),
+            next_visit_queue_position=None,
+            next_position_offset=6,  # 2 uneventful visits, whatever the permutation
+        )
     ]

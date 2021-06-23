@@ -26,6 +26,16 @@ def max_date(*dates: Optional[datetime]) -> datetime:
     return max(filtered_dates)
 
 
+def update_next_position_offset(visit_stats: Dict, increment: int) -> None:
+    """Update the next position offset according to existing value and the increment. The
+    resulting value must be a positive integer.
+
+    """
+    visit_stats["next_position_offset"] = max(
+        0, visit_stats["next_position_offset"] + increment
+    )
+
+
 def process_journal_objects(
     messages: Dict[str, List[Dict]], *, scheduler: SchedulerInterface
 ) -> None:
@@ -51,6 +61,10 @@ def process_journal_objects(
 
         - Compared to what is already stored in the origin_visit_stats table, only most
           recent information is kept.
+
+        - This updates the `next_visit_queue_position` (time at which some new objects
+          are expected to be added for the origin), and `next_position_offset` (duration
+          that we expect to wait between visits of this origin).
 
     This is a worker function to be used with `JournalClient.process(worker_fn)`, after
     currification of `scheduler` and `task_names`.
@@ -99,22 +113,20 @@ def process_journal_objects(
             visit_stats_d["last_notfound"] = max_date(
                 msg_dict["date"], visit_stats_d.get("last_notfound")
             )
-        elif msg_dict["status"] == "failed":
+            update_next_position_offset(visit_stats_d, 1)  # visit less often
+        elif msg_dict["status"] == "failed" or msg_dict["snapshot"] is None:
             visit_stats_d["last_failed"] = max_date(
                 msg_dict["date"], visit_stats_d.get("last_failed")
             )
-        elif msg_dict["snapshot"] is None:
-            visit_stats_d["last_failed"] = max_date(
-                msg_dict["date"], visit_stats_d.get("last_failed")
-            )
+            update_next_position_offset(visit_stats_d, 1)  # visit less often
         else:  # visit with snapshot, something happened
             if visit_stats_d["last_snapshot"] is None:
                 # first time visit with snapshot, we keep relevant information
                 visit_stats_d["last_eventful"] = msg_dict["date"]
                 visit_stats_d["last_snapshot"] = msg_dict["snapshot"]
             else:
-                # visit with snapshot already stored, last_eventful should already be
-                # stored
+                # last_snapshot is set, so an eventful visit should have previously been
+                # recorded
                 assert visit_stats_d["last_eventful"] is not None
                 latest_recorded_visit_date = max_date(
                     visit_stats_d["last_eventful"], visit_stats_d["last_uneventful"]
@@ -131,6 +143,8 @@ def process_journal_objects(
                     # new eventful visit (new snapshot)
                     visit_stats_d["last_eventful"] = current_status_date
                     visit_stats_d["last_snapshot"] = msg_dict["snapshot"]
+                    # Visit this origin more often in the future
+                    update_next_position_offset(visit_stats_d, -2)
                 else:
                     # same snapshot as before
                     if (
@@ -147,6 +161,8 @@ def process_journal_objects(
                         visit_stats_d["last_eventful"] = min(
                             visit_stats_d["last_eventful"], current_status_date
                         )
+                        # Visit this origin less often in the future
+                        update_next_position_offset(visit_stats_d, 1)
                     elif (
                         latest_recorded_visit_date
                         and current_status_date == latest_recorded_visit_date
@@ -157,6 +173,8 @@ def process_journal_objects(
                     else:
                         # uneventful event
                         visit_stats_d["last_uneventful"] = current_status_date
+                        # Visit this origin less often in the future
+                        update_next_position_offset(visit_stats_d, 1)
 
     scheduler.origin_visit_stats_upsert(
         OriginVisitStats(**ovs) for ovs in origin_visit_stats.values()
