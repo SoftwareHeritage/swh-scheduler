@@ -1204,6 +1204,26 @@ class TestScheduler:
                 ]
             )
 
+    def test_visit_scheduler_queue_position(
+        self, swh_scheduler, listed_origins
+    ) -> None:
+        result = swh_scheduler.visit_scheduler_queue_position_get()
+        assert result == {}
+
+        expected_result = {}
+        visit_types = set()
+        for origin in listed_origins:
+            visit_type = origin.visit_type
+            if visit_type in visit_types:
+                continue
+            visit_types.add(visit_type)
+            position = utcnow()
+            swh_scheduler.visit_scheduler_queue_position_set(visit_type, position)
+            expected_result[visit_type] = position
+
+        result = swh_scheduler.visit_scheduler_queue_position_get()
+        assert result == expected_result
+
     def test_metrics_origins_known(self, swh_scheduler, listed_origins):
         swh_scheduler.record_listed_origins(listed_origins)
 

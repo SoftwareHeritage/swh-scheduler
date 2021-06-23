@@ -975,6 +975,24 @@ class SchedulerBackend:
         return [OriginVisitStats(**row) for row in rows]
 
     @db_transaction()
+    def visit_scheduler_queue_position_get(
+        self, db=None, cur=None,
+    ) -> Dict[str, datetime.datetime]:
+        cur.execute("SELECT visit_type, position FROM visit_scheduler_queue_position")
+        return {row["visit_type"]: row["position"] for row in cur}
+
+    @db_transaction()
+    def visit_scheduler_queue_position_set(
+        self, visit_type: str, position: datetime.datetime, db=None, cur=None,
+    ) -> None:
+        query = """
+            INSERT INTO visit_scheduler_queue_position(visit_type, position)
+            VALUES(%s, %s)
+            ON CONFLICT(visit_type) DO UPDATE SET position=EXCLUDED.position
+        """
+        cur.execute(query, (visit_type, position))
+
+    @db_transaction()
     def update_metrics(
         self,
         lister_id: Optional[UUID] = None,

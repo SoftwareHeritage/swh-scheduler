@@ -440,6 +440,25 @@ class SchedulerInterface(Protocol):
         """
         ...
 
+    @remote_api_endpoint("visit_scheduler/get")
+    def visit_scheduler_queue_position_get(self,) -> Dict[str, datetime.datetime]:
+        """Retrieve all current queue positions for the recurrent visit scheduler.
+
+        Returns
+            Mapping of visit type to their current queue position
+
+        """
+        ...
+
+    @remote_api_endpoint("visit_scheduler/set")
+    def visit_scheduler_queue_position_set(
+        self, visit_type: str, position: datetime.datetime
+    ) -> None:
+        """Set the current queue position of the recurrent visit scheduler for `visit_type`.
+
+        """
+        ...
+
     @remote_api_endpoint("scheduler_metrics/update")
     def update_metrics(
         self,
