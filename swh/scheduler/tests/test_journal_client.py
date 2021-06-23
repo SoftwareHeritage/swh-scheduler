@@ -489,19 +489,17 @@ def test_journal_client_origin_visit_status_permutation1(visit_statuses, swh_sch
         {"origin_visit_status": visit_statuses}, scheduler=swh_scheduler
     )
 
-    expected_visit_stats = OriginVisitStats(
-        url="cavabarder",
-        visit_type="hg",
-        last_eventful=DATE1 + 2 * ONE_DAY,
-        last_uneventful=DATE1 + 3 * ONE_DAY,
-        last_failed=None,
-        last_notfound=None,
-        last_snapshot=hash_to_bytes("aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"),
-    )
+    (actual_visit_stats,) = swh_scheduler.origin_visit_stats_get([("cavabarder", "hg")])
 
-    assert swh_scheduler.origin_visit_stats_get([("cavabarder", "hg")]) == [
-        expected_visit_stats
-    ]
+    assert actual_visit_stats.url == "cavabarder"
+    assert actual_visit_stats.visit_type == "hg"
+    assert actual_visit_stats.last_eventful == DATE1 + 2 * ONE_DAY
+    assert actual_visit_stats.last_uneventful == DATE1 + 3 * ONE_DAY
+    assert actual_visit_stats.last_failed is None
+    assert actual_visit_stats.last_notfound is None
+    assert actual_visit_stats.last_snapshot == hash_to_bytes(
+        "aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"
+    )
 
 
 VISIT_STATUSES_2 = [
