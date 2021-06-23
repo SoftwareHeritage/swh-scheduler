@@ -56,22 +56,23 @@ def process_journal_objects(
             list(set((vs["origin"], vs["type"]) for vs in interesting_messages))
         )
     }
+    # Use the default values from the model object
+    empty_object = {
+        field.name: field.default if field.default != attr.NOTHING else None
+        for field in attr.fields(OriginVisitStats)
+    }
 
     for msg_dict in interesting_messages:
         origin = msg_dict["origin"]
         visit_type = msg_dict["type"]
-        empty_object = {
-            "url": origin,
-            "visit_type": visit_type,
-            "last_uneventful": None,
-            "last_eventful": None,
-            "last_failed": None,
-            "last_notfound": None,
-            "last_snapshot": None,
-        }
         pk = origin, visit_type
         if pk not in origin_visit_stats:
-            origin_visit_stats[pk] = empty_object
+            origin_visit_stats[pk] = {
+                **empty_object,
+                "url": origin,
+                "visit_type": visit_type,
+            }
+
         visit_stats_d = origin_visit_stats[pk]
 
         if msg_dict["status"] == "not_found":
