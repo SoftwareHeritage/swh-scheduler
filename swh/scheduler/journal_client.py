@@ -29,10 +29,30 @@ def max_date(*dates: Optional[datetime]) -> datetime:
 def process_journal_objects(
     messages: Dict[str, List[Dict]], *, scheduler: SchedulerInterface
 ) -> None:
-    """Read messages from origin_visit_status journal topics, then inserts them in the
-    scheduler "origin_visit_stats" table.
+    """Read messages from origin_visit_status journal topic to update "origin_visit_stats"
+    information on (origin, visit_type). The goal is to compute visit stats information
+    per origin and visit_type: last_eventful, last_uneventful, last_failed,
+    last_notfound, last_snapshot, ...
 
-    Worker function for `JournalClient.process(worker_fn)`, after
+    Details:
+
+        - This journal consumes origin visit status information for final visit status
+          ("full", "partial", "failed", "not_found"). It drops the information on non
+          final visit statuses ("ongoing", "created").
+
+        - The snapshot is used to determine the "eventful/uneventful" nature of the
+          origin visit status.
+
+        - When no snapshot is provided, the visit is considered as failed so the
+          last_failed column is updated.
+
+        - As there is no time guarantee when reading message from the topic, the code
+          tries to keep the data in the most timely ordered as possible.
+
+        - Compared to what is already stored in the origin_visit_stats table, only most
+          recent information is kept.
+
+    This is a worker function to be used with `JournalClient.process(worker_fn)`, after
     currification of `scheduler` and `task_names`.
 
     """
