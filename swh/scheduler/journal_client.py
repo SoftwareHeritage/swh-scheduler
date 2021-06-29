@@ -3,13 +3,15 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-from datetime import datetime
+from datetime import datetime, timedelta
+import random
 from typing import Dict, List, Optional, Tuple
 
 import attr
 
 from swh.scheduler.interface import SchedulerInterface
 from swh.scheduler.model import OriginVisitStats
+from swh.scheduler.utils import utcnow
 
 msg_type = "origin_visit_status"
 
@@ -34,6 +36,70 @@ def update_next_position_offset(visit_stats: Dict, increment: int) -> None:
     visit_stats["next_position_offset"] = max(
         0, visit_stats["next_position_offset"] + increment
     )
+
+
+def from_position_offset_to_days(position_offset: int) -> int:
+    """Compute position offset to interval in days.
+
+        - index 0 and 1: interval 1 day
+        - index 2, 3 and 4: interval 2 days
+        - index 5 and up: interval `4^(n-4)` days for n in (4, 16, 64, 256, 1024, ...)
+
+    Args:
+        position_offset: The actual position offset for a given visit stats
+
+    Returns:
+        The offset as an interval in number of days
+
+    """
+    assert position_offset >= 0
+    if position_offset < 2:
+        result = 1
+    elif position_offset < 5:
+        result = 2
+    else:
+        result = 4 ** (position_offset - 4)
+    return result
+
+
+def next_visit_queue_position(
+    queue_position_per_visit_type: Dict, visit_stats: Dict
+) -> datetime:
+    """Compute the next visit queue position for the given visit_stats.
+
+    This takes the visit_stats next_position_offset value and compute a corresponding
+    interval in days (with a random fudge factor of -/+ 10% range to avoid scheduling
+    burst for hosters). Then computes out of this visit interval and the current visit
+    stats's position in the queue a new position.
+
+    As an implementation detail, if the visit stats does not have a queue position yet,
+    this fallbacks to use the current global position (for the same visit type as the
+    visit stats) to compute the new position in the queue. If there is no global state
+    yet for the visit type, this starts up using the ``utcnow`` function as default
+    value.
+
+    Args:
+        queue_position_per_visit_type: The global state of the queue per visit type
+        visit_stats: The actual visit information to compute the next position for
+
+    Returns:
+        The actual next visit queue position for that visit stats
+
+    """
+    days = from_position_offset_to_days(visit_stats["next_position_offset"])
+    random_fudge_factor = random.uniform(-0.1, 0.1)
+    visit_interval = timedelta(days=days * (1 + random_fudge_factor))
+    # Use the current queue position per visit type as starting position if none is
+    # already set
+    default_queue_position = queue_position_per_visit_type.get(
+        visit_stats["visit_type"], utcnow()
+    )
+    current_position = (
+        visit_stats["next_visit_queue_position"]
+        if visit_stats.get("next_visit_queue_position")
+        else default_queue_position
+    )
+    return current_position + visit_interval
 
 
 def process_journal_objects(
@@ -95,6 +161,9 @@ def process_journal_objects(
         field.name: field.default if field.default != attr.NOTHING else None
         for field in attr.fields(OriginVisitStats)
     }
+
+    # Retrieve the global queue state
+    queue_position_per_visit_type = scheduler.visit_scheduler_queue_position_get()
 
     for msg_dict in interesting_messages:
         origin = msg_dict["origin"]
@@ -175,6 +244,13 @@ def process_journal_objects(
                         visit_stats_d["last_uneventful"] = current_status_date
                         # Visit this origin less often in the future
                         update_next_position_offset(visit_stats_d, 1)
+
+        # Update the next visit queue position (which will be used solely for origin
+        # without any last_update, cf. the dedicated scheduling policy
+        # "origins_without_last_update")
+        visit_stats_d["next_visit_queue_position"] = next_visit_queue_position(
+            queue_position_per_visit_type, visit_stats_d
+        )
 
     scheduler.origin_visit_stats_upsert(
         OriginVisitStats(**ovs) for ovs in origin_visit_stats.values()
