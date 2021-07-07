@@ -178,6 +178,7 @@ create table origin_visit_stats (
   next_visit_queue_position timestamptz,
   -- duration that we expect to wait between visits of this origin
   next_position_offset int not null default 4,
+  successive_visits	int not null default 1,
 
   primary key (url, visit_type)
 );
@@ -193,6 +194,7 @@ comment on column origin_visit_stats.last_snapshot is 'sha1_git of the last visi
 
 comment on column origin_visit_stats.next_visit_queue_position is 'Time at which some new objects are expected to be found';
 comment on column origin_visit_stats.next_position_offset is 'Duration that we expect to wait between visits of this origin';
+comment on column origin_visit_stats.successive_visits is 'number of successive visits with the same status';
 
 create table visit_scheduler_queue_position (
   visit_type text not null,

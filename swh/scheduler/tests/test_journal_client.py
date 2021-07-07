@@ -171,6 +171,7 @@ def test_journal_client_origin_visit_status_from_journal_last_not_found(swh_sche
             last_visit=visit_status["date"],
             last_visit_status=LastVisitStatus.not_found,
             next_position_offset=4,
+            successive_visits=1,
         ),
     )
 
@@ -206,6 +207,7 @@ def test_journal_client_origin_visit_status_from_journal_last_not_found(swh_sche
             last_visit=DATE3,
             last_visit_status=LastVisitStatus.not_found,
             next_position_offset=6,
+            successive_visits=3,
         ),
     )
 
@@ -259,6 +261,7 @@ def test_journal_client_origin_visit_status_from_journal_last_failed(swh_schedul
             last_visit=DATE3,
             last_visit_status=LastVisitStatus.failed,
             next_position_offset=6,
+            successive_visits=3,
         ),
     )
 
@@ -296,6 +299,7 @@ def test_journal_client_origin_visit_status_from_journal_last_failed2(swh_schedu
             last_visit=DATE2,
             last_visit_status=LastVisitStatus.failed,
             next_position_offset=5,
+            successive_visits=2,
         ),
     )
 
@@ -351,6 +355,7 @@ def test_journal_client_origin_visit_status_from_journal_last_successful(swh_sch
             last_visit_status=LastVisitStatus.successful,
             last_snapshot=hash_to_bytes("dddcc0710eb6cf9efd5b920a8453e1e07157bddd"),
             next_position_offset=0,
+            successive_visits=3,
         ),
     )
 
@@ -377,6 +382,7 @@ def test_journal_client_origin_visit_status_from_journal_last_uneventful(swh_sch
                 last_snapshot=visit_status["snapshot"],
                 next_visit_queue_position=None,
                 next_position_offset=4,
+                successive_visits=1,
             )
         ]
     )
@@ -388,6 +394,7 @@ def test_journal_client_origin_visit_status_from_journal_last_uneventful(swh_sch
     actual_origin_visit_stats = swh_scheduler.origin_visit_stats_get(
         [(visit_status["origin"], visit_status["type"])]
     )
+
     assert_visit_stats_ok(
         actual_origin_visit_stats[0],
         OriginVisitStats(
@@ -399,6 +406,7 @@ def test_journal_client_origin_visit_status_from_journal_last_uneventful(swh_sch
             last_snapshot=visit_status["snapshot"],
             next_visit_queue_position=None,
             next_position_offset=5,
+            successive_visits=1,
         ),
     )
 
@@ -463,13 +471,19 @@ def test_journal_client_origin_visit_status_permutation0(visit_statuses, swh_sch
             last_visit_status=LastVisitStatus.successful,
             last_snapshot=hash_to_bytes("d81cc0710eb6cf9efd5b920a8453e1e07157b6cd"),
         ),
-        ignore_fields=["next_visit_queue_position", "next_position_offset"],
+        ignore_fields=[
+            "next_visit_queue_position",
+            "next_position_offset",
+            "successive_visits",
+        ],
     )
 
     # We ignore out of order messages, so the next_position_offset isn't exact
     # depending on the permutation. What matters is consistency of the final
     # dates (last_visit and last_successful).
     assert 4 <= visit_stats.next_position_offset <= 5
+    # same goes for successive_visits
+    assert 1 <= visit_stats.successive_visits <= 2
 
 
 VISIT_STATUSES_1 = [
@@ -533,13 +547,19 @@ def test_journal_client_origin_visit_status_permutation1(visit_statuses, swh_sch
             last_visit_status=LastVisitStatus.successful,
             last_snapshot=hash_to_bytes("aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"),
         ),
-        ignore_fields=["next_visit_queue_position", "next_position_offset"],
+        ignore_fields=[
+            "next_visit_queue_position",
+            "next_position_offset",
+            "successive_visits",
+        ],
     )
 
     # We ignore out of order messages, so the next_position_offset isn't exact
     # depending on the permutation. What matters is consistency of the final
     # dates (last_visit and last_successful).
     assert 2 <= visit_stats.next_position_offset <= 5
+    # same goes for successive_visits
+    assert 1 <= visit_stats.successive_visits <= 4
 
 
 VISIT_STATUSES_2 = [
@@ -680,6 +700,7 @@ def test_journal_client_origin_visit_status_duplicated_messages(swh_scheduler):
             last_visit=DATE1,
             last_visit_status=LastVisitStatus.successful,
             last_snapshot=hash_to_bytes("aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"),
+            successive_visits=1,
         ),
     )
 
@@ -725,6 +746,7 @@ def test_journal_client_origin_visit_status_several_upsert(swh_scheduler):
             last_visit_status=LastVisitStatus.successful,
             last_snapshot=hash_to_bytes("aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"),
             next_position_offset=4,
+            successive_visits=1,
         ),
     )
 
@@ -787,13 +809,19 @@ def test_journal_client_origin_visit_statuses_same_snapshot_permutation(
             last_visit_status=LastVisitStatus.successful,
             last_snapshot=hash_to_bytes("aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"),
         ),
-        ignore_fields=["next_visit_queue_position", "next_position_offset"],
+        ignore_fields=[
+            "next_visit_queue_position",
+            "next_position_offset",
+            "successive_visits",
+        ],
     )
 
     # We ignore out of order messages, so the next_position_offset isn't exact
     # depending on the permutation. What matters is consistency of the final
     # dates (last_visit and last_successful).
     assert 4 <= visit_stats.next_position_offset <= 6
+    # same goes for successive_visits
+    assert 1 <= visit_stats.successive_visits <= 3
 
 
 @pytest.mark.parametrize(

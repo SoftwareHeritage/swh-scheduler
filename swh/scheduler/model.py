@@ -226,6 +226,8 @@ class OriginVisitStats(BaseSchedulerModel):
     )
     next_position_offset = attr.ib(type=int, validator=type_validator(), default=4)
 
+    successive_visits = attr.ib(type=int, validator=type_validator(), default=1)
+
     @last_successful.validator
     def check_last_successful(self, attribute, value):
         check_timestamptz(value)

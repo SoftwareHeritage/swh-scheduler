@@ -230,6 +230,10 @@ def process_journal_objects(
             visit_stats_d["next_position_offset"] = max(
                 0, visit_stats_d["next_position_offset"] + increment
             )
+            # increment the counter when last_visit_status is the same
+            same_visit_status = last_visit_status == visit_stats_d["last_visit_status"]
+        else:
+            same_visit_status = False
 
         # Record current visit date as highest known date (we've rejected out of order
         # messages earlier).
@@ -248,6 +252,10 @@ def process_journal_objects(
         # "origins_without_last_update")
         visit_stats_d["next_visit_queue_position"] = next_visit_queue_position(
             queue_position_per_visit_type, visit_stats_d
+        )
+
+        visit_stats_d["successive_visits"] = (
+            visit_stats_d["successive_visits"] + 1 if same_visit_status else 1
         )
 
     scheduler.origin_visit_stats_upsert(
