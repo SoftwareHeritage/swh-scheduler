@@ -921,3 +921,76 @@ def test_next_visit_queue_position_with_next_visit_queue(
     )
 
     assert mock_random.called
+
+
+def test_disable_failing_origins(swh_scheduler):
+    """Origin with too many failed attempts ends up being deactivated in the scheduler.
+
+    """
+
+    # actually store the origin in the scheduler so we can check it's deactivated in the
+    # end.
+    lister = swh_scheduler.get_or_create_lister(
+        name="something", instance_name="something"
+    )
+    origin = ListedOrigin(
+        url="bar", enabled=True, visit_type="svn", lister_id=lister.id
+    )
+    swh_scheduler.record_listed_origins([origin])
+
+    visit_statuses = [
+        {
+            "origin": "bar",
+            "visit": 2,
+            "status": "failed",
+            "date": DATE1,
+            "type": "svn",
+            "snapshot": None,
+        },
+        {
+            "origin": "bar",
+            "visit": 3,
+            "status": "failed",
+            "date": DATE2,
+            "type": "svn",
+            "snapshot": None,
+        },
+        {
+            "origin": "bar",
+            "visit": 3,
+            "status": "failed",
+            "date": DATE3,
+            "type": "svn",
+            "snapshot": None,
+        },
+    ]
+
+    process_journal_objects(
+        {"origin_visit_status": visit_statuses}, scheduler=swh_scheduler
+    )
+
+    actual_origin_visit_stats = swh_scheduler.origin_visit_stats_get([("bar", "svn")])
+    assert_visit_stats_ok(
+        actual_origin_visit_stats[0],
+        OriginVisitStats(
+            url="bar",
+            visit_type="svn",
+            last_successful=None,
+            last_visit=DATE3,
+            last_visit_status=LastVisitStatus.failed,
+            next_position_offset=6,
+            successive_visits=3,
+        ),
+    )
+
+    # Now check that the origin in question is disabled
+    actual_page = swh_scheduler.get_listed_origins(url="bar")
+
+    assert len(actual_page.results) == 1
+    assert actual_page.next_page_token is None
+
+    for origin in actual_page.results:
+        assert origin.enabled is False
+        assert origin.lister_id == lister.id
+        assert origin.url == "bar"
+        assert origin.visit_type == "svn"

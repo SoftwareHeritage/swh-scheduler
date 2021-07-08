@@ -15,6 +15,9 @@ from swh.scheduler.utils import utcnow
 
 msg_type = "origin_visit_status"
 
+DISABLE_ORIGIN_THRESHOLD = 3
+"""Threshold to disable failing origins"""
+
 
 def max_date(*dates: Optional[datetime]) -> datetime:
     """Return the max date of given (possibly None) dates
@@ -130,7 +133,7 @@ def get_last_status(
 def process_journal_objects(
     messages: Dict[str, List[Dict]], *, scheduler: SchedulerInterface
 ) -> None:
-    """Read messages from origin_visit_status journal topic to update "origin_visit_stats"
+    f"""Read messages from origin_visit_status journal topic to update "origin_visit_stats"
     information on (origin, visit_type). The goal is to compute visit stats information
     per origin and visit_type: `last_successful`, `last_visit`, `last_visit_status`, ...
 
@@ -155,6 +158,10 @@ def process_journal_objects(
         - Finally, the `next_visit_queue_position` (time at which some new objects
           are expected to be added for the origin), and `next_position_offset` (duration
           that we expect to wait between visits of this origin) are updated.
+
+        - When visits fails at least {DISABLE_ORIGIN_THRESHOLD} times in a row, the
+          origins are disabled in the scheduler table. It's up to the lister to activate
+          those back when they are listed again.
 
     This is a worker function to be used with `JournalClient.process(worker_fn)`, after
     currification of `scheduler` and `task_names`.
@@ -192,6 +199,8 @@ def process_journal_objects(
         field.name: field.default if field.default != attr.NOTHING else None
         for field in attr.fields(OriginVisitStats)
     }
+
+    disabled_urls: List[str] = []
 
     # Retrieve the global queue state
     queue_position_per_visit_type = scheduler.visit_scheduler_queue_position_get()
@@ -258,6 +267,25 @@ def process_journal_objects(
             visit_stats_d["successive_visits"] + 1 if same_visit_status else 1
         )
 
+        # Disable recurring failing/not-found origins
+        if (
+            visit_stats_d["last_visit_status"]
+            in [LastVisitStatus.not_found, LastVisitStatus.failed]
+        ) and visit_stats_d["successive_visits"] >= DISABLE_ORIGIN_THRESHOLD:
+            disabled_urls.append(visit_stats_d["url"])
+
     scheduler.origin_visit_stats_upsert(
         OriginVisitStats(**ovs) for ovs in origin_visit_stats.values()
     )
+
+    # Disable any origins if any
+    if disabled_urls:
+        disabled_origins = []
+        for url in disabled_urls:
+            origins = scheduler.get_listed_origins(url=url).results
+            if len(origins) > 0:
+                origin = attr.evolve(origins[0], enabled=False)
+                disabled_origins.append(origin)
+
+        if disabled_origins:
+            scheduler.record_listed_origins(disabled_origins)
