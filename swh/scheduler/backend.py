@@ -428,6 +428,27 @@ class SchedulerBackend:
               )
               DESC
             """
+        elif policy == "origins_without_last_update":
+            where_clauses.append("last_update IS NULL")
+            order_by = "origin_visit_stats.next_visit_queue_position nulls first"
+
+            # fmt: off
+
+            # This policy requires updating the global queue position for this
+            # visit type
+            common_table_expressions.append(("update_queue_position", """
+                INSERT INTO
+                  visit_scheduler_queue_position(visit_type, position)
+                SELECT
+                  visit_type, COALESCE(MAX(next_visit_queue_position), now())
+                FROM selected_origins
+                GROUP BY visit_type
+                ON CONFLICT(visit_type) DO UPDATE
+                  SET position=GREATEST(
+                    visit_scheduler_queue_position.position, EXCLUDED.position
+                  )
+            """))
+            # fmt: on
         else:
             raise UnknownPolicy(f"Unknown scheduling policy {policy}")
 
