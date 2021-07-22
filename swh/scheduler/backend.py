@@ -346,6 +346,9 @@ class SchedulerBackend:
 
         where_clauses = []
 
+        # list of (name, query) handled as CTEs before the main query
+        common_table_expressions: List[Tuple[str, str]] = []
+
         # "NOT enabled" = the lister said the origin no longer exists
         where_clauses.append("enabled")
 
@@ -428,46 +431,54 @@ class SchedulerBackend:
         else:
             raise UnknownPolicy(f"Unknown scheduling policy {policy}")
 
-        select_query = f"""
-          SELECT
-            {origin_select_cols}
-          FROM
-            listed_origins
-          LEFT JOIN
-            origin_visit_stats USING (url, visit_type)
-          WHERE
-            ({") AND (".join(where_clauses)})
-          ORDER BY
-            {order_by}
-          LIMIT %s
-        """
+        # fmt: off
+        common_table_expressions.insert(0, ("selected_origins", f"""
+            SELECT
+              {origin_select_cols}, next_visit_queue_position
+            FROM
+              listed_origins
+            LEFT JOIN
+              origin_visit_stats USING (url, visit_type)
+            WHERE
+              ({") AND (".join(where_clauses)})
+            ORDER BY
+              {order_by}
+            LIMIT %s
+        """))
+        # fmt: on
+
         query_args.append(count)
 
-        query = f"""
-            WITH selected_origins AS (
-               {select_query}
-            ),
-            update_stats AS (
-              INSERT INTO
-                origin_visit_stats (
-                  url, visit_type, last_scheduled
-                )
-              SELECT
-                url, visit_type, %s
-              FROM
-                selected_origins
-              ON CONFLICT (url, visit_type) DO UPDATE
-                SET last_scheduled = GREATEST(
-                  origin_visit_stats.last_scheduled,
-                  EXCLUDED.last_scheduled
-                )
-            )
+        # fmt: off
+        common_table_expressions.append(("update_stats", """
+            INSERT INTO
+              origin_visit_stats (url, visit_type, last_scheduled)
             SELECT
-              *
+              url, visit_type, %s
+            FROM
+              selected_origins
+            ON CONFLICT (url, visit_type) DO UPDATE
+              SET last_scheduled = GREATEST(
+                origin_visit_stats.last_scheduled,
+                EXCLUDED.last_scheduled
+              )
+        """))
+        # fmt: on
+
+        query_args.append(timestamp)
+
+        formatted_ctes = ",\n".join(
+            f"{name} AS (\n{cte}\n)" for name, cte in common_table_expressions
+        )
+
+        query = f"""
+            WITH
+              {formatted_ctes}
+            SELECT
+              {origin_select_cols}
             FROM
               selected_origins
         """
-        query_args.append(timestamp)
 
         cur.execute(query, tuple(query_args))
         return [ListedOrigin(**d) for d in cur]
