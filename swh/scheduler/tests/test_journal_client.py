@@ -7,6 +7,7 @@ import datetime
 from datetime import timedelta
 import functools
 from itertools import permutations
+from typing import List
 from unittest.mock import Mock
 
 import attr
@@ -130,7 +131,11 @@ def test_journal_client_ignore_missing_type(swh_scheduler):
     swh_scheduler.origin_visit_stats_upsert.assert_not_called()
 
 
-def assert_visit_stats_ok(actual_visit_stats, expected_visit_stats):
+def assert_visit_stats_ok(
+    actual_visit_stats: List[OriginVisitStats],
+    expected_visit_stats: List[OriginVisitStats],
+    ignore_fields: List[str] = ["next_visit_queue_position"],
+):
     """Utility test function to ensure visits stats read from the backend are in the right
     shape. The comparison on the next_visit_queue_position will be dealt with in
     dedicated tests so it's not tested in tests that are calling this function.
@@ -138,9 +143,11 @@ def assert_visit_stats_ok(actual_visit_stats, expected_visit_stats):
     """
     assert len(actual_visit_stats) == len(expected_visit_stats)
 
-    for visit_stats in actual_visit_stats:
-        visit_stats = attr.evolve(visit_stats, next_visit_queue_position=None)
+    fields = attr.fields_dict(OriginVisitStats)
+    defaults = {field: fields[field].default for field in ignore_fields}
 
+    for visit_stats in actual_visit_stats:
+        visit_stats = attr.evolve(visit_stats, **defaults)
         assert visit_stats in expected_visit_stats
 
 
