@@ -397,7 +397,7 @@ class SchedulerInterface(Protocol):
         timestamp: Optional[datetime.datetime] = None,
         scheduled_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=7),
         failed_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=14),
-        notfound_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=31),
+        not_found_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=31),
     ) -> List[ListedOrigin]:
         """Get at most the `count` next origins that need to be visited with
         the `visit_type` loader according to the given scheduling `policy`.
@@ -415,8 +415,8 @@ class SchedulerInterface(Protocol):
             the same origin again
           failed_cooldown: the minimal interval before which we can reschedule a
             failed origin
-          notfound_cooldown: the minimal interval before which we can reschedule a
-            notfound origin
+          not_found_cooldown: the minimal interval before which we can reschedule a
+            not_found origin
         """
         ...
 

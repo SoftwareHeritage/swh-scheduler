@@ -19,7 +19,12 @@ import pytest
 from swh.model.hashutil import hash_to_bytes
 from swh.scheduler.exc import SchedulerException, StaleData, UnknownPolicy
 from swh.scheduler.interface import ListedOriginPageToken, SchedulerInterface
-from swh.scheduler.model import ListedOrigin, OriginVisitStats, SchedulerMetrics
+from swh.scheduler.model import (
+    LastVisitStatus,
+    ListedOrigin,
+    OriginVisitStats,
+    SchedulerMetrics,
+)
 from swh.scheduler.utils import utcnow
 
 from .common import (
@@ -842,10 +847,8 @@ class TestScheduler:
                 url=origin.url,
                 visit_type=origin.visit_type,
                 last_snapshot=None,
-                last_eventful=None,
-                last_uneventful=None,
-                last_failed=None,
-                last_notfound=None,
+                last_successful=None,
+                last_visit=None,
                 last_scheduled=base_date - timedelta(seconds=i),
             )
             for i, origin in enumerate(origins[1:])
@@ -871,7 +874,7 @@ class TestScheduler:
             expected=expected,
         )
 
-    @pytest.mark.parametrize("which_cooldown", ("scheduled", "failed", "notfound"))
+    @pytest.mark.parametrize("which_cooldown", ("scheduled", "failed", "not_found"))
     @pytest.mark.parametrize("cooldown", (7, 15))
     def test_grab_next_visits_cooldowns(
         self, swh_scheduler, listed_origins_by_type, which_cooldown, cooldown,
@@ -886,18 +889,24 @@ class TestScheduler:
             expected=expected,
         )
 
-        # Mark all the visits as `{which_cooldown}` (scheduled, failed or notfound) on
-        # the `after` timestamp
-        ovs_args = {"last_failed": None, "last_notfound": None, "last_scheduled": None}
-        ovs_args[f"last_{which_cooldown}"] = after
+        # Mark all the visits as scheduled, failed or notfound on the `after` timestamp
+        ovs_args = {
+            "last_visit": None,
+            "last_visit_status": None,
+            "last_scheduled": None,
+        }
+        if which_cooldown == "scheduled":
+            ovs_args["last_scheduled"] = after
+        else:
+            ovs_args["last_visit"] = after
+            ovs_args["last_visit_status"] = LastVisitStatus(which_cooldown)
 
         visit_stats = [
             OriginVisitStats(
                 url=origin.url,
                 visit_type=origin.visit_type,
                 last_snapshot=None,
-                last_eventful=None,
-                last_uneventful=None,
+                last_successful=None,
                 **ovs_args,
             )
             for i, origin in enumerate(origins)
@@ -908,7 +917,7 @@ class TestScheduler:
         cooldown_args = {
             "scheduled_cooldown": None,
             "failed_cooldown": None,
-            "notfound_cooldown": None,
+            "not_found_cooldown": None,
         }
         cooldown_args[f"{which_cooldown}_cooldown"] = cooldown_td
 
@@ -985,10 +994,8 @@ class TestScheduler:
                 url=origin.url,
                 visit_type=origin.visit_type,
                 last_snapshot=hash_to_bytes("d81cc0710eb6cf9efd5b920a8453e1e07157b6cd"),
-                last_eventful=visit_date,
-                last_uneventful=None,
-                last_failed=None,
-                last_notfound=None,
+                last_successful=visit_date,
+                last_visit=visit_date,
             )
             for origin in visited_origins
         ]
@@ -1099,10 +1106,8 @@ class TestScheduler:
                 OriginVisitStats(
                     url=origin.url,
                     visit_type=origin.visit_type,
-                    last_eventful=utcnow(),
-                    last_uneventful=None,
-                    last_failed=None,
-                    last_notfound=None,
+                    last_successful=utcnow(),
+                    last_visit=utcnow(),
                     next_visit_queue_position=date_now
                     + timedelta(days=random.uniform(-10, 1)),
                 )
@@ -1112,10 +1117,8 @@ class TestScheduler:
                 OriginVisitStats(
                     url=origin.url,
                     visit_type=origin.visit_type,
-                    last_eventful=utcnow(),
-                    last_uneventful=None,
-                    last_failed=None,
-                    last_notfound=None,
+                    last_successful=utcnow(),
+                    last_visit=utcnow(),
                     next_visit_queue_position=date_now
                     + timedelta(days=random.uniform(1, 10)),  # definitely > now()
                 )
@@ -1125,10 +1128,8 @@ class TestScheduler:
                 OriginVisitStats(
                     url=origin.url,
                     visit_type=origin.visit_type,
-                    last_eventful=utcnow(),
-                    last_uneventful=None,
-                    last_failed=None,
-                    last_notfound=None,
+                    last_successful=utcnow(),
+                    last_visit=utcnow(),
                 )
                 for origin in origins[150:]
             ]
@@ -1176,10 +1177,8 @@ class TestScheduler:
             OriginVisitStats(
                 url=f"https://example.com/origin-{i:03d}",
                 visit_type="git",
-                last_eventful=utcnow(),
-                last_uneventful=None,
-                last_failed=None,
-                last_notfound=None,
+                last_successful=utcnow(),
+                last_visit=utcnow(),
             )
             for i in range(
                 page_size + 1
@@ -1201,10 +1200,8 @@ class TestScheduler:
         visit_stats = OriginVisitStats(
             url=url,
             visit_type="git",
-            last_eventful=eventful_date,
-            last_uneventful=None,
-            last_failed=None,
-            last_notfound=None,
+            last_successful=eventful_date,
+            last_visit=eventful_date,
         )
         swh_scheduler.origin_visit_stats_upsert([visit_stats])
         swh_scheduler.origin_visit_stats_upsert([visit_stats])
@@ -1212,14 +1209,9 @@ class TestScheduler:
         assert swh_scheduler.origin_visit_stats_get([(url, "git")]) == [visit_stats]
         assert swh_scheduler.origin_visit_stats_get([(url, "svn")]) == []
 
-        uneventful_date = utcnow()
+        new_visit_date = utcnow()
         visit_stats = OriginVisitStats(
-            url=url,
-            visit_type="git",
-            last_eventful=None,
-            last_uneventful=uneventful_date,
-            last_failed=None,
-            last_notfound=None,
+            url=url, visit_type="git", last_successful=None, last_visit=new_visit_date,
         )
         swh_scheduler.origin_visit_stats_upsert([visit_stats])
 
@@ -1228,37 +1220,11 @@ class TestScheduler:
         expected_visit_stats = OriginVisitStats(
             url=url,
             visit_type="git",
-            last_eventful=eventful_date,
-            last_uneventful=uneventful_date,
-            last_failed=None,
-            last_notfound=None,
+            last_successful=eventful_date,
+            last_visit=new_visit_date,
         )
 
         assert uneventful_visits == [expected_visit_stats]
-
-        failed_date = utcnow()
-        visit_stats = OriginVisitStats(
-            url=url,
-            visit_type="git",
-            last_eventful=None,
-            last_uneventful=None,
-            last_failed=failed_date,
-            last_notfound=None,
-        )
-        swh_scheduler.origin_visit_stats_upsert([visit_stats])
-
-        failed_visits = swh_scheduler.origin_visit_stats_get([(url, "git")])
-
-        expected_visit_stats = OriginVisitStats(
-            url=url,
-            visit_type="git",
-            last_eventful=eventful_date,
-            last_uneventful=uneventful_date,
-            last_failed=failed_date,
-            last_notfound=None,
-        )
-
-        assert failed_visits == [expected_visit_stats]
 
     def test_origin_visit_stats_upsert_with_snapshot(self, swh_scheduler) -> None:
         eventful_date = utcnow()
@@ -1267,10 +1233,7 @@ class TestScheduler:
         visit_stats = OriginVisitStats(
             url=url,
             visit_type="git",
-            last_eventful=eventful_date,
-            last_uneventful=None,
-            last_failed=None,
-            last_notfound=None,
+            last_successful=eventful_date,
             last_snapshot=hash_to_bytes("d81cc0710eb6cf9efd5b920a8453e1e07157b6cd"),
         )
         swh_scheduler.origin_visit_stats_upsert([visit_stats])
@@ -1284,19 +1247,13 @@ class TestScheduler:
             OriginVisitStats(
                 url="foo",
                 visit_type="git",
-                last_eventful=utcnow(),
-                last_uneventful=None,
-                last_failed=None,
-                last_notfound=None,
+                last_successful=utcnow(),
                 last_snapshot=hash_to_bytes("d81cc0710eb6cf9efd5b920a8453e1e07157b6cd"),
             ),
             OriginVisitStats(
                 url="bar",
                 visit_type="git",
-                last_eventful=None,
-                last_uneventful=utcnow(),
-                last_notfound=None,
-                last_failed=None,
+                last_visit=utcnow(),
                 last_snapshot=hash_to_bytes("fffcc0710eb6cf9efd5b920a8453e1e07157bfff"),
             ),
         ]
@@ -1318,20 +1275,14 @@ class TestScheduler:
                     OriginVisitStats(
                         url="foo",
                         visit_type="git",
-                        last_eventful=None,
-                        last_uneventful=utcnow(),
-                        last_notfound=None,
-                        last_failed=None,
-                        last_snapshot=None,
+                        last_successful=None,
+                        last_visit=utcnow(),
                     ),
                     OriginVisitStats(
                         url="foo",
                         visit_type="git",
-                        last_eventful=None,
-                        last_uneventful=utcnow(),
-                        last_notfound=None,
-                        last_failed=None,
-                        last_snapshot=None,
+                        last_successful=utcnow(),
+                        last_visit=None,
                     ),
                 ]
             )
@@ -1387,10 +1338,7 @@ class TestScheduler:
                 OriginVisitStats(
                     url=visited_origin.url,
                     visit_type=visited_origin.visit_type,
-                    last_eventful=utcnow(),
-                    last_uneventful=None,
-                    last_failed=None,
-                    last_notfound=None,
+                    last_successful=utcnow(),
                     last_snapshot=hash_to_bytes(
                         "d81cc0710eb6cf9efd5b920a8453e1e07157b6cd"
                     ),
@@ -1419,10 +1367,7 @@ class TestScheduler:
                 OriginVisitStats(
                     url=visited_origin.url,
                     visit_type=visited_origin.visit_type,
-                    last_eventful=visited_origin.last_update - timedelta(days=1),
-                    last_uneventful=None,
-                    last_failed=None,
-                    last_notfound=None,
+                    last_successful=visited_origin.last_update - timedelta(days=1),
                     last_snapshot=hash_to_bytes(
                         "d81cc0710eb6cf9efd5b920a8453e1e07157b6cd"
                     ),

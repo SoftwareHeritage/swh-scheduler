@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Tuple
 import attr
 
 from swh.scheduler.interface import SchedulerInterface
-from swh.scheduler.model import OriginVisitStats
+from swh.scheduler.model import LastVisitStatus, OriginVisitStats
 from swh.scheduler.utils import utcnow
 
 msg_type = "origin_visit_status"
@@ -28,11 +28,13 @@ def max_date(*dates: Optional[datetime]) -> datetime:
     return max(filtered_dates)
 
 
-def update_next_position_offset(visit_stats: Dict, increment: int) -> None:
-    """Update the next position offset according to existing value and the increment. The
-    resulting value must be a positive integer.
+def update_next_position_offset(visit_stats: Dict, eventful: Optional[bool]) -> None:
+    """Update the next position offset according to the existing value and the eventfulness
+    of the visit. The resulting value must be a positive integer.
 
     """
+    increment = -2 if eventful else 1
+
     visit_stats["next_position_offset"] = max(
         0, visit_stats["next_position_offset"] + increment
     )
@@ -102,38 +104,66 @@ def next_visit_queue_position(
     return current_position + visit_interval
 
 
+def get_last_status(
+    incoming_visit_status: Dict, known_visit_stats: Dict
+) -> Tuple[LastVisitStatus, Optional[bool]]:
+    """Determine the `last_visit_status` and eventfulness of an origin according to
+    the received visit_status object, and the state of the origin_visit_stats in db
+    """
+
+    status = incoming_visit_status["status"]
+    if status in ("not_found", "failed"):
+        return LastVisitStatus(status), None
+
+    assert status in ("full", "partial")
+
+    if incoming_visit_status["snapshot"] is None:
+        return LastVisitStatus.failed, None
+
+    if incoming_visit_status["snapshot"] != known_visit_stats.get("last_snapshot"):
+        return LastVisitStatus.successful, True
+
+    return LastVisitStatus.successful, False
+
+
 def process_journal_objects(
     messages: Dict[str, List[Dict]], *, scheduler: SchedulerInterface
 ) -> None:
     """Read messages from origin_visit_status journal topic to update "origin_visit_stats"
     information on (origin, visit_type). The goal is to compute visit stats information
-    per origin and visit_type: last_eventful, last_uneventful, last_failed,
-    last_notfound, last_snapshot, ...
+    per origin and visit_type: `last_successful`, `last_visit`, `last_visit_status`, ...
 
     Details:
 
-        - This journal consumes origin visit status information for final visit status
-          ("full", "partial", "failed", "not_found"). It drops the information on non
-          final visit statuses ("ongoing", "created").
+        - This journal consumes origin visit status information for final visit
+          status (`"full"`, `"partial"`, `"failed"`, `"not_found"`). It drops
+          the information of non final visit statuses (`"ongoing"`,
+          `"created"`).
 
-        - The snapshot is used to determine the "eventful/uneventful" nature of the
-          origin visit status.
+        - This journal client only considers messages that arrive in
+          chronological order. Messages that arrive out of order (i.e. with a
+          date field smaller than the latest recorded visit of the origin) are
+          ignored. This is a tradeoff between correctness and simplicity of
+          implementation [1]_.
 
-        - When no snapshot is provided, the visit is considered as failed so the
-          last_failed column is updated.
+        - The snapshot is used to determine the eventful or uneventful nature of
+          the origin visit.
 
-        - As there is no time guarantee when reading message from the topic, the code
-          tries to keep the data in the most timely ordered as possible.
+        - When no snapshot is provided, the visit is considered as failed.
 
-        - Compared to what is already stored in the origin_visit_stats table, only most
-          recent information is kept.
-
-        - This updates the `next_visit_queue_position` (time at which some new objects
+        - Finally, the `next_visit_queue_position` (time at which some new objects
           are expected to be added for the origin), and `next_position_offset` (duration
-          that we expect to wait between visits of this origin).
+          that we expect to wait between visits of this origin) are updated.
 
     This is a worker function to be used with `JournalClient.process(worker_fn)`, after
     currification of `scheduler` and `task_names`.
+
+    .. [1] Ignoring out of order messages makes the initialization of the
+      origin_visit_status table (from a full journal) less deterministic: only the
+      `last_visit`, `last_visit_state` and `last_successful` fields are guaranteed
+      to be exact, the `next_position_offset` field is a best effort estimate
+      (which should converge once the client has run for a while on in-order
+      messages).
 
     """
     assert set(messages) <= {
@@ -178,72 +208,34 @@ def process_journal_objects(
 
         visit_stats_d = origin_visit_stats[pk]
 
-        if msg_dict["status"] == "not_found":
-            visit_stats_d["last_notfound"] = max_date(
-                msg_dict["date"], visit_stats_d.get("last_notfound")
+        if (
+            visit_stats_d.get("last_visit")
+            and msg_dict["date"] <= visit_stats_d["last_visit"]
+        ):
+            # message received out of order, ignore
+            continue
+
+        # Compare incoming message to known status of the origin, to determine
+        # eventfulness
+        last_visit_status, eventful = get_last_status(msg_dict, visit_stats_d)
+
+        # Update the position offset according to the visit status,
+        # if we had already visited this origin before.
+
+        if visit_stats_d.get("last_visit"):
+            update_next_position_offset(visit_stats_d, eventful)
+
+        # Record current visit date as highest known date (we've rejected out of order
+        # messages earlier).
+        visit_stats_d["last_visit"] = msg_dict["date"]
+        visit_stats_d["last_visit_status"] = last_visit_status
+
+        # Record last successful visit date
+        if last_visit_status == LastVisitStatus.successful:
+            visit_stats_d["last_successful"] = max_date(
+                msg_dict["date"], visit_stats_d.get("last_successful")
             )
-            update_next_position_offset(visit_stats_d, 1)  # visit less often
-        elif msg_dict["status"] == "failed" or msg_dict["snapshot"] is None:
-            visit_stats_d["last_failed"] = max_date(
-                msg_dict["date"], visit_stats_d.get("last_failed")
-            )
-            update_next_position_offset(visit_stats_d, 1)  # visit less often
-        else:  # visit with snapshot, something happened
-            if visit_stats_d["last_snapshot"] is None:
-                # first time visit with snapshot, we keep relevant information
-                visit_stats_d["last_eventful"] = msg_dict["date"]
-                visit_stats_d["last_snapshot"] = msg_dict["snapshot"]
-            else:
-                # last_snapshot is set, so an eventful visit should have previously been
-                # recorded
-                assert visit_stats_d["last_eventful"] is not None
-                latest_recorded_visit_date = max_date(
-                    visit_stats_d["last_eventful"], visit_stats_d["last_uneventful"]
-                )
-                current_status_date = msg_dict["date"]
-                previous_snapshot = visit_stats_d["last_snapshot"]
-                if msg_dict["snapshot"] != previous_snapshot:
-                    if (
-                        latest_recorded_visit_date
-                        and current_status_date < latest_recorded_visit_date
-                    ):
-                        # out of order message so ignored
-                        continue
-                    # new eventful visit (new snapshot)
-                    visit_stats_d["last_eventful"] = current_status_date
-                    visit_stats_d["last_snapshot"] = msg_dict["snapshot"]
-                    # Visit this origin more often in the future
-                    update_next_position_offset(visit_stats_d, -2)
-                else:
-                    # same snapshot as before
-                    if (
-                        latest_recorded_visit_date
-                        and current_status_date < latest_recorded_visit_date
-                    ):
-                        # we receive an old message which is an earlier "eventful" event
-                        # than what we had, we consider the last_eventful event as
-                        # actually an uneventful event.
-                        # The last uneventful visit remains the most recent:
-                        # max, previously computed
-                        visit_stats_d["last_uneventful"] = latest_recorded_visit_date
-                        # The eventful visit remains the oldest one: min
-                        visit_stats_d["last_eventful"] = min(
-                            visit_stats_d["last_eventful"], current_status_date
-                        )
-                        # Visit this origin less often in the future
-                        update_next_position_offset(visit_stats_d, 1)
-                    elif (
-                        latest_recorded_visit_date
-                        and current_status_date == latest_recorded_visit_date
-                    ):
-                        # A duplicated message must be ignored to avoid
-                        # populating the last_uneventful message
-                        continue
-                    else:
-                        # uneventful event
-                        visit_stats_d["last_uneventful"] = current_status_date
-                        # Visit this origin less often in the future
-                        update_next_position_offset(visit_stats_d, 1)
+            visit_stats_d["last_snapshot"] = msg_dict["snapshot"]
 
         # Update the next visit queue position (which will be used solely for origin
         # without any last_update, cf. the dedicated scheduling policy

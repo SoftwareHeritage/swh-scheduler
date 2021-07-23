@@ -378,7 +378,7 @@ as $$
         enabled and last_snapshot is NULL
       ) as origins_never_visited,
       count(*) filter (where
-        enabled and lo.last_update > greatest(ovs.last_eventful, ovs.last_uneventful)
+        enabled and lo.last_update > last_successful
       ) as origins_with_pending_changes
     from listed_origins lo
     left join origin_visit_stats ovs using (url, visit_type)

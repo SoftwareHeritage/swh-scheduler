@@ -11,6 +11,7 @@ from uuid import UUID
 
 import attr
 from psycopg2.errors import CardinalityViolation
+from psycopg2.extensions import AsIs
 import psycopg2.extras
 import psycopg2.pool
 
@@ -20,12 +21,23 @@ from swh.scheduler.utils import utcnow
 
 from .exc import SchedulerException, StaleData, UnknownPolicy
 from .interface import ListedOriginPageToken, PaginatedListedOriginList
-from .model import ListedOrigin, Lister, OriginVisitStats, SchedulerMetrics
+from .model import (
+    LastVisitStatus,
+    ListedOrigin,
+    Lister,
+    OriginVisitStats,
+    SchedulerMetrics,
+)
 
 logger = logging.getLogger(__name__)
 
 
+def adapt_LastVisitStatus(v: LastVisitStatus):
+    return AsIs(f"'{v.value}'::last_visit_status")
+
+
 psycopg2.extensions.register_adapter(dict, psycopg2.extras.Json)
+psycopg2.extensions.register_adapter(LastVisitStatus, adapt_LastVisitStatus)
 psycopg2.extras.register_uuid()
 
 
@@ -333,7 +345,7 @@ class SchedulerBackend:
         timestamp: Optional[datetime.datetime] = None,
         scheduled_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=7),
         failed_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=14),
-        notfound_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=31),
+        not_found_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=31),
         db=None,
         cur=None,
     ) -> List[ListedOrigin]:
@@ -364,10 +376,7 @@ class SchedulerBackend:
                 """origin_visit_stats.last_scheduled IS NULL
                 OR origin_visit_stats.last_scheduled < GREATEST(
                   %s - %s,
-                  origin_visit_stats.last_eventful,
-                  origin_visit_stats.last_uneventful,
-                  origin_visit_stats.last_failed,
-                  origin_visit_stats.last_notfound
+                  origin_visit_stats.last_visit
                 )
             """
             )
@@ -377,20 +386,20 @@ class SchedulerBackend:
         if failed_cooldown:
             # Don't retry failed origins too often
             where_clauses.append(
-                "origin_visit_stats.last_failed is null "
-                "or origin_visit_stats.last_failed < %s - %s"
+                "origin_visit_stats.last_visit_status is distinct from 'failed' "
+                "or origin_visit_stats.last_visit < %s - %s"
             )
             query_args.append(timestamp)
             query_args.append(failed_cooldown)
 
-        if notfound_cooldown:
+        if not_found_cooldown:
             # Don't retry not found origins too often
             where_clauses.append(
-                "origin_visit_stats.last_notfound is null "
-                "or origin_visit_stats.last_notfound < %s - %s"
+                "origin_visit_stats.last_visit_status is distinct from 'not_found' "
+                "or origin_visit_stats.last_visit < %s - %s"
             )
             query_args.append(timestamp)
-            query_args.append(notfound_cooldown)
+            query_args.append(not_found_cooldown)
 
         if policy == "oldest_scheduled_first":
             order_by = "origin_visit_stats.last_scheduled NULLS FIRST"
@@ -410,24 +419,13 @@ class SchedulerBackend:
             # ignore origins we have visited after the known last update
             where_clauses.append("listed_origins.last_update IS NOT NULL")
             where_clauses.append(
-                """
-              listed_origins.last_update
-              > GREATEST(
-                origin_visit_stats.last_eventful,
-                origin_visit_stats.last_uneventful
-              )
-            """
+                "listed_origins.last_update > origin_visit_stats.last_successful"
             )
 
             # order by decreasing visit lag
-            order_by = """\
-              listed_origins.last_update
-              - GREATEST(
-                origin_visit_stats.last_eventful,
-                origin_visit_stats.last_uneventful
-              )
-              DESC
-            """
+            order_by = (
+                "listed_origins.last_update - origin_visit_stats.last_successful DESC"
+            )
         elif policy == "origins_without_last_update":
             where_clauses.append("last_update IS NULL")
             order_by = "origin_visit_stats.next_visit_queue_position nulls first"
