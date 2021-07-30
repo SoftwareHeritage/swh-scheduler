@@ -96,7 +96,20 @@ def get_last_status(
     incoming_visit_status: Dict, known_visit_stats: Dict
 ) -> Tuple[LastVisitStatus, Optional[bool]]:
     """Determine the `last_visit_status` and eventfulness of an origin according to
-    the received visit_status object, and the state of the origin_visit_stats in db
+    the received visit_status object, and the state of the origin_visit_stats in db.
+
+    Note that at the time this function is called, out of order messages were already
+    discarded. Thus why the implementation is rather simple.
+
+    Args:
+        incoming_visit_status: Incoming visit status read ouf of the journal
+        known_visit_stats: Visit stats already registered in the backend
+
+    Returns:
+        A tuple of (LastVisitStatus, Optional[bool]). LastVisitStatus represents the
+        successfulness of the visit. Optional[bool] represents whether the snapshot is
+        fresher than before (True/False) or None if there is no snapshot at all.
+
     """
 
     status = incoming_visit_status["status"]
