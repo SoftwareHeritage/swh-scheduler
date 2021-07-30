@@ -28,18 +28,6 @@ def max_date(*dates: Optional[datetime]) -> datetime:
     return max(filtered_dates)
 
 
-def update_next_position_offset(visit_stats: Dict, eventful: Optional[bool]) -> None:
-    """Update the next position offset according to the existing value and the eventfulness
-    of the visit. The resulting value must be a positive integer.
-
-    """
-    increment = -2 if eventful else 1
-
-    visit_stats["next_position_offset"] = max(
-        0, visit_stats["next_position_offset"] + increment
-    )
-
-
 def from_position_offset_to_days(position_offset: int) -> int:
     """Compute position offset to interval in days.
 
@@ -223,7 +211,12 @@ def process_journal_objects(
         # if we had already visited this origin before.
 
         if visit_stats_d.get("last_visit"):
-            update_next_position_offset(visit_stats_d, eventful)
+            # Update the next position offset according to the existing value and the
+            # eventfulness of the visit.
+            increment = -2 if eventful else 1
+            visit_stats_d["next_position_offset"] = max(
+                0, visit_stats_d["next_position_offset"] + increment
+            )
 
         # Record current visit date as highest known date (we've rejected out of order
         # messages earlier).
