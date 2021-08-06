@@ -395,6 +395,9 @@ class SchedulerInterface(Protocol):
         count: int,
         policy: str,
         timestamp: Optional[datetime.datetime] = None,
+        scheduled_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=7),
+        failed_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=14),
+        not_found_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=31),
     ) -> List[ListedOrigin]:
         """Get at most the `count` next origins that need to be visited with
         the `visit_type` loader according to the given scheduling `policy`.
@@ -408,6 +411,12 @@ class SchedulerInterface(Protocol):
           policy: the scheduling policy used to select which visits to schedule
           timestamp: the mocked timestamp at which we're recording that the visits are
             being scheduled (defaults to the current time)
+          scheduled_cooldown: the minimal interval before which we can schedule
+            the same origin again
+          failed_cooldown: the minimal interval before which we can reschedule a
+            failed origin
+          not_found_cooldown: the minimal interval before which we can reschedule a
+            not_found origin
         """
         ...
 
@@ -427,6 +436,25 @@ class SchedulerInterface(Protocol):
 
         If some visit_stats are not found, they are filtered out of the result. So the
         output list may be of length inferior to the length of the input list.
+
+        """
+        ...
+
+    @remote_api_endpoint("visit_scheduler/get")
+    def visit_scheduler_queue_position_get(self,) -> Dict[str, datetime.datetime]:
+        """Retrieve all current queue positions for the recurrent visit scheduler.
+
+        Returns
+            Mapping of visit type to their current queue position
+
+        """
+        ...
+
+    @remote_api_endpoint("visit_scheduler/set")
+    def visit_scheduler_queue_position_set(
+        self, visit_type: str, position: datetime.datetime
+    ) -> None:
+        """Set the current queue position of the recurrent visit scheduler for `visit_type`.
 
         """
         ...

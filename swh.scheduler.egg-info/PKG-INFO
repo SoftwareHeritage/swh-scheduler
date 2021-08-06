@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: swh.scheduler
-Version: 0.16.0
+Version: 0.17.0
 Summary: Software Heritage Scheduler
 Home-page: https://forge.softwareheritage.org/diffusion/DSCH/
 Author: Software Heritage developers
@@ -21,8 +21,8 @@ Description-Content-Type: text/markdown
 Provides-Extra: testing
 Provides-Extra: journal
 Provides-Extra: simulator
-License-File: LICENSE.Celery
 License-File: LICENSE
+License-File: LICENSE.Celery
 License-File: AUTHORS
 
 swh-scheduler
