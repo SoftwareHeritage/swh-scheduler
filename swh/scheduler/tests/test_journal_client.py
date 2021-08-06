@@ -4,15 +4,23 @@
 # See top-level LICENSE file for more information
 
 import datetime
+from datetime import timedelta
 import functools
 from itertools import permutations
+from typing import List
 from unittest.mock import Mock
 
+import attr
 import pytest
 
 from swh.model.hashutil import hash_to_bytes
-from swh.scheduler.journal_client import max_date, process_journal_objects
-from swh.scheduler.model import ListedOrigin, OriginVisitStats
+from swh.scheduler.journal_client import (
+    from_position_offset_to_days,
+    max_date,
+    next_visit_queue_position,
+    process_journal_objects,
+)
+from swh.scheduler.model import LastVisitStatus, ListedOrigin, OriginVisitStats
 from swh.scheduler.utils import utcnow
 
 
@@ -123,7 +131,24 @@ def test_journal_client_ignore_missing_type(swh_scheduler):
     swh_scheduler.origin_visit_stats_upsert.assert_not_called()
 
 
-def test_journal_client_origin_visit_status_from_journal_last_notfound(swh_scheduler):
+def assert_visit_stats_ok(
+    actual_visit_stats: OriginVisitStats,
+    expected_visit_stats: OriginVisitStats,
+    ignore_fields: List[str] = ["next_visit_queue_position"],
+):
+    """Utility test function to ensure visits stats read from the backend are in the right
+    shape. The comparison on the next_visit_queue_position will be dealt with in
+    dedicated tests so it's not tested in tests that are calling this function.
+
+    """
+    fields = attr.fields_dict(OriginVisitStats)
+    defaults = {field: fields[field].default for field in ignore_fields}
+
+    actual_visit_stats = attr.evolve(actual_visit_stats, **defaults)
+    assert actual_visit_stats == expected_visit_stats
+
+
+def test_journal_client_origin_visit_status_from_journal_last_not_found(swh_scheduler):
     visit_status = {
         "origin": "foo",
         "visit": 1,
@@ -138,17 +163,17 @@ def test_journal_client_origin_visit_status_from_journal_last_notfound(swh_sched
     )
 
     actual_origin_visit_stats = swh_scheduler.origin_visit_stats_get([("foo", "git")])
-    assert actual_origin_visit_stats == [
+    assert_visit_stats_ok(
+        actual_origin_visit_stats[0],
         OriginVisitStats(
             url="foo",
             visit_type="git",
-            last_eventful=None,
-            last_uneventful=None,
-            last_failed=None,
-            last_notfound=visit_status["date"],
-            last_snapshot=None,
-        )
-    ]
+            last_visit=visit_status["date"],
+            last_visit_status=LastVisitStatus.not_found,
+            next_position_offset=4,
+            successive_visits=1,
+        ),
+    )
 
     visit_statuses = [
         {
@@ -174,17 +199,17 @@ def test_journal_client_origin_visit_status_from_journal_last_notfound(swh_sched
     )
 
     actual_origin_visit_stats = swh_scheduler.origin_visit_stats_get([("foo", "git")])
-    assert actual_origin_visit_stats == [
+    assert_visit_stats_ok(
+        actual_origin_visit_stats[0],
         OriginVisitStats(
             url="foo",
             visit_type="git",
-            last_eventful=None,
-            last_uneventful=None,
-            last_failed=None,
-            last_notfound=DATE3,
-            last_snapshot=None,
-        )
-    ]
+            last_visit=DATE3,
+            last_visit_status=LastVisitStatus.not_found,
+            next_position_offset=6,
+            successive_visits=3,
+        ),
+    )
 
 
 def test_journal_client_origin_visit_status_from_journal_last_failed(swh_scheduler):
@@ -228,17 +253,17 @@ def test_journal_client_origin_visit_status_from_journal_last_failed(swh_schedul
     )
 
     actual_origin_visit_stats = swh_scheduler.origin_visit_stats_get([("bar", "git")])
-    assert actual_origin_visit_stats == [
+    assert_visit_stats_ok(
+        actual_origin_visit_stats[0],
         OriginVisitStats(
             url="bar",
             visit_type="git",
-            last_eventful=None,
-            last_uneventful=None,
-            last_failed=DATE3,
-            last_notfound=None,
-            last_snapshot=None,
-        )
-    ]
+            last_visit=DATE3,
+            last_visit_status=LastVisitStatus.failed,
+            next_position_offset=6,
+            successive_visits=3,
+        ),
+    )
 
 
 def test_journal_client_origin_visit_status_from_journal_last_failed2(swh_scheduler):
@@ -266,20 +291,20 @@ def test_journal_client_origin_visit_status_from_journal_last_failed2(swh_schedu
     )
 
     actual_origin_visit_stats = swh_scheduler.origin_visit_stats_get([("bar", "git")])
-    assert actual_origin_visit_stats == [
+    assert_visit_stats_ok(
+        actual_origin_visit_stats[0],
         OriginVisitStats(
             url="bar",
             visit_type="git",
-            last_eventful=None,
-            last_uneventful=None,
-            last_failed=DATE2,
-            last_notfound=None,
-            last_snapshot=None,
-        )
-    ]
+            last_visit=DATE2,
+            last_visit_status=LastVisitStatus.failed,
+            next_position_offset=5,
+            successive_visits=2,
+        ),
+    )
 
 
-def test_journal_client_origin_visit_status_from_journal_last_eventful(swh_scheduler):
+def test_journal_client_origin_visit_status_from_journal_last_successful(swh_scheduler):
     visit_statuses = [
         {
             "origin": "bar",
@@ -320,17 +345,19 @@ def test_journal_client_origin_visit_status_from_journal_last_eventful(swh_sched
     )
 
     actual_origin_visit_stats = swh_scheduler.origin_visit_stats_get([("foo", "git")])
-    assert actual_origin_visit_stats == [
+    assert_visit_stats_ok(
+        actual_origin_visit_stats[0],
         OriginVisitStats(
             url="foo",
             visit_type="git",
-            last_eventful=DATE3,
-            last_uneventful=None,
-            last_failed=None,
-            last_notfound=None,
+            last_successful=DATE3,
+            last_visit=DATE3,
+            last_visit_status=LastVisitStatus.successful,
             last_snapshot=hash_to_bytes("dddcc0710eb6cf9efd5b920a8453e1e07157bddd"),
-        )
-    ]
+            next_position_offset=0,
+            successive_visits=3,
+        ),
+    )
 
 
 def test_journal_client_origin_visit_status_from_journal_last_uneventful(swh_scheduler):
@@ -349,11 +376,13 @@ def test_journal_client_origin_visit_status_from_journal_last_uneventful(swh_sch
             OriginVisitStats(
                 url=visit_status["origin"],
                 visit_type=visit_status["type"],
-                last_eventful=DATE1,
-                last_uneventful=DATE3,
-                last_failed=DATE2,
-                last_notfound=DATE1,
+                last_successful=DATE2,
+                last_visit=DATE3,
+                last_visit_status=LastVisitStatus.failed,
                 last_snapshot=visit_status["snapshot"],
+                next_visit_queue_position=None,
+                next_position_offset=4,
+                successive_visits=1,
             )
         ]
     )
@@ -365,17 +394,21 @@ def test_journal_client_origin_visit_status_from_journal_last_uneventful(swh_sch
     actual_origin_visit_stats = swh_scheduler.origin_visit_stats_get(
         [(visit_status["origin"], visit_status["type"])]
     )
-    assert actual_origin_visit_stats == [
+
+    assert_visit_stats_ok(
+        actual_origin_visit_stats[0],
         OriginVisitStats(
             url=visit_status["origin"],
             visit_type=visit_status["type"],
-            last_eventful=DATE1,
-            last_uneventful=visit_status["date"],  # most recent date but uneventful
-            last_failed=DATE2,
-            last_notfound=DATE1,
+            last_visit=DATE3 + ONE_DAY,
+            last_successful=DATE3 + ONE_DAY,
+            last_visit_status=LastVisitStatus.successful,
             last_snapshot=visit_status["snapshot"],
-        )
-    ]
+            next_visit_queue_position=None,
+            next_position_offset=5,
+            successive_visits=1,
+        ),
+    )
 
 
 VISIT_STATUSES = [
@@ -426,19 +459,31 @@ def test_journal_client_origin_visit_status_permutation0(visit_statuses, swh_sch
         {"origin_visit_status": visit_statuses}, scheduler=swh_scheduler
     )
 
-    expected_visit_stats = OriginVisitStats(
-        url="foo",
-        visit_type="git",
-        last_eventful=DATE1 + ONE_DAY,
-        last_uneventful=DATE1 + 3 * ONE_DAY,
-        last_failed=None,
-        last_notfound=None,
-        last_snapshot=hash_to_bytes("d81cc0710eb6cf9efd5b920a8453e1e07157b6cd"),
+    actual_origin_visit_stats = swh_scheduler.origin_visit_stats_get([("foo", "git")])
+    visit_stats = actual_origin_visit_stats[0]
+    assert_visit_stats_ok(
+        visit_stats,
+        OriginVisitStats(
+            url="foo",
+            visit_type="git",
+            last_successful=DATE1 + 3 * ONE_DAY,
+            last_visit=DATE1 + 3 * ONE_DAY,
+            last_visit_status=LastVisitStatus.successful,
+            last_snapshot=hash_to_bytes("d81cc0710eb6cf9efd5b920a8453e1e07157b6cd"),
+        ),
+        ignore_fields=[
+            "next_visit_queue_position",
+            "next_position_offset",
+            "successive_visits",
+        ],
     )
 
-    assert swh_scheduler.origin_visit_stats_get([("foo", "git")]) == [
-        expected_visit_stats
-    ]
+    # We ignore out of order messages, so the next_position_offset isn't exact
+    # depending on the permutation. What matters is consistency of the final
+    # dates (last_visit and last_successful).
+    assert 4 <= visit_stats.next_position_offset <= 5
+    # same goes for successive_visits
+    assert 1 <= visit_stats.successive_visits <= 2
 
 
 VISIT_STATUSES_1 = [
@@ -489,19 +534,32 @@ def test_journal_client_origin_visit_status_permutation1(visit_statuses, swh_sch
         {"origin_visit_status": visit_statuses}, scheduler=swh_scheduler
     )
 
-    expected_visit_stats = OriginVisitStats(
-        url="cavabarder",
-        visit_type="hg",
-        last_eventful=DATE1 + 2 * ONE_DAY,
-        last_uneventful=DATE1 + 3 * ONE_DAY,
-        last_failed=None,
-        last_notfound=None,
-        last_snapshot=hash_to_bytes("aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"),
+    actual_visit_stats = swh_scheduler.origin_visit_stats_get([("cavabarder", "hg")])
+    visit_stats = actual_visit_stats[0]
+
+    assert_visit_stats_ok(
+        visit_stats,
+        OriginVisitStats(
+            url="cavabarder",
+            visit_type="hg",
+            last_successful=DATE1 + 3 * ONE_DAY,
+            last_visit=DATE1 + 3 * ONE_DAY,
+            last_visit_status=LastVisitStatus.successful,
+            last_snapshot=hash_to_bytes("aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"),
+        ),
+        ignore_fields=[
+            "next_visit_queue_position",
+            "next_position_offset",
+            "successive_visits",
+        ],
     )
 
-    assert swh_scheduler.origin_visit_stats_get([("cavabarder", "hg")]) == [
-        expected_visit_stats
-    ]
+    # We ignore out of order messages, so the next_position_offset isn't exact
+    # depending on the permutation. What matters is consistency of the final
+    # dates (last_visit and last_successful).
+    assert 2 <= visit_stats.next_position_offset <= 5
+    # same goes for successive_visits
+    assert 1 <= visit_stats.successive_visits <= 4
 
 
 VISIT_STATUSES_2 = [
@@ -603,10 +661,9 @@ def test_journal_client_origin_visit_status_after_grab_next_visits(
         assert ovs.last_scheduled is None
 
     ovs = swh_scheduler.origin_visit_stats_get([("cavabarder", "git")])[0]
-    assert ovs.last_eventful == DATE1 + 5 * ONE_DAY
-    assert ovs.last_uneventful is None
-    assert ovs.last_failed is None
-    assert ovs.last_notfound is None
+    assert ovs.last_successful == DATE1 + 5 * ONE_DAY
+    assert ovs.last_visit == DATE1 + 5 * ONE_DAY
+    assert ovs.last_visit_status == LastVisitStatus.successful
     assert ovs.last_snapshot == hash_to_bytes(
         "5555555555555555555555555555555555555555"
     )
@@ -633,23 +690,23 @@ def test_journal_client_origin_visit_status_duplicated_messages(swh_scheduler):
         {"origin_visit_status": [visit_status]}, scheduler=swh_scheduler
     )
 
-    expected_visit_stats = OriginVisitStats(
-        url="foo",
-        visit_type="git",
-        last_eventful=DATE1,
-        last_uneventful=None,
-        last_failed=None,
-        last_notfound=None,
-        last_snapshot=hash_to_bytes("aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"),
+    actual_origin_visit_stats = swh_scheduler.origin_visit_stats_get([("foo", "git")])
+    assert_visit_stats_ok(
+        actual_origin_visit_stats[0],
+        OriginVisitStats(
+            url="foo",
+            visit_type="git",
+            last_successful=DATE1,
+            last_visit=DATE1,
+            last_visit_status=LastVisitStatus.successful,
+            last_snapshot=hash_to_bytes("aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"),
+            successive_visits=1,
+        ),
     )
-
-    assert swh_scheduler.origin_visit_stats_get([("foo", "git")]) == [
-        expected_visit_stats
-    ]
 
 
 def test_journal_client_origin_visit_status_several_upsert(swh_scheduler):
-    """A duplicated message must be ignored
+    """An old message updates old information
 
     """
     visit_status1 = {
@@ -678,19 +735,20 @@ def test_journal_client_origin_visit_status_several_upsert(swh_scheduler):
         {"origin_visit_status": [visit_status1]}, scheduler=swh_scheduler
     )
 
-    expected_visit_stats = OriginVisitStats(
-        url="foo",
-        visit_type="git",
-        last_eventful=DATE1,
-        last_uneventful=DATE2,
-        last_failed=None,
-        last_notfound=None,
-        last_snapshot=hash_to_bytes("aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"),
+    actual_origin_visit_stats = swh_scheduler.origin_visit_stats_get([("foo", "git")])
+    assert_visit_stats_ok(
+        actual_origin_visit_stats[0],
+        OriginVisitStats(
+            url="foo",
+            visit_type="git",
+            last_successful=DATE2,
+            last_visit=DATE2,
+            last_visit_status=LastVisitStatus.successful,
+            last_snapshot=hash_to_bytes("aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"),
+            next_position_offset=4,
+            successive_visits=1,
+        ),
     )
-
-    assert swh_scheduler.origin_visit_stats_get([("foo", "git")]) == [
-        expected_visit_stats
-    ]
 
 
 VISIT_STATUSES_SAME_SNAPSHOT = [
@@ -737,16 +795,202 @@ def test_journal_client_origin_visit_statuses_same_snapshot_permutation(
         {"origin_visit_status": visit_statuses}, scheduler=swh_scheduler
     )
 
-    expected_visit_stats = OriginVisitStats(
-        url="cavabarder",
-        visit_type="hg",
-        last_eventful=DATE1,
-        last_uneventful=DATE1 + 2 * ONE_YEAR,
-        last_failed=None,
-        last_notfound=None,
-        last_snapshot=hash_to_bytes("aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"),
+    actual_origin_visit_stats = swh_scheduler.origin_visit_stats_get(
+        [("cavabarder", "hg")]
+    )
+    visit_stats = actual_origin_visit_stats[0]
+    assert_visit_stats_ok(
+        visit_stats,
+        OriginVisitStats(
+            url="cavabarder",
+            visit_type="hg",
+            last_successful=DATE1 + 2 * ONE_YEAR,
+            last_visit=DATE1 + 2 * ONE_YEAR,
+            last_visit_status=LastVisitStatus.successful,
+            last_snapshot=hash_to_bytes("aaaaaabbbeb6cf9efd5b920a8453e1e07157b6cd"),
+        ),
+        ignore_fields=[
+            "next_visit_queue_position",
+            "next_position_offset",
+            "successive_visits",
+        ],
     )
 
-    assert swh_scheduler.origin_visit_stats_get([("cavabarder", "hg")]) == [
-        expected_visit_stats
+    # We ignore out of order messages, so the next_position_offset isn't exact
+    # depending on the permutation. What matters is consistency of the final
+    # dates (last_visit and last_successful).
+    assert 4 <= visit_stats.next_position_offset <= 6
+    # same goes for successive_visits
+    assert 1 <= visit_stats.successive_visits <= 3
+
+
+@pytest.mark.parametrize(
+    "position_offset, interval",
+    [
+        (0, 1),
+        (1, 1),
+        (2, 2),
+        (3, 2),
+        (4, 2),
+        (5, 4),
+        (6, 16),
+        (7, 64),
+        (8, 256),
+        (9, 1024),
+        (10, 4096),
+    ],
+)
+def test_journal_client_from_position_offset_to_days(position_offset, interval):
+    assert from_position_offset_to_days(position_offset) == interval
+
+
+def test_journal_client_from_position_offset_to_days_only_positive_input():
+    with pytest.raises(AssertionError):
+        from_position_offset_to_days(-1)
+
+
+@pytest.mark.parametrize(
+    "fudge_factor,next_position_offset", [(0.01, 1), (-0.01, 5), (0.1, 8), (-0.1, 10),]
+)
+def test_next_visit_queue_position(mocker, fudge_factor, next_position_offset):
+    mock_random = mocker.patch("swh.scheduler.journal_client.random.uniform")
+    mock_random.return_value = fudge_factor
+
+    date_now = utcnow()
+
+    mock_now = mocker.patch("swh.scheduler.journal_client.utcnow")
+    mock_now.return_value = date_now
+
+    actual_position = next_visit_queue_position(
+        {}, {"next_position_offset": next_position_offset, "visit_type": "svn",}
+    )
+
+    assert actual_position == date_now + timedelta(
+        days=from_position_offset_to_days(next_position_offset) * (1 + fudge_factor)
+    )
+
+    assert mock_now.called
+    assert mock_random.called
+
+
+@pytest.mark.parametrize(
+    "fudge_factor,next_position_offset", [(0.02, 2), (-0.02, 3), (0, 7), (-0.09, 9),]
+)
+def test_next_visit_queue_position_with_state(
+    mocker, fudge_factor, next_position_offset
+):
+    mock_random = mocker.patch("swh.scheduler.journal_client.random.uniform")
+    mock_random.return_value = fudge_factor
+
+    date_now = utcnow()
+
+    actual_position = next_visit_queue_position(
+        {"git": date_now},
+        {"next_position_offset": next_position_offset, "visit_type": "git",},
+    )
+
+    assert actual_position == date_now + timedelta(
+        days=from_position_offset_to_days(next_position_offset) * (1 + fudge_factor)
+    )
+
+    assert mock_random.called
+
+
+@pytest.mark.parametrize(
+    "fudge_factor,next_position_offset", [(0.03, 3), (-0.03, 4), (0.08, 7), (-0.08, 9),]
+)
+def test_next_visit_queue_position_with_next_visit_queue(
+    mocker, fudge_factor, next_position_offset
+):
+    mock_random = mocker.patch("swh.scheduler.journal_client.random.uniform")
+    mock_random.return_value = fudge_factor
+
+    date_now = utcnow()
+
+    actual_position = next_visit_queue_position(
+        {},
+        {
+            "next_position_offset": next_position_offset,
+            "visit_type": "hg",
+            "next_visit_queue_position": date_now,
+        },
+    )
+
+    assert actual_position == date_now + timedelta(
+        days=from_position_offset_to_days(next_position_offset) * (1 + fudge_factor)
+    )
+
+    assert mock_random.called
+
+
+def test_disable_failing_origins(swh_scheduler):
+    """Origin with too many failed attempts ends up being deactivated in the scheduler.
+
+    """
+
+    # actually store the origin in the scheduler so we can check it's deactivated in the
+    # end.
+    lister = swh_scheduler.get_or_create_lister(
+        name="something", instance_name="something"
+    )
+    origin = ListedOrigin(
+        url="bar", enabled=True, visit_type="svn", lister_id=lister.id
+    )
+    swh_scheduler.record_listed_origins([origin])
+
+    visit_statuses = [
+        {
+            "origin": "bar",
+            "visit": 2,
+            "status": "failed",
+            "date": DATE1,
+            "type": "svn",
+            "snapshot": None,
+        },
+        {
+            "origin": "bar",
+            "visit": 3,
+            "status": "failed",
+            "date": DATE2,
+            "type": "svn",
+            "snapshot": None,
+        },
+        {
+            "origin": "bar",
+            "visit": 3,
+            "status": "failed",
+            "date": DATE3,
+            "type": "svn",
+            "snapshot": None,
+        },
     ]
+
+    process_journal_objects(
+        {"origin_visit_status": visit_statuses}, scheduler=swh_scheduler
+    )
+
+    actual_origin_visit_stats = swh_scheduler.origin_visit_stats_get([("bar", "svn")])
+    assert_visit_stats_ok(
+        actual_origin_visit_stats[0],
+        OriginVisitStats(
+            url="bar",
+            visit_type="svn",
+            last_successful=None,
+            last_visit=DATE3,
+            last_visit_status=LastVisitStatus.failed,
+            next_position_offset=6,
+            successive_visits=3,
+        ),
+    )
+
+    # Now check that the origin in question is disabled
+    actual_page = swh_scheduler.get_listed_origins(url="bar")
+
+    assert len(actual_page.results) == 1
+    assert actual_page.next_page_token is None
+
+    for origin in actual_page.results:
+        assert origin.enabled is False
+        assert origin.lister_id == lister.id
+        assert origin.url == "bar"
+        assert origin.visit_type == "svn"

@@ -11,6 +11,7 @@ from uuid import UUID
 
 import attr
 from psycopg2.errors import CardinalityViolation
+from psycopg2.extensions import AsIs
 import psycopg2.extras
 import psycopg2.pool
 
@@ -20,12 +21,23 @@ from swh.scheduler.utils import utcnow
 
 from .exc import SchedulerException, StaleData, UnknownPolicy
 from .interface import ListedOriginPageToken, PaginatedListedOriginList
-from .model import ListedOrigin, Lister, OriginVisitStats, SchedulerMetrics
+from .model import (
+    LastVisitStatus,
+    ListedOrigin,
+    Lister,
+    OriginVisitStats,
+    SchedulerMetrics,
+)
 
 logger = logging.getLogger(__name__)
 
 
+def adapt_LastVisitStatus(v: LastVisitStatus):
+    return AsIs(f"'{v.value}'::last_visit_status")
+
+
 psycopg2.extensions.register_adapter(dict, psycopg2.extras.Json)
+psycopg2.extensions.register_adapter(LastVisitStatus, adapt_LastVisitStatus)
 psycopg2.extras.register_uuid()
 
 
@@ -331,6 +343,9 @@ class SchedulerBackend:
         count: int,
         policy: str,
         timestamp: Optional[datetime.datetime] = None,
+        scheduled_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=7),
+        failed_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=14),
+        not_found_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=31),
         db=None,
         cur=None,
     ) -> List[ListedOrigin]:
@@ -343,6 +358,9 @@ class SchedulerBackend:
 
         where_clauses = []
 
+        # list of (name, query) handled as CTEs before the main query
+        common_table_expressions: List[Tuple[str, str]] = []
+
         # "NOT enabled" = the lister said the origin no longer exists
         where_clauses.append("enabled")
 
@@ -350,21 +368,38 @@ class SchedulerBackend:
         where_clauses.append("visit_type = %s")
         query_args.append(visit_type)
 
-        # Don't re-schedule visits if they're already scheduled but we haven't
-        # recorded a result yet, unless they've been scheduled more than a week
-        # ago (it probably means we've lost them in flight somewhere).
-        where_clauses.append(
-            """origin_visit_stats.last_scheduled IS NULL
-            OR origin_visit_stats.last_scheduled < GREATEST(
-              %s - '7 day'::interval,
-              origin_visit_stats.last_eventful,
-              origin_visit_stats.last_uneventful,
-              origin_visit_stats.last_failed,
-              origin_visit_stats.last_notfound
+        if scheduled_cooldown:
+            # Don't re-schedule visits if they're already scheduled but we haven't
+            # recorded a result yet, unless they've been scheduled more than a week
+            # ago (it probably means we've lost them in flight somewhere).
+            where_clauses.append(
+                """origin_visit_stats.last_scheduled IS NULL
+                OR origin_visit_stats.last_scheduled < GREATEST(
+                  %s - %s,
+                  origin_visit_stats.last_visit
+                )
+            """
             )
-        """
-        )
-        query_args.append(timestamp)
+            query_args.append(timestamp)
+            query_args.append(scheduled_cooldown)
+
+        if failed_cooldown:
+            # Don't retry failed origins too often
+            where_clauses.append(
+                "origin_visit_stats.last_visit_status is distinct from 'failed' "
+                "or origin_visit_stats.last_visit < %s - %s"
+            )
+            query_args.append(timestamp)
+            query_args.append(failed_cooldown)
+
+        if not_found_cooldown:
+            # Don't retry not found origins too often
+            where_clauses.append(
+                "origin_visit_stats.last_visit_status is distinct from 'not_found' "
+                "or origin_visit_stats.last_visit < %s - %s"
+            )
+            query_args.append(timestamp)
+            query_args.append(not_found_cooldown)
 
         if policy == "oldest_scheduled_first":
             order_by = "origin_visit_stats.last_scheduled NULLS FIRST"
@@ -384,67 +419,85 @@ class SchedulerBackend:
             # ignore origins we have visited after the known last update
             where_clauses.append("listed_origins.last_update IS NOT NULL")
             where_clauses.append(
-                """
-              listed_origins.last_update
-              > GREATEST(
-                origin_visit_stats.last_eventful,
-                origin_visit_stats.last_uneventful
-              )
-            """
+                "listed_origins.last_update > origin_visit_stats.last_successful"
             )
 
             # order by decreasing visit lag
-            order_by = """\
-              listed_origins.last_update
-              - GREATEST(
-                origin_visit_stats.last_eventful,
-                origin_visit_stats.last_uneventful
-              )
-              DESC
-            """
+            order_by = (
+                "listed_origins.last_update - origin_visit_stats.last_successful DESC"
+            )
+        elif policy == "origins_without_last_update":
+            where_clauses.append("last_update IS NULL")
+            order_by = "origin_visit_stats.next_visit_queue_position nulls first"
+
+            # fmt: off
+
+            # This policy requires updating the global queue position for this
+            # visit type
+            common_table_expressions.append(("update_queue_position", """
+                INSERT INTO
+                  visit_scheduler_queue_position(visit_type, position)
+                SELECT
+                  visit_type, COALESCE(MAX(next_visit_queue_position), now())
+                FROM selected_origins
+                GROUP BY visit_type
+                ON CONFLICT(visit_type) DO UPDATE
+                  SET position=GREATEST(
+                    visit_scheduler_queue_position.position, EXCLUDED.position
+                  )
+            """))
+            # fmt: on
         else:
             raise UnknownPolicy(f"Unknown scheduling policy {policy}")
 
-        select_query = f"""
-          SELECT
-            {origin_select_cols}
-          FROM
-            listed_origins
-          LEFT JOIN
-            origin_visit_stats USING (url, visit_type)
-          WHERE
-            ({") AND (".join(where_clauses)})
-          ORDER BY
-            {order_by}
-          LIMIT %s
-        """
+        # fmt: off
+        common_table_expressions.insert(0, ("selected_origins", f"""
+            SELECT
+              {origin_select_cols}, next_visit_queue_position
+            FROM
+              listed_origins
+            LEFT JOIN
+              origin_visit_stats USING (url, visit_type)
+            WHERE
+              ({") AND (".join(where_clauses)})
+            ORDER BY
+              {order_by}
+            LIMIT %s
+        """))
+        # fmt: on
+
         query_args.append(count)
 
-        query = f"""
-            WITH selected_origins AS (
-               {select_query}
-            ),
-            update_stats AS (
-              INSERT INTO
-                origin_visit_stats (
-                  url, visit_type, last_scheduled
-                )
-              SELECT
-                url, visit_type, %s
-              FROM
-                selected_origins
-              ON CONFLICT (url, visit_type) DO UPDATE
-                SET last_scheduled = GREATEST(
-                  origin_visit_stats.last_scheduled,
-                  EXCLUDED.last_scheduled
-                )
-            )
+        # fmt: off
+        common_table_expressions.append(("update_stats", """
+            INSERT INTO
+              origin_visit_stats (url, visit_type, last_scheduled)
             SELECT
-              *
+              url, visit_type, %s
+            FROM
+              selected_origins
+            ON CONFLICT (url, visit_type) DO UPDATE
+              SET last_scheduled = GREATEST(
+                origin_visit_stats.last_scheduled,
+                EXCLUDED.last_scheduled
+              )
+        """))
+        # fmt: on
+
+        query_args.append(timestamp)
+
+        formatted_ctes = ",\n".join(
+            f"{name} AS (\n{cte}\n)" for name, cte in common_table_expressions
+        )
+
+        query = f"""
+            WITH
+              {formatted_ctes}
+            SELECT
+              {origin_select_cols}
             FROM
               selected_origins
         """
-        query_args.append(timestamp)
 
         cur.execute(query, tuple(query_args))
         return [ListedOrigin(**d) for d in cur]
@@ -905,16 +958,17 @@ class SchedulerBackend:
         pk_cols = OriginVisitStats.primary_key_columns()
         insert_cols, insert_meta = OriginVisitStats.insert_columns_and_metavars()
 
+        upsert_cols = [col for col in insert_cols if col not in pk_cols]
+        upsert_set = ", ".join(
+            f"{col} = coalesce(EXCLUDED.{col}, ovi.{col})" for col in upsert_cols
+        )
+
         query = f"""
             INSERT into origin_visit_stats AS ovi ({", ".join(insert_cols)})
             VALUES %s
             ON CONFLICT ({", ".join(pk_cols)}) DO UPDATE
-            SET last_eventful = coalesce(excluded.last_eventful, ovi.last_eventful),
-                last_uneventful = coalesce(excluded.last_uneventful, ovi.last_uneventful),
-                last_failed = coalesce(excluded.last_failed, ovi.last_failed),
-                last_notfound = coalesce(excluded.last_notfound, ovi.last_notfound),
-                last_snapshot = coalesce(excluded.last_snapshot, ovi.last_snapshot)
-        """  # noqa
+            SET {upsert_set}
+        """
 
         try:
             psycopg2.extras.execute_values(
@@ -949,6 +1003,24 @@ class SchedulerBackend:
             cur=cur, sql=query, argslist=primary_keys, fetch=True
         )
         return [OriginVisitStats(**row) for row in rows]
+
+    @db_transaction()
+    def visit_scheduler_queue_position_get(
+        self, db=None, cur=None,
+    ) -> Dict[str, datetime.datetime]:
+        cur.execute("SELECT visit_type, position FROM visit_scheduler_queue_position")
+        return {row["visit_type"]: row["position"] for row in cur}
+
+    @db_transaction()
+    def visit_scheduler_queue_position_set(
+        self, visit_type: str, position: datetime.datetime, db=None, cur=None,
+    ) -> None:
+        query = """
+            INSERT INTO visit_scheduler_queue_position(visit_type, position)
+            VALUES(%s, %s)
+            ON CONFLICT(visit_type) DO UPDATE SET position=EXCLUDED.position
+        """
+        cur.execute(query, (visit_type, position))
 
     @db_transaction()
     def update_metrics(

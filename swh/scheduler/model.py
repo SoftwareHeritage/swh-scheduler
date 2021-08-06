@@ -4,7 +4,8 @@
 # See top-level LICENSE file for more information
 
 import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple, Union
 from uuid import UUID
 
 import attr
@@ -177,6 +178,20 @@ class ListedOrigin(BaseSchedulerModel):
         }
 
 
+class LastVisitStatus(Enum):
+    successful = "successful"
+    failed = "failed"
+    not_found = "not_found"
+
+
+def convert_last_visit_status(
+    s: Union[None, str, LastVisitStatus]
+) -> Optional[LastVisitStatus]:
+    if not isinstance(s, str):
+        return s
+    return LastVisitStatus(s)
+
+
 @attr.s(frozen=True, slots=True)
 class OriginVisitStats(BaseSchedulerModel):
     """Represents an aggregated origin visits view.
@@ -188,15 +203,17 @@ class OriginVisitStats(BaseSchedulerModel):
     visit_type = attr.ib(
         type=str, validator=[type_validator()], metadata={"primary_key": True}
     )
-    last_eventful = attr.ib(
-        type=Optional[datetime.datetime], validator=type_validator()
+    last_successful = attr.ib(
+        type=Optional[datetime.datetime], validator=type_validator(), default=None
     )
-    last_uneventful = attr.ib(
-        type=Optional[datetime.datetime], validator=type_validator()
+    last_visit = attr.ib(
+        type=Optional[datetime.datetime], validator=type_validator(), default=None
     )
-    last_failed = attr.ib(type=Optional[datetime.datetime], validator=type_validator())
-    last_notfound = attr.ib(
-        type=Optional[datetime.datetime], validator=type_validator()
+    last_visit_status = attr.ib(
+        type=Optional[LastVisitStatus],
+        validator=type_validator(),
+        default=None,
+        converter=convert_last_visit_status,
     )
     last_scheduled = attr.ib(
         type=Optional[datetime.datetime], validator=[type_validator()], default=None,
@@ -204,21 +221,23 @@ class OriginVisitStats(BaseSchedulerModel):
     last_snapshot = attr.ib(
         type=Optional[bytes], validator=type_validator(), default=None
     )
+    next_visit_queue_position = attr.ib(
+        type=Optional[datetime.datetime], validator=type_validator(), default=None
+    )
+    next_position_offset = attr.ib(type=int, validator=type_validator(), default=4)
 
-    @last_eventful.validator
-    def check_last_eventful(self, attribute, value):
+    successive_visits = attr.ib(type=int, validator=type_validator(), default=1)
+
+    @last_successful.validator
+    def check_last_successful(self, attribute, value):
         check_timestamptz(value)
 
-    @last_uneventful.validator
-    def check_last_uneventful(self, attribute, value):
+    @last_visit.validator
+    def check_last_visit(self, attribute, value):
         check_timestamptz(value)
 
-    @last_failed.validator
-    def check_last_failed(self, attribute, value):
-        check_timestamptz(value)
-
-    @last_notfound.validator
-    def check_last_notfound(self, attribute, value):
+    @next_visit_queue_position.validator
+    def check_next_visit_queue_position(self, attribute, value):
         check_timestamptz(value)
 
 
