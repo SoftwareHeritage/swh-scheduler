@@ -1,3 +1,20 @@
+swh-scheduler (0.17.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.17.0     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2021-08-05 15:29:18
+    +0200)
+  * Upstream changes:     - v0.17.0     - Introduce new scheduling
+    policy to grab origins without last update     - journal_client:
+    Disable origins when too many visited attempts failed     -
+    journal_client: Record last_visited and last_successful in
+    origin_visit_stats     - Add a specific cooldown for notfound
+    origins     - Add a (longer) specific cooldown for failed origin
+    visits     - Make the origin visit scheduling cooldown configurable
+    - Various refactoring to simplify the grab next visits logic and
+    updates
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 06 Aug 2021 09:11:54 +0000
+
 swh-scheduler (0.16.0-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.16.0     - (tagged by Antoine Lambert
