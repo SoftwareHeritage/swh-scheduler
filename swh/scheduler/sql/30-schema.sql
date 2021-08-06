@@ -11,7 +11,7 @@ comment on column dbversion.release is 'Version deployment timestamp';
 comment on column dbversion.description is 'Version description';
 
 insert into dbversion (version, release, description)
-       values (28, now(), 'Work In Progress');
+       values (30, now(), 'Work In Progress');
 
 create table task_type (
   type text primary key,
@@ -160,31 +160,52 @@ comment on column listed_origins.last_seen is 'Time at which the origin was last
 
 comment on column listed_origins.last_update is 'Time of the last update to the origin recorded by the remote';
 
+create type last_visit_status as enum ('successful', 'failed', 'not_found');
+comment on type last_visit_status is 'Record of the status of the last visit of an origin';
 
 create table origin_visit_stats (
   url text not null,
   visit_type text not null,
-  last_eventful timestamptz,
-  last_uneventful timestamptz,
-  last_failed timestamptz,
-  last_notfound timestamptz,
+  last_successful timestamptz,
+  last_visit timestamptz,
+  last_visit_status last_visit_status,
   -- visit scheduling information
   last_scheduled timestamptz,
   -- last snapshot resulting from an eventful visit
   last_snapshot bytea,
+  -- position in the global queue, the "time" at which we expect the origin to have new
+  -- objects
+  next_visit_queue_position timestamptz,
+  -- duration that we expect to wait between visits of this origin
+  next_position_offset int not null default 4,
+  successive_visits	int not null default 1,
 
   primary key (url, visit_type)
 );
 
+comment on table origin_visit_stats is 'Aggregated information on visits for each origin in the archive';
 comment on column origin_visit_stats.url is 'Origin URL';
 comment on column origin_visit_stats.visit_type is 'Type of the visit for the given url';
-comment on column origin_visit_stats.last_eventful is 'Date of the last eventful event';
-comment on column origin_visit_stats.last_uneventful is 'Date of the last uneventful event';
-comment on column origin_visit_stats.last_failed is 'Date of the last failed event';
-comment on column origin_visit_stats.last_notfound is 'Date of the last notfound event';
+comment on column origin_visit_stats.last_successful is 'Date of the last successful visit, at which we recorded the `last_snapshot`';
+comment on column origin_visit_stats.last_visit is 'Date of the last visit overall';
+comment on column origin_visit_stats.last_visit_status is 'Status of the last visit';
 comment on column origin_visit_stats.last_scheduled is 'Time when this origin was scheduled to be visited last';
 comment on column origin_visit_stats.last_snapshot is 'sha1_git of the last visit snapshot';
 
+comment on column origin_visit_stats.next_visit_queue_position is 'Time at which some new objects are expected to be found';
+comment on column origin_visit_stats.next_position_offset is 'Duration that we expect to wait between visits of this origin';
+comment on column origin_visit_stats.successive_visits is 'number of successive visits with the same status';
+
+create table visit_scheduler_queue_position (
+  visit_type text not null,
+  position timestamptz not null,
+
+  primary key (visit_type)
+);
+
+comment on table visit_scheduler_queue_position is 'Current queue position for the recurrent visit scheduler';
+comment on column visit_scheduler_queue_position.visit_type is 'Visit type';
+comment on column visit_scheduler_queue_position.position is 'Current position for the runner of this visit type';
 
 create table scheduler_metrics (
   lister_id uuid not null references listers(id),

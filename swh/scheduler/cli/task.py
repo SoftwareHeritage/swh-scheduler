@@ -501,6 +501,8 @@ def list_tasks(
 ):
     """List tasks.
     """
+    from operator import itemgetter
+
     scheduler = ctx.obj["scheduler"]
     if not scheduler:
         raise ValueError("Scheduler class (local/remote) must be instantiated")
@@ -538,11 +540,11 @@ def list_tasks(
         runs = {}
 
     output.append("Found %d tasks\n" % (len(tasks)))
-    for task in tasks:
+    for task in sorted(tasks, key=itemgetter("id")):
         output.append(pretty_print_task(task, full=True))
         if runs.get(task["id"]):
             output.append(click.style("  Executions:", bold=True))
-            for run in runs[task["id"]]:
+            for run in sorted(runs[task["id"]], key=itemgetter("id")):
                 output.append(pretty_print_run(run, indent=4))
 
     click.echo("\n".join(output))
