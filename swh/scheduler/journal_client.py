@@ -18,6 +18,9 @@ msg_type = "origin_visit_status"
 DISABLE_ORIGIN_THRESHOLD = 3
 """Threshold to disable failing origins"""
 
+MAX_NEXT_POSITION_OFFSET = 10
+"""Max next position offset to avoid date computation overflow"""
+
 
 def max_date(*dates: Optional[datetime]) -> datetime:
     """Return the max date of given (possibly None) dates
@@ -32,17 +35,19 @@ def max_date(*dates: Optional[datetime]) -> datetime:
 
 
 def from_position_offset_to_days(position_offset: int) -> int:
-    """Compute position offset to interval in days.
+    """Compute position offset to interval in days. Note that this does not bound the
+       position_offset input so client code should limit the date computation to avoid
+       overflow errors.
 
-        - index 0 and 1: interval 1 day
-        - index 2, 3 and 4: interval 2 days
-        - index 5 and up: interval `4^(n-4)` days for n in (4, 16, 64, 256, 1024, ...)
+        - index in [0:1]: interval 1 day
+        - index in [2:4]: interval 2 days
+        - index in [5:+inf]: interval `4^(index-4)` days
 
     Args:
         position_offset: The actual position offset for a given visit stats
 
     Returns:
-        The offset as an interval in number of days
+        The offset as an interval in number of days.
 
     """
     assert position_offset >= 0
@@ -236,9 +241,12 @@ def process_journal_objects(
             # Update the next position offset according to the existing value and the
             # eventfulness of the visit.
             increment = -2 if eventful else 1
-            visit_stats_d["next_position_offset"] = max(
-                0, visit_stats_d["next_position_offset"] + increment
+            # Limit the next_position_offset for acceptable date computations
+            current_offset = min(
+                visit_stats_d["next_position_offset"] + increment,
+                MAX_NEXT_POSITION_OFFSET,
             )
+            visit_stats_d["next_position_offset"] = max(0, current_offset)
             # increment the counter when last_visit_status is the same
             same_visit_status = last_visit_status == visit_stats_d["last_visit_status"]
         else:

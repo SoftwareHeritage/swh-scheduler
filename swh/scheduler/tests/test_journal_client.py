@@ -838,6 +838,7 @@ def test_journal_client_origin_visit_statuses_same_snapshot_permutation(
         (8, 256),
         (9, 1024),
         (10, 4096),
+        (11, 16384),
     ],
 )
 def test_journal_client_from_position_offset_to_days(position_offset, interval):
