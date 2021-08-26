@@ -136,9 +136,9 @@ insert into task_type(
        default_interval, min_interval, max_interval, backoff_factor,
        max_queue_length)
 values (
-       'index-fossology-license-for-range',
-       'Fossology license range indexer task',
-       'swh.indexer.tasks.ContentRangeFossologyLicense',
+       'index-fossology-license-for-partition',
+       'Fossology license partition indexer task',
+       'swh.indexer.tasks.ContentFossologyLicensePartition',
        '1 day', '12:00:00', '1 days', 2,
        5000);
 
