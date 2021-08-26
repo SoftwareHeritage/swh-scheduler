@@ -59,6 +59,7 @@ sql/updates/26.sql
 sql/updates/27.sql
 sql/updates/28.sql
 sql/updates/29.sql
+sql/updates/30-bis.sql
 sql/updates/30.sql
 swh/__init__.py
 swh.scheduler.egg-info/PKG-INFO
