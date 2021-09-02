@@ -342,10 +342,13 @@ class SchedulerBackend:
         visit_type: str,
         count: int,
         policy: str,
+        enabled: bool = True,
+        lister_uuid: Optional[str] = None,
         timestamp: Optional[datetime.datetime] = None,
         scheduled_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=7),
         failed_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=14),
         not_found_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=31),
+        tablesample: Optional[float] = None,
         db=None,
         cur=None,
     ) -> List[ListedOrigin]:
@@ -362,7 +365,7 @@ class SchedulerBackend:
         common_table_expressions: List[Tuple[str, str]] = []
 
         # "NOT enabled" = the lister said the origin no longer exists
-        where_clauses.append("enabled")
+        where_clauses.append("enabled" if enabled else "not enabled")
 
         # Only schedule visits of the given type
         where_clauses.append("visit_type = %s")
@@ -428,7 +431,16 @@ class SchedulerBackend:
             )
         elif policy == "origins_without_last_update":
             where_clauses.append("last_update IS NULL")
-            order_by = "origin_visit_stats.next_visit_queue_position nulls first"
+            order_by = ", ".join(
+                [
+                    # By default, sort using the queue position. If the queue
+                    # position is null, then the origin has never been visited,
+                    # which we want to handle first
+                    "origin_visit_stats.next_visit_queue_position nulls first",
+                    # Schedule unknown origins in the order we've seen them
+                    "listed_origins.first_seen",
+                ]
+            )
 
             # fmt: off
 
@@ -450,12 +462,22 @@ class SchedulerBackend:
         else:
             raise UnknownPolicy(f"Unknown scheduling policy {policy}")
 
+        if tablesample:
+            table = "listed_origins tablesample SYSTEM (%s)"
+            query_args.insert(0, tablesample)
+        else:
+            table = "listed_origins"
+
+        if lister_uuid:
+            where_clauses.append("lister_id = %s")
+            query_args.append(lister_uuid)
+
         # fmt: off
         common_table_expressions.insert(0, ("selected_origins", f"""
             SELECT
               {origin_select_cols}, next_visit_queue_position
             FROM
-              listed_origins
+              {table}
             LEFT JOIN
               origin_visit_stats USING (url, visit_type)
             WHERE

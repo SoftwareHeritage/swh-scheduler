@@ -28,7 +28,10 @@ from . import cli
     "task_type_names",
     multiple=True,
     default=[],
-    help="Task type names (e.g load-git, load-hg, list-github-full, ...) to schedule.",
+    help=(
+        "Task types to schedule. If not provided, this iterates over every "
+        "task types referenced in the scheduler backend."
+    ),
 )
 @click.option(
     "--with-priority/--without-priority",
