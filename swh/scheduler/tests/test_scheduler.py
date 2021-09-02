@@ -943,6 +943,22 @@ class TestScheduler:
             expected
         ), "grab_next_visits didn't reschedule visits after the configured cooldown"
 
+    def test_grab_next_visits_tablesample(
+        self, swh_scheduler, listed_origins_by_type,
+    ):
+        visit_type, origins, expected = self._prepare_oldest_scheduled_first_origins(
+            swh_scheduler, listed_origins_by_type
+        )
+        ret = swh_scheduler.grab_next_visits(
+            visit_type=visit_type,
+            policy="oldest_scheduled_first",
+            tablesample=50,
+            count=len(expected),
+        )
+
+        # Just a smoke test, not obvious how to test this more reliably
+        assert ret is not None
+
     def test_grab_next_visits_never_visited_oldest_update_first(
         self, swh_scheduler, listed_origins_by_type,
     ):
