@@ -394,10 +394,13 @@ class SchedulerInterface(Protocol):
         visit_type: str,
         count: int,
         policy: str,
+        enabled: bool = True,
+        lister_uuid: Optional[str] = None,
         timestamp: Optional[datetime.datetime] = None,
         scheduled_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=7),
         failed_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=14),
         not_found_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=31),
+        tablesample: Optional[float] = None,
     ) -> List[ListedOrigin]:
         """Get at most the `count` next origins that need to be visited with
         the `visit_type` loader according to the given scheduling `policy`.
@@ -409,6 +412,10 @@ class SchedulerInterface(Protocol):
           visit_type: type of visits to schedule
           count: number of visits to schedule
           policy: the scheduling policy used to select which visits to schedule
+          enabled: Determine whether we want to list enabled or disabled origins. As
+            default, we want reasonably enabled origins. For some edge case, we might
+            want the others.
+          lister_uuid: Determine the list of origins listed from the lister with uuid
           timestamp: the mocked timestamp at which we're recording that the visits are
             being scheduled (defaults to the current time)
           scheduled_cooldown: the minimal interval before which we can schedule
@@ -417,6 +424,9 @@ class SchedulerInterface(Protocol):
             failed origin
           not_found_cooldown: the minimal interval before which we can reschedule a
             not_found origin
+          tablesample: the percentage of the table on which we run the query
+            (None: no sampling)
+
         """
         ...
 

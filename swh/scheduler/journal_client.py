@@ -3,6 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import copy
 from datetime import datetime, timedelta
 import random
 from typing import Dict, List, Optional, Tuple
@@ -199,6 +200,8 @@ def process_journal_objects(
             list(set((vs["origin"], vs["type"]) for vs in interesting_messages))
         )
     }
+    existing_origin_visit_stats = copy.deepcopy(origin_visit_stats)
+
     # Use the default values from the model object
     empty_object = {
         field.name: field.default if field.default != attr.NOTHING else None
@@ -282,9 +285,17 @@ def process_journal_objects(
         ) and visit_stats_d["successive_visits"] >= DISABLE_ORIGIN_THRESHOLD:
             disabled_urls.append(visit_stats_d["url"])
 
-    scheduler.origin_visit_stats_upsert(
-        OriginVisitStats(**ovs) for ovs in origin_visit_stats.values()
-    )
+    # Only upsert changed values
+    to_upsert = []
+    for key, ovs in origin_visit_stats.items():
+        if (
+            key not in existing_origin_visit_stats
+            or ovs != existing_origin_visit_stats[key]
+        ):
+            to_upsert.append(OriginVisitStats(**ovs))
+
+    if to_upsert:
+        scheduler.origin_visit_stats_upsert(to_upsert)
 
     # Disable any origins if any
     if disabled_urls:

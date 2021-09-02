@@ -1,8 +1,17 @@
-swh-scheduler (0.17.1-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-scheduler (0.18.0-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 0.18.0     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2021-09-02 11:32:59
+    +0200)
+  * Upstream changes:     - v0.18.0     - Refine scheduling policy for
+    origins with no known last update     - Add a swh scheduler origin
+    send-to-celery subcommand     - runner: Improve help message on the
+    task types flag.     - send-to-celery: Add more options to allow
+    scheduling of edge cases     - Add table sampling option to
+    grab_next_visits     - journal_client: Only upsert if we have
+    something to upsert
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 26 Aug 2021 08:43:42 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 02 Sep 2021 09:35:32 +0000
 
 swh-scheduler (0.17.1-1~swh1) unstable-swh; urgency=medium
 
