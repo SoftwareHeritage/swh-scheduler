@@ -230,7 +230,12 @@ MAX_NUM_TASKS = 10000
 
 def get_available_slots(app, queue_name: str, max_length: Optional[int]):
     """Get the number of tasks that can be sent to `queue_name`, when
-    the queue is limited to `max_length`."""
+    the queue is limited to `max_length`.
+
+    Returns:
+        The number of available slots in the queue. That result should be positive.
+
+    """
 
     if not max_length:
         return MAX_NUM_TASKS
@@ -238,7 +243,7 @@ def get_available_slots(app, queue_name: str, max_length: Optional[int]):
     try:
         queue_length = get_queue_length(app, queue_name)
         # Clamp the return value to MAX_NUM_TASKS
-        max_val = min(max_length - queue_length, MAX_NUM_TASKS)
+        max_val = max(0, min(max_length - queue_length, MAX_NUM_TASKS))
     except (ValueError, TypeError):
         # Unknown queue length, just schedule all the tasks
         max_val = MAX_NUM_TASKS
