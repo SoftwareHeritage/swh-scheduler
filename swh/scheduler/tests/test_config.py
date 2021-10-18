@@ -45,6 +45,16 @@ def test_get_available_slots_no_queue_length(mocker):
     assert mock.called
 
 
+def test_get_available_slots_no_more_slots(mocker):
+    mock = mocker.patch("swh.scheduler.celery_backend.config.get_queue_length")
+    max_length = 100
+    queue_length = 9000
+    mock.return_value = queue_length
+    actual_num = get_available_slots(app, "anything", max_length)
+    assert actual_num == 0
+    assert mock.called
+
+
 def test_get_available_slots(mocker):
     mock = mocker.patch("swh.scheduler.celery_backend.config.get_queue_length")
     max_length = 100
