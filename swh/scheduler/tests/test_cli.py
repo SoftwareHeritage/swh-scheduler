@@ -18,7 +18,6 @@ from swh.core.api.classes import stream_results
 from swh.model.model import Origin
 from swh.scheduler.cli import cli
 from swh.scheduler.utils import create_task_dict, utcnow
-from swh.storage import get_storage
 
 CLI_CONFIG = """
 scheduler:
@@ -597,13 +596,12 @@ def _fill_storage_with_origins(storage, nb_origins):
 
 
 @pytest.fixture
-def storage():
+def storage(swh_storage):
     """An instance of in-memory storage that gets injected
     into the CLI functions."""
-    storage = get_storage(cls="memory")
     with patch("swh.storage.get_storage") as get_storage_mock:
-        get_storage_mock.return_value = storage
-        yield storage
+        get_storage_mock.return_value = swh_storage
+        yield swh_storage
 
 
 @patch("swh.scheduler.cli.utils.TASK_BATCH_SIZE", 3)
