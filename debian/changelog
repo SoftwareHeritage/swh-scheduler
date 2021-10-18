@@ -1,3 +1,13 @@
+swh-scheduler (0.18.2-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.18.2     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2021-10-18 15:11:59
+    +0200)
+  * Upstream changes:     - v0.18.2     - Use swh_storage fixture for
+    cli tests
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 18 Oct 2021 13:18:56 +0000
+
 swh-scheduler (0.18.1-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.18.1     - (tagged by Antoine R. Dumont
