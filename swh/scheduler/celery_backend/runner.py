@@ -3,6 +3,15 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+"""This is the first scheduler runner. It is in charge of scheduling "oneshot" tasks
+(e.g save code now, indexer, vault, deposit, ...). To do this, it reads tasks ouf of the
+scheduler backend and pushes those to their associated rabbitmq queues.
+
+The scheduler listener :mod:`swh.scheduler.celery_backend.pika_listener` is the module
+in charge of finalizing the task results.
+
+"""
+
 import logging
 from typing import Dict, List, Tuple
 
