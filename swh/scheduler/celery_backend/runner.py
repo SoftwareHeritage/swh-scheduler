@@ -6,6 +6,7 @@
 import logging
 from typing import Dict, List, Tuple
 
+from deprecated import deprecated
 from kombu.utils.uuid import uuid
 
 from swh.core.statsd import statsd
@@ -151,6 +152,7 @@ def run_ready_tasks(
         all_backend_tasks.extend(backend_tasks)
 
 
+@deprecated(version="0.18", reason="Use `swh scheduler start-runner` instead")
 def main():
     from .config import app as main_app
 
