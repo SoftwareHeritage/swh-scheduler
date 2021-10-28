@@ -1,7 +1,7 @@
 attrs
 attrs-strict
 celery!=5.0.3,>=4.3
-click
+click<8.0
 elasticsearch>5.4
 flask
 humanize
@@ -32,6 +32,7 @@ types-click
 types-flask
 types-pyyaml
 types-requests
+types-Deprecated
 swh.journal
 plotille
 simpy<4,>=3

@@ -595,15 +595,6 @@ def _fill_storage_with_origins(storage, nb_origins):
     return origins
 
 
-@pytest.fixture
-def storage(swh_storage):
-    """An instance of in-memory storage that gets injected
-    into the CLI functions."""
-    with patch("swh.storage.get_storage") as get_storage_mock:
-        get_storage_mock.return_value = swh_storage
-        yield swh_storage
-
-
 @patch("swh.scheduler.cli.utils.TASK_BATCH_SIZE", 3)
 def test_task_schedule_origins_dry_run(swh_scheduler, storage):
     """Tests the scheduling when origin_batch_size*task_batch_size is a

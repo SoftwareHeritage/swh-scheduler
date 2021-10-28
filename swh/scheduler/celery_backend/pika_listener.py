@@ -1,7 +1,16 @@
-# Copyright (C) 2020  The Software Heritage developers
+# Copyright (C) 2020-2021  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
+
+"""This is the scheduler listener. It is in charge of listening to rabbitmq events (the
+task result) and flushes the "oneshot" tasks' status in the scheduler backend. It's the
+final step after a task is done.
+
+The scheduler runner :mod:`swh.scheduler.celery_backend.runner` is the module in charge
+of pushing tasks in the queue.
+
+"""
 
 import json
 import logging

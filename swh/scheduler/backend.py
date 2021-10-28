@@ -378,31 +378,28 @@ class SchedulerBackend:
             where_clauses.append(
                 """origin_visit_stats.last_scheduled IS NULL
                 OR origin_visit_stats.last_scheduled < GREATEST(
-                  %s - %s,
+                  %s,
                   origin_visit_stats.last_visit
                 )
             """
             )
-            query_args.append(timestamp)
-            query_args.append(scheduled_cooldown)
+            query_args.append(timestamp - scheduled_cooldown)
 
         if failed_cooldown:
             # Don't retry failed origins too often
             where_clauses.append(
                 "origin_visit_stats.last_visit_status is distinct from 'failed' "
-                "or origin_visit_stats.last_visit < %s - %s"
+                "or origin_visit_stats.last_visit < %s"
             )
-            query_args.append(timestamp)
-            query_args.append(failed_cooldown)
+            query_args.append(timestamp - failed_cooldown)
 
         if not_found_cooldown:
             # Don't retry not found origins too often
             where_clauses.append(
                 "origin_visit_stats.last_visit_status is distinct from 'not_found' "
-                "or origin_visit_stats.last_visit < %s - %s"
+                "or origin_visit_stats.last_visit < %s"
             )
-            query_args.append(timestamp)
-            query_args.append(not_found_cooldown)
+            query_args.append(timestamp - not_found_cooldown)
 
         if policy == "oldest_scheduled_first":
             order_by = "origin_visit_stats.last_scheduled NULLS FIRST"
