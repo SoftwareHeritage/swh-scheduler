@@ -87,8 +87,8 @@ swh/scheduler/api/serializers.py
 swh/scheduler/api/server.py
 swh/scheduler/celery_backend/__init__.py
 swh/scheduler/celery_backend/config.py
-swh/scheduler/celery_backend/listener.py
 swh/scheduler/celery_backend/pika_listener.py
+swh/scheduler/celery_backend/recurrent_visits.py
 swh/scheduler/celery_backend/runner.py
 swh/scheduler/cli/__init__.py
 swh/scheduler/cli/admin.py
@@ -125,6 +125,7 @@ swh/scheduler/tests/test_config.py
 swh/scheduler/tests/test_init.py
 swh/scheduler/tests/test_journal_client.py
 swh/scheduler/tests/test_model.py
+swh/scheduler/tests/test_recurrent_visits.py
 swh/scheduler/tests/test_scheduler.py
 swh/scheduler/tests/test_server.py
 swh/scheduler/tests/test_simulator.py
