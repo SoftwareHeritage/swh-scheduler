@@ -5,7 +5,7 @@
 attrs
 attrs-strict
 celery >= 4.3, != 5.0.3
-click
+click < 8.0
 elasticsearch > 5.4
 flask
 humanize

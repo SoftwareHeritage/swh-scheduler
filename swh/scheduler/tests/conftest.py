@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2020  The Software Heritage developers
+# Copyright (C) 2016-2021  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -6,6 +6,7 @@
 from datetime import datetime, timezone
 import os
 from typing import Dict, List
+from unittest.mock import patch
 
 import pytest
 
@@ -60,3 +61,12 @@ def listed_origins_by_type(
 def listed_origins(listed_origins_by_type) -> List[ListedOrigin]:
     """Return a (fixed) set of listed origins"""
     return sum(listed_origins_by_type.values(), [])
+
+
+@pytest.fixture
+def storage(swh_storage):
+    """An instance of in-memory storage that gets injected
+    into the CLI functions."""
+    with patch("swh.storage.get_storage") as get_storage_mock:
+        get_storage_mock.return_value = swh_storage
+        yield swh_storage

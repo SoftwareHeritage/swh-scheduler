@@ -1,8 +1,16 @@
-swh-scheduler (0.18.2-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-scheduler (0.19.0-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 0.19.0     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2021-10-28 13:10:55
+    +0200)
+  * Upstream changes:     - v0.19.0     - Add a new cli endpoint to
+    schedule recurrent visits in Celery     - grab_next_visits: avoid
+    time interval calculations in PostgreSQL     - Restrict the click
+    version to avoid conflict version with celery's     - Add docstring
+    to runner and listener modules     - Drop deprecated listener module
+    - scheduler: Deprecate unused main celery runner
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 18 Oct 2021 13:21:35 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 28 Oct 2021 11:15:10 +0000
 
 swh-scheduler (0.18.2-1~swh1) unstable-swh; urgency=medium
 
