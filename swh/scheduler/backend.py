@@ -488,13 +488,22 @@ class SchedulerBackend:
         query_args.append(count)
 
         # fmt: off
+        common_table_expressions.append(("deduplicated_selected_origins", """
+          SELECT DISTINCT
+            url, visit_type
+          FROM
+            selected_origins
+        """))
+        # fmt: on
+
+        # fmt: off
         common_table_expressions.append(("update_stats", """
             INSERT INTO
               origin_visit_stats (url, visit_type, last_scheduled)
             SELECT
               url, visit_type, %s
             FROM
-              selected_origins
+              deduplicated_selected_origins
             ON CONFLICT (url, visit_type) DO UPDATE
               SET last_scheduled = GREATEST(
                 origin_visit_stats.last_scheduled,

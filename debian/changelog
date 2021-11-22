@@ -1,8 +1,14 @@
-swh-scheduler (0.19.0-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-scheduler (0.20.0-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 0.20.0     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2021-11-22 16:11:16
+    +0100)
+  * Upstream changes:     - v0.20.0     - recurrent visits scheduler:
+    use policy weights instead of ratios     - recurrent visits
+    scheduler: Improve docs rendering     - backend: Fix
+    CardinalityViolation in grab_next_visits on duplicate origins
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 28 Oct 2021 11:17:22 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 22 Nov 2021 15:14:56 +0000
 
 swh-scheduler (0.19.0-1~swh1) unstable-swh; urgency=medium
 
