@@ -261,6 +261,11 @@ class SchedulerBackend:
         select_cols = ListedOrigin.select_columns()
         insert_cols, insert_meta = ListedOrigin.insert_columns_and_metavars()
 
+        deduplicated_origins = {
+            tuple(getattr(origin, k) for k in pk_cols): origin
+            for origin in listed_origins
+        }
+
         upsert_cols = [col for col in insert_cols if col not in pk_cols]
         upsert_set = ", ".join(f"{col} = EXCLUDED.{col}" for col in upsert_cols)
 
@@ -274,7 +279,7 @@ class SchedulerBackend:
         ret = psycopg2.extras.execute_values(
             cur=cur,
             sql=query,
-            argslist=(attr.asdict(origin) for origin in listed_origins),
+            argslist=(attr.asdict(origin) for origin in deduplicated_origins.values()),
             template=f"({', '.join(insert_meta)})",
             page_size=1000,
             fetch=True,
