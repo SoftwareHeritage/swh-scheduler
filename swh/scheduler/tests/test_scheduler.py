@@ -686,6 +686,15 @@ class TestScheduler:
 
         assert all(origin.first_seen == origin.last_seen for origin in ret)
 
+    def test_record_listed_origins_with_duplicate(self, swh_scheduler, listed_origins):
+        # the duplicates must be in the same page to raise the "on conflict error"
+        listed_origins.insert(0, listed_origins[0])
+
+        ret = swh_scheduler.record_listed_origins(listed_origins)
+
+        # without the duplicate
+        assert len(ret) == len(listed_origins) - 1
+
     def test_record_listed_origins_upsert(self, swh_scheduler, listed_origins):
         # First, insert `cutoff` origins
         cutoff = 100
