@@ -222,7 +222,7 @@ class OriginVisitStats(BaseSchedulerModel):
         type=Optional[bytes], validator=type_validator(), default=None
     )
     next_visit_queue_position = attr.ib(
-        type=Optional[datetime.datetime], validator=type_validator(), default=None
+        type=Optional[int], validator=type_validator(), default=None
     )
     next_position_offset = attr.ib(type=int, validator=type_validator(), default=4)
 
@@ -234,10 +234,6 @@ class OriginVisitStats(BaseSchedulerModel):
 
     @last_visit.validator
     def check_last_visit(self, attribute, value):
-        check_timestamptz(value)
-
-    @next_visit_queue_position.validator
-    def check_next_visit_queue_position(self, attribute, value):
         check_timestamptz(value)
 
 
