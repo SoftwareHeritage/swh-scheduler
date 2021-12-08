@@ -1076,8 +1076,8 @@ class TestScheduler:
         swh_scheduler.record_listed_origins(origins)
 
         # Initially, we have no global queue position
-        actual_state = swh_scheduler.visit_scheduler_queue_position_get()
-        assert actual_state == {}
+        current_state = swh_scheduler.visit_scheduler_queue_position_get()
+        assert current_state == {}
 
         # nor any visit statuses
         actual_visit_stats = swh_scheduler.origin_visit_stats_get(
@@ -1093,8 +1093,8 @@ class TestScheduler:
         assert len(next_visits) == len(origins)
 
         # Now the global state got updated
-        actual_state = swh_scheduler.visit_scheduler_queue_position_get()
-        assert actual_state[visit_type] is not None
+        current_state = swh_scheduler.visit_scheduler_queue_position_get()
+        assert current_state[visit_type] is not None
 
         actual_visit_stats = swh_scheduler.origin_visit_stats_get(
             (o.url, o.visit_type) for o in next_visits
@@ -1120,10 +1120,9 @@ class TestScheduler:
         swh_scheduler.record_listed_origins(origins)
 
         # Initially, we have no global queue position
-        actual_state = swh_scheduler.visit_scheduler_queue_position_get()
-        assert actual_state == {}
+        current_state = swh_scheduler.visit_scheduler_queue_position_get()
+        assert current_state == {}
 
-        date_now = utcnow()
         # Simulate some of those origins have associated visit stats (some with an
         # existing queue position and some without any)
         visit_stats = (
@@ -1133,8 +1132,7 @@ class TestScheduler:
                     visit_type=origin.visit_type,
                     last_successful=utcnow(),
                     last_visit=utcnow(),
-                    next_visit_queue_position=date_now
-                    + timedelta(days=random.uniform(-10, 1)),
+                    next_visit_queue_position=int(24 * 3600 * random.uniform(-10, 1)),
                 )
                 for origin in origins[:100]
             ]
@@ -1144,8 +1142,9 @@ class TestScheduler:
                     visit_type=origin.visit_type,
                     last_successful=utcnow(),
                     last_visit=utcnow(),
-                    next_visit_queue_position=date_now
-                    + timedelta(days=random.uniform(1, 10)),  # definitely > now()
+                    next_visit_queue_position=int(
+                        24 * 3600 * random.uniform(1, 10)
+                    ),  # definitely > 0
                 )
                 for origin in origins[100:150]
             ]
@@ -1173,8 +1172,8 @@ class TestScheduler:
         )
         assert len(actual_visit_stats) == len(origins)
 
-        actual_state = swh_scheduler.visit_scheduler_queue_position_get()
-        assert actual_state == {
+        current_state = swh_scheduler.visit_scheduler_queue_position_get()
+        assert current_state == {
             visit_type: max(
                 s.next_visit_queue_position
                 for s in actual_visit_stats
@@ -1356,7 +1355,7 @@ class TestScheduler:
             if visit_type in visit_types:
                 continue
             visit_types.add(visit_type)
-            position = utcnow()
+            position = 42
             swh_scheduler.visit_scheduler_queue_position_set(visit_type, position)
             expected_result[visit_type] = position
 

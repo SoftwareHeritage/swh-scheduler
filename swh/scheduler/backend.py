@@ -452,7 +452,7 @@ class SchedulerBackend:
                 INSERT INTO
                   visit_scheduler_queue_position(visit_type, position)
                 SELECT
-                  visit_type, COALESCE(MAX(next_visit_queue_position), now())
+                  visit_type, COALESCE(MAX(next_visit_queue_position), 0)
                 FROM selected_origins
                 GROUP BY visit_type
                 ON CONFLICT(visit_type) DO UPDATE
@@ -1038,15 +1038,13 @@ class SchedulerBackend:
         return [OriginVisitStats(**row) for row in rows]
 
     @db_transaction()
-    def visit_scheduler_queue_position_get(
-        self, db=None, cur=None,
-    ) -> Dict[str, datetime.datetime]:
+    def visit_scheduler_queue_position_get(self, db=None, cur=None) -> Dict[str, int]:
         cur.execute("SELECT visit_type, position FROM visit_scheduler_queue_position")
         return {row["visit_type"]: row["position"] for row in cur}
 
     @db_transaction()
     def visit_scheduler_queue_position_set(
-        self, visit_type: str, position: datetime.datetime, db=None, cur=None,
+        self, visit_type: str, position: int, db=None, cur=None,
     ) -> None:
         query = """
             INSERT INTO visit_scheduler_queue_position(visit_type, position)
