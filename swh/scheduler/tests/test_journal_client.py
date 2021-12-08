@@ -4,7 +4,6 @@
 # See top-level LICENSE file for more information
 
 import datetime
-from datetime import timedelta
 import functools
 from itertools import permutations
 from typing import List
@@ -857,20 +856,17 @@ def test_next_visit_queue_position(mocker, fudge_factor, next_position_offset):
     mock_random = mocker.patch("swh.scheduler.journal_client.random.uniform")
     mock_random.return_value = fudge_factor
 
-    date_now = utcnow()
-
-    mock_now = mocker.patch("swh.scheduler.journal_client.utcnow")
-    mock_now.return_value = date_now
-
     actual_position = next_visit_queue_position(
         {}, {"next_position_offset": next_position_offset, "visit_type": "svn",}
     )
 
-    assert actual_position == date_now + timedelta(
-        days=from_position_offset_to_days(next_position_offset) * (1 + fudge_factor)
+    assert actual_position == int(
+        24
+        * 3600
+        * from_position_offset_to_days(next_position_offset)
+        * (1 + fudge_factor)
     )
 
-    assert mock_now.called
     assert mock_random.called
 
 
@@ -883,15 +879,16 @@ def test_next_visit_queue_position_with_state(
     mock_random = mocker.patch("swh.scheduler.journal_client.random.uniform")
     mock_random.return_value = fudge_factor
 
-    date_now = utcnow()
-
     actual_position = next_visit_queue_position(
-        {"git": date_now},
+        {"git": 0},
         {"next_position_offset": next_position_offset, "visit_type": "git",},
     )
 
-    assert actual_position == date_now + timedelta(
-        days=from_position_offset_to_days(next_position_offset) * (1 + fudge_factor)
+    assert actual_position == int(
+        24
+        * 3600
+        * from_position_offset_to_days(next_position_offset)
+        * (1 + fudge_factor)
     )
 
     assert mock_random.called
@@ -906,19 +903,20 @@ def test_next_visit_queue_position_with_next_visit_queue(
     mock_random = mocker.patch("swh.scheduler.journal_client.random.uniform")
     mock_random.return_value = fudge_factor
 
-    date_now = utcnow()
-
     actual_position = next_visit_queue_position(
         {},
         {
             "next_position_offset": next_position_offset,
             "visit_type": "hg",
-            "next_visit_queue_position": date_now,
+            "next_visit_queue_position": 0,
         },
     )
 
-    assert actual_position == date_now + timedelta(
-        days=from_position_offset_to_days(next_position_offset) * (1 + fudge_factor)
+    assert actual_position == int(
+        24
+        * 3600
+        * from_position_offset_to_days(next_position_offset)
+        * (1 + fudge_factor)
     )
 
     assert mock_random.called

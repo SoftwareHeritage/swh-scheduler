@@ -11,7 +11,7 @@ comment on column dbversion.release is 'Version deployment timestamp';
 comment on column dbversion.description is 'Version description';
 
 insert into dbversion (version, release, description)
-       values (30, now(), 'Work In Progress');
+       values (31, now(), 'Work In Progress');
 
 create table task_type (
   type text primary key,
@@ -173,9 +173,9 @@ create table origin_visit_stats (
   last_scheduled timestamptz,
   -- last snapshot resulting from an eventful visit
   last_snapshot bytea,
-  -- position in the global queue, the "time" at which we expect the origin to have new
+  -- position in the global queue, at which time we expect the origin to have new
   -- objects
-  next_visit_queue_position timestamptz,
+  next_visit_queue_position bigint,
   -- duration that we expect to wait between visits of this origin
   next_position_offset int not null default 4,
   successive_visits	int not null default 1,
@@ -192,13 +192,13 @@ comment on column origin_visit_stats.last_visit_status is 'Status of the last vi
 comment on column origin_visit_stats.last_scheduled is 'Time when this origin was scheduled to be visited last';
 comment on column origin_visit_stats.last_snapshot is 'sha1_git of the last visit snapshot';
 
-comment on column origin_visit_stats.next_visit_queue_position is 'Time at which some new objects are expected to be found';
+comment on column origin_visit_stats.next_visit_queue_position is 'Position in the global per origin-type queue at which some new objects are expected to be found';
 comment on column origin_visit_stats.next_position_offset is 'Duration that we expect to wait between visits of this origin';
 comment on column origin_visit_stats.successive_visits is 'number of successive visits with the same status';
 
 create table visit_scheduler_queue_position (
   visit_type text not null,
-  position timestamptz not null,
+  position bigint not null,
 
   primary key (visit_type)
 );
