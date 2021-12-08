@@ -4,7 +4,7 @@
 # See top-level LICENSE file for more information
 
 import copy
-from datetime import datetime, timedelta
+from datetime import datetime
 import random
 from typing import Dict, List, Optional, Tuple
 
@@ -12,7 +12,6 @@ import attr
 
 from swh.scheduler.interface import SchedulerInterface
 from swh.scheduler.model import LastVisitStatus, OriginVisitStats
-from swh.scheduler.utils import utcnow
 
 msg_type = "origin_visit_status"
 
@@ -62,20 +61,19 @@ def from_position_offset_to_days(position_offset: int) -> int:
 
 
 def next_visit_queue_position(
-    queue_position_per_visit_type: Dict, visit_stats: Dict
-) -> datetime:
+    queue_position_per_visit_type: Dict[str, int], visit_stats: Dict
+) -> int:
     """Compute the next visit queue position for the given visit_stats.
 
     This takes the visit_stats next_position_offset value and compute a corresponding
-    interval in days (with a random fudge factor of -/+ 10% range to avoid scheduling
+    interval in "days" (with a random fudge factor of -/+ 10% range to avoid scheduling
     burst for hosters). Then computes out of this visit interval and the current visit
     stats's position in the queue a new position.
 
     As an implementation detail, if the visit stats does not have a queue position yet,
     this fallbacks to use the current global position (for the same visit type as the
     visit stats) to compute the new position in the queue. If there is no global state
-    yet for the visit type, this starts up using the ``utcnow`` function as default
-    value.
+    yet for the visit type, this starts up using 0 as default value.
 
     Args:
         queue_position_per_visit_type: The global state of the queue per visit type
@@ -87,12 +85,13 @@ def next_visit_queue_position(
     """
     days = from_position_offset_to_days(visit_stats["next_position_offset"])
     random_fudge_factor = random.uniform(-0.1, 0.1)
-    visit_interval = timedelta(days=days * (1 + random_fudge_factor))
+    visit_interval = int(days * 24 * 3600 * (1 + random_fudge_factor))
     # Use the current queue position per visit type as starting position if none is
     # already set
     default_queue_position = queue_position_per_visit_type.get(
-        visit_stats["visit_type"], utcnow()
+        visit_stats["visit_type"], 0
     )
+
     current_position = (
         visit_stats["next_visit_queue_position"]
         if visit_stats.get("next_visit_queue_position")
@@ -161,9 +160,10 @@ def process_journal_objects(
 
         - When no snapshot is provided, the visit is considered as failed.
 
-        - Finally, the `next_visit_queue_position` (time at which some new objects
-          are expected to be added for the origin), and `next_position_offset` (duration
-          that we expect to wait between visits of this origin) are updated.
+        - Finally, the `next_visit_queue_position` (position in the global per-origin
+          type queue at which some new objects are expected to be added for the origin),
+          and `next_position_offset` (duration that we expect to wait between visits of
+          this origin) are updated.
 
         - When visits fails at least {DISABLE_ORIGIN_THRESHOLD} times in a row, the
           origins are disabled in the scheduler table. It's up to the lister to activate
