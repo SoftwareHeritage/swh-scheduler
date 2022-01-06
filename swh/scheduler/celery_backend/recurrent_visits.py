@@ -49,6 +49,15 @@ POLICY_WEIGHTS: Dict[str, Dict[str, float]] = {
     "cvs": _VCS_POLICY_WEIGHTS,
     "bzr": _VCS_POLICY_WEIGHTS,
 }
+
+POLICY_ADDITIONAL_PARAMETERS: Dict[str, Dict[str, Any]] = {
+    "git": {
+        "already_visited_order_by_lag": {"tablesample": 0.1},
+        "never_visited_oldest_update_first": {"tablesample": 0.1},
+        "origins_without_last_update": {"tablesample": 0.1},
+    }
+}
+
 """Scheduling policies to use to retrieve visits for the given visit types, with their
 relative weights"""
 
@@ -103,7 +112,10 @@ def grab_next_visits_policy_weights(
     for policy, ratio in policy_ratio.items():
         num_tasks_to_send = int(num_visits * ratio)
         fetched_origins[policy] = scheduler.grab_next_visits(
-            visit_type, num_tasks_to_send, policy=policy
+            visit_type,
+            num_tasks_to_send,
+            policy=policy,
+            **POLICY_ADDITIONAL_PARAMETERS.get(visit_type, {}).get(policy, {}),
         )
 
     all_origins: List[ListedOrigin] = list(

@@ -62,6 +62,7 @@ sql/updates/29.sql
 sql/updates/30-bis.sql
 sql/updates/30.sql
 sql/updates/31.sql
+sql/updates/32.sql
 swh/__init__.py
 swh.scheduler.egg-info/PKG-INFO
 swh.scheduler.egg-info/SOURCES.txt
@@ -71,9 +72,7 @@ swh.scheduler.egg-info/requires.txt
 swh.scheduler.egg-info/top_level.txt
 swh/scheduler/__init__.py
 swh/scheduler/backend.py
-swh/scheduler/backend_es.py
 swh/scheduler/cli_utils.py
-swh/scheduler/elasticsearch_memory.py
 swh/scheduler/exc.py
 swh/scheduler/interface.py
 swh/scheduler/journal_client.py
@@ -131,8 +130,3 @@ swh/scheduler/tests/test_scheduler.py
 swh/scheduler/tests/test_server.py
 swh/scheduler/tests/test_simulator.py
 swh/scheduler/tests/test_utils.py
-swh/scheduler/tests/es/__init__.py
-swh/scheduler/tests/es/conftest.py
-swh/scheduler/tests/es/test_backend_es.py
-swh/scheduler/tests/es/test_cli_task.py
-swh/scheduler/tests/es/test_elasticsearch_memory.py
