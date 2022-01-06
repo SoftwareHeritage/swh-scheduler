@@ -11,7 +11,9 @@ from unittest.mock import MagicMock
 import pytest
 
 from swh.scheduler.celery_backend.recurrent_visits import (
+    POLICY_ADDITIONAL_PARAMETERS,
     VisitSchedulerThreads,
+    grab_next_visits_policy_weights,
     send_visits_for_visit_type,
     spawn_visit_scheduler_thread,
     terminate_visit_scheduler_threads,
@@ -130,6 +132,26 @@ def test_recurrent_visit_scheduling(
 
     for expected_record in expected_records:
         assert expected_record in set(records)
+
+
+@pytest.mark.parametrize(
+    "visit_type, tablesamples",
+    [("hg", {}), ("git", POLICY_ADDITIONAL_PARAMETERS["git"])],
+)
+def test_recurrent_visit_additional_parameters(
+    swh_scheduler, mocker, visit_type, tablesamples
+):
+    """Testing additional policy parameters"""
+
+    mock_grab_next_visits = mocker.patch.object(swh_scheduler, "grab_next_visits")
+    mock_grab_next_visits.return_value = []
+
+    grab_next_visits_policy_weights(swh_scheduler, visit_type, 10)
+
+    for call in mock_grab_next_visits.call_args_list:
+        assert call[1].get("tablesample") == tablesamples.get(
+            call[1]["policy"], {}
+        ).get("tablesample")
 
 
 @pytest.fixture
