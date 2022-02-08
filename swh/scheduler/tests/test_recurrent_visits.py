@@ -6,7 +6,7 @@
 from datetime import timedelta
 import logging
 from queue import Queue
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -34,7 +34,7 @@ def _compute_backend_name(visit_type: str) -> str:
 @pytest.fixture
 def swh_scheduler(swh_scheduler):
     """Override default fixture of the scheduler to install some more task types."""
-    for visit_type in ["git", "hg", "svn"]:
+    for visit_type in ["test-git", "test-hg", "test-svn"]:
         task_type = f"load-{visit_type}"
         swh_scheduler.create_task_type(
             {
@@ -58,7 +58,13 @@ def test_cli_schedule_recurrent_unknown_visit_type(swh_scheduler):
         invoke(
             swh_scheduler,
             False,
-            ["schedule-recurrent", "--visit-type", "unknown", "--visit-type", "git"],
+            [
+                "schedule-recurrent",
+                "--visit-type",
+                "unknown",
+                "--visit-type",
+                "test-git",
+            ],
         )
 
 
@@ -108,7 +114,7 @@ def test_recurrent_visit_scheduling(
         # we'll limit the orchestrator to the origins' type we know
         task_types.append(task_type)
 
-    for visit_type in ["git", "svn"]:
+    for visit_type in ["test-git", "test-svn"]:
         task_type = f"load-{visit_type}"
         send_visits_for_visit_type(
             swh_scheduler, mock_celery_app, visit_type, all_task_types[task_type]
@@ -134,9 +140,12 @@ def test_recurrent_visit_scheduling(
         assert expected_record in set(records)
 
 
+@patch.dict(
+    POLICY_ADDITIONAL_PARAMETERS, {"test-git": POLICY_ADDITIONAL_PARAMETERS["git"]}
+)
 @pytest.mark.parametrize(
     "visit_type, tablesamples",
-    [("hg", {}), ("git", POLICY_ADDITIONAL_PARAMETERS["git"])],
+    [("test-hg", {}), ("test-git", POLICY_ADDITIONAL_PARAMETERS["git"])],
 )
 def test_recurrent_visit_additional_parameters(
     swh_scheduler, mocker, visit_type, tablesamples

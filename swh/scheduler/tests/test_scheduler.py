@@ -86,22 +86,22 @@ class TestScheduler:
         assert missing_methods == []
 
     def test_add_task_type(self, swh_scheduler):
-        tt = TASK_TYPES["git"]
+        tt = TASK_TYPES["test-git"]
         swh_scheduler.create_task_type(tt)
         assert tt == swh_scheduler.get_task_type(tt["type"])
-        tt2 = TASK_TYPES["hg"]
+        tt2 = TASK_TYPES["test-hg"]
         swh_scheduler.create_task_type(tt2)
         assert tt == swh_scheduler.get_task_type(tt["type"])
         assert tt2 == swh_scheduler.get_task_type(tt2["type"])
 
     def test_create_task_type_idempotence(self, swh_scheduler):
-        tt = TASK_TYPES["git"]
+        tt = TASK_TYPES["test-git"]
         swh_scheduler.create_task_type(tt)
         swh_scheduler.create_task_type(tt)
         assert tt == swh_scheduler.get_task_type(tt["type"])
 
     def test_get_task_types(self, swh_scheduler):
-        tt, tt2 = TASK_TYPES["git"], TASK_TYPES["hg"]
+        tt, tt2 = TASK_TYPES["test-git"], TASK_TYPES["test-hg"]
         swh_scheduler.create_task_type(tt)
         swh_scheduler.create_task_type(tt2)
         actual_task_types = swh_scheduler.get_task_types()
@@ -111,9 +111,9 @@ class TestScheduler:
     def test_create_tasks(self, swh_scheduler):
         self._create_task_types(swh_scheduler)
         num_git = 100
-        tasks_1 = tasks_from_template(TEMPLATES["git"], utcnow(), num_git)
+        tasks_1 = tasks_from_template(TEMPLATES["test-git"], utcnow(), num_git)
         tasks_2 = tasks_from_template(
-            TEMPLATES["hg"], utcnow(), num_priorities=NUM_PRIORITY_TASKS
+            TEMPLATES["test-hg"], utcnow(), num_priorities=NUM_PRIORITY_TASKS
         )
         tasks = tasks_1 + tasks_2
 
@@ -134,7 +134,7 @@ class TestScheduler:
 
         for task, orig_task in zip(ret, tasks):
             task = copy.deepcopy(task)
-            task_type = TASK_TYPES[orig_task["type"].split("-")[-1]]
+            task_type = TASK_TYPES[orig_task["type"].split("-", 1)[-1]]
             assert task["id"] not in ids
             assert task["status"] == "next_run_not_scheduled"
             assert task["current_interval"] == task_type["default_interval"]
@@ -161,8 +161,8 @@ class TestScheduler:
     def test_peek_ready_tasks_no_priority(self, swh_scheduler):
         self._create_task_types(swh_scheduler)
         t = utcnow()
-        task_type = TEMPLATES["git"]["type"]
-        tasks = tasks_from_template(TEMPLATES["git"], t, 100)
+        task_type = TEMPLATES["test-git"]["type"]
+        tasks = tasks_from_template(TEMPLATES["test-git"], t, 100)
         random.shuffle(tasks)
         swh_scheduler.create_tasks(tasks)
 
@@ -203,10 +203,10 @@ class TestScheduler:
         """Peek ready tasks only return standard tasks (no priority)"""
         self._create_task_types(swh_scheduler)
         t = utcnow()
-        task_type = TEMPLATES["git"]["type"]
+        task_type = TEMPLATES["test-git"]["type"]
         # Create tasks with and without priorities
         tasks = tasks_from_template(
-            TEMPLATES["git"], t, num_priorities=NUM_PRIORITY_TASKS,
+            TEMPLATES["test-git"], t, num_priorities=NUM_PRIORITY_TASKS,
         )
 
         count_priority = 0
@@ -230,10 +230,10 @@ class TestScheduler:
     def test_grab_ready_tasks(self, swh_scheduler):
         self._create_task_types(swh_scheduler)
         t = utcnow()
-        task_type = TEMPLATES["git"]["type"]
+        task_type = TEMPLATES["test-git"]["type"]
         # Create tasks with and without priorities
         tasks = tasks_from_template(
-            TEMPLATES["git"], t, num_priorities=NUM_PRIORITY_TASKS
+            TEMPLATES["test-git"], t, num_priorities=NUM_PRIORITY_TASKS
         )
         random.shuffle(tasks)
         swh_scheduler.create_tasks(tasks)
@@ -257,17 +257,17 @@ class TestScheduler:
         """check the grab and peek priority tasks endpoint behave as expected"""
         self._create_task_types(swh_scheduler)
         t = utcnow()
-        task_type = TEMPLATES["git"]["type"]
+        task_type = TEMPLATES["test-git"]["type"]
         num_tasks = 100
         # Create tasks with and without priorities
         tasks0 = tasks_with_priority_from_template(
-            TEMPLATES["git"], t, num_tasks, "high",
+            TEMPLATES["test-git"], t, num_tasks, "high",
         )
         tasks1 = tasks_with_priority_from_template(
-            TEMPLATES["hg"], t, num_tasks, "low",
+            TEMPLATES["test-hg"], t, num_tasks, "low",
         )
         tasks2 = tasks_with_priority_from_template(
-            TEMPLATES["hg"], t, num_tasks, "normal",
+            TEMPLATES["test-hg"], t, num_tasks, "normal",
         )
         tasks = tasks0 + tasks1 + tasks2
 
@@ -291,7 +291,7 @@ class TestScheduler:
     def test_get_tasks(self, swh_scheduler):
         self._create_task_types(swh_scheduler)
         t = utcnow()
-        tasks = tasks_from_template(TEMPLATES["git"], t, 100)
+        tasks = tasks_from_template(TEMPLATES["test-git"], t, 100)
         tasks = swh_scheduler.create_tasks(tasks)
         random.shuffle(tasks)
         while len(tasks) > 1:
@@ -311,7 +311,7 @@ class TestScheduler:
 
         self._create_task_types(swh_scheduler)
         t = utcnow()
-        tasks = tasks_from_template(TEMPLATES["git"], t, 100)
+        tasks = tasks_from_template(TEMPLATES["test-git"], t, 100)
         tasks = swh_scheduler.create_tasks(tasks)
         assert make_real_dicts(swh_scheduler.search_tasks()) == make_real_dicts(tasks)
 
@@ -336,8 +336,8 @@ class TestScheduler:
         """
         self._create_task_types(swh_scheduler)
         _time = utcnow()
-        recurring = tasks_from_template(TEMPLATES["git"], _time, 12)
-        oneshots = tasks_from_template(TEMPLATES["hg"], _time, 12)
+        recurring = tasks_from_template(TEMPLATES["test-git"], _time, 12)
+        oneshots = tasks_from_template(TEMPLATES["test-hg"], _time, 12)
         total_tasks = len(recurring) + len(oneshots)
 
         # simulate scheduling tasks
@@ -458,8 +458,8 @@ class TestScheduler:
     def test_delete_archived_tasks(self, swh_scheduler):
         self._create_task_types(swh_scheduler)
         _time = utcnow()
-        recurring = tasks_from_template(TEMPLATES["git"], _time, 12)
-        oneshots = tasks_from_template(TEMPLATES["hg"], _time, 12)
+        recurring = tasks_from_template(TEMPLATES["test-git"], _time, 12)
+        oneshots = tasks_from_template(TEMPLATES["test-hg"], _time, 12)
         total_tasks = len(recurring) + len(oneshots)
         pending_tasks = swh_scheduler.create_tasks(recurring + oneshots)
         backend_tasks = [
@@ -505,8 +505,8 @@ class TestScheduler:
         """
         self._create_task_types(swh_scheduler)
         _time = utcnow()
-        recurring = tasks_from_template(TEMPLATES["git"], _time, 12)
-        oneshots = tasks_from_template(TEMPLATES["hg"], _time, 12)
+        recurring = tasks_from_template(TEMPLATES["test-git"], _time, 12)
+        oneshots = tasks_from_template(TEMPLATES["test-hg"], _time, 12)
         swh_scheduler.create_tasks(recurring + oneshots)
 
         assert not swh_scheduler.get_task_runs(task_ids=())
@@ -520,8 +520,8 @@ class TestScheduler:
         """
         self._create_task_types(swh_scheduler)
         _time = utcnow()
-        recurring = tasks_from_template(TEMPLATES["git"], _time, 12)
-        oneshots = tasks_from_template(TEMPLATES["hg"], _time, 12)
+        recurring = tasks_from_template(TEMPLATES["test-git"], _time, 12)
+        oneshots = tasks_from_template(TEMPLATES["test-hg"], _time, 12)
         total_tasks = len(recurring) + len(oneshots)
         pending_tasks = swh_scheduler.create_tasks(recurring + oneshots)
         backend_tasks = [
@@ -574,8 +574,8 @@ class TestScheduler:
         """
         self._create_task_types(swh_scheduler)
         _time = utcnow()
-        recurring = tasks_from_template(TEMPLATES["git"], _time, 12)
-        oneshots = tasks_from_template(TEMPLATES["hg"], _time, 12)
+        recurring = tasks_from_template(TEMPLATES["test-git"], _time, 12)
+        oneshots = tasks_from_template(TEMPLATES["test-hg"], _time, 12)
         pending_tasks = swh_scheduler.create_tasks(recurring + oneshots)
         backend_tasks = [
             {
