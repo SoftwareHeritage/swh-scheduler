@@ -55,6 +55,8 @@ class SchedulerBackend:
 
     """
 
+    current_version = 33
+
     def __init__(self, db, min_pool_conns=1, max_pool_conns=10):
         """
         Args:
@@ -72,6 +74,9 @@ class SchedulerBackend:
                 cursor_factory=psycopg2.extras.RealDictCursor,
             )
             self._db = None
+
+    def get_current_version(self):
+        return self.current_version
 
     def get_db(self):
         if self._db:
