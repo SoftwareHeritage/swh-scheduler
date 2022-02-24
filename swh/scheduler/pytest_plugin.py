@@ -4,30 +4,36 @@
 # See top-level LICENSE file for more information
 
 from datetime import timedelta
-import os
+from functools import partial
 
 from celery.contrib.testing import worker
 from celery.contrib.testing.app import TestApp, setup_default_app
 import pkg_resources
 import pytest
+from pytest_postgresql import factories
 
-from swh.core.db.pytest_plugin import postgresql_fact
-import swh.scheduler
+from swh.core.db.pytest_plugin import initialize_database_for_module, postgresql_fact
 from swh.scheduler import get_scheduler
-
-SQL_DIR = os.path.join(os.path.dirname(swh.scheduler.__file__), "sql")
+from swh.scheduler.backend import SchedulerBackend
 
 # celery tasks for testing purpose; tasks themselves should be
 # in swh/scheduler/tests/tasks.py
 TASK_NAMES = ["ping", "multiping", "add", "error", "echo"]
 
 
-postgresql_scheduler = postgresql_fact(
-    "postgresql_proc",
+scheduler_postgresql_proc = factories.postgresql_proc(
     dbname="scheduler",
-    dump_files=os.path.join(SQL_DIR, "*.sql"),
-    no_truncate_tables={"dbversion", "priority_ratio"},
+    load=[
+        partial(
+            initialize_database_for_module,
+            modname="scheduler",
+            version=SchedulerBackend.current_version,
+        )
+    ],
 )
+
+
+postgresql_scheduler = postgresql_fact("scheduler_postgresql_proc")
 
 
 @pytest.fixture

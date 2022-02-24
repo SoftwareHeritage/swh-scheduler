@@ -1,7 +1,7 @@
 attrs
 attrs-strict
 celery!=5.0.3,>=4.3
-click<8.0
+click
 flask
 humanize
 pika>=1.1.0
@@ -10,7 +10,7 @@ pyyaml
 requests
 setuptools
 typing-extensions
-swh.core[db,http]>=0.14.0
+swh.core[db,http]>=2
 swh.storage>=0.11.1
 
 [journal]
@@ -21,7 +21,7 @@ plotille
 simpy<4,>=3
 
 [testing]
-pytest
+pytest<7.0.0
 pytest-mock
 celery>=4.3
 hypothesis>=3.11.0

@@ -8,13 +8,13 @@ import datetime
 from typing import Dict, List, Optional
 
 TEMPLATES = {
-    "git": {
-        "type": "load-git",
+    "test-git": {
+        "type": "load-test-git",
         "arguments": {"args": [], "kwargs": {},},
         "next_run": None,
     },
-    "hg": {
-        "type": "load-hg",
+    "test-hg": {
+        "type": "load-test-hg",
         "arguments": {"args": [], "kwargs": {},},
         "next_run": None,
         "policy": "oneshot",
@@ -23,8 +23,8 @@ TEMPLATES = {
 
 
 TASK_TYPES = {
-    "git": {
-        "type": "load-git",
+    "test-git": {
+        "type": "load-test-git",
         "description": "Update a git repository",
         "backend_name": "swh.loader.git.tasks.UpdateGitRepository",
         "default_interval": datetime.timedelta(days=64),
@@ -35,8 +35,8 @@ TASK_TYPES = {
         "num_retries": 7,
         "retry_delay": datetime.timedelta(hours=2),
     },
-    "hg": {
-        "type": "load-hg",
+    "test-hg": {
+        "type": "load-test-hg",
         "description": "Update a mercurial repository",
         "backend_name": "swh.loader.mercurial.tasks.UpdateHgRepository",
         "default_interval": datetime.timedelta(days=64),

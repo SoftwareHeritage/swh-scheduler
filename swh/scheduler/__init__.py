@@ -24,8 +24,10 @@ if TYPE_CHECKING:
 
 
 BACKEND_TYPES: Dict[str, str] = {
-    "local": ".backend.SchedulerBackend",
+    "postgresql": ".backend.SchedulerBackend",
     "remote": ".api.client.RemoteScheduler",
+    # deprecated
+    "local": ".backend.SchedulerBackend",
 }
 
 
@@ -66,3 +68,6 @@ def get_scheduler(cls: str, **kwargs) -> SchedulerInterface:
     module = import_module(module_path, package=__package__)
     BackendClass = getattr(module, class_name)
     return BackendClass(**kwargs)
+
+
+get_datastore = get_scheduler
