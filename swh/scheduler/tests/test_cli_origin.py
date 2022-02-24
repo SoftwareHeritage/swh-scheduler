@@ -60,6 +60,8 @@ def test_grab_next(swh_scheduler, listed_origins_by_type):
     NUM_RESULTS = 10
     # Strict inequality to check that grab_next_visits doesn't return more
     # results than requested
+
+    # XXX: should test all of 'listed_origins_by_type' here...
     visit_type = next(iter(listed_origins_by_type))
     assert len(listed_origins_by_type[visit_type]) > NUM_RESULTS
 

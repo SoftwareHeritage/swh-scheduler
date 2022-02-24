@@ -24,11 +24,11 @@ executing such a swh-task.
 Then a number of services are also provided to manage the scheduling of these
 swh-tasks as Celery tasks.
 
-The `scheduler-runner` service is a daemon that regularly looks for swh-tasks
+The ``scheduler-runner`` service is a daemon that regularly looks for swh-tasks
 in the database that should be scheduled. For each of the selected swh-task, a
 Celery task is instantiated.
 
-The `scheduler-listener` service is a daemon that listen to the Celery event
+The ``scheduler-listener`` service is a daemon that listen to the Celery event
 bus and maintain scheduled swh-tasks workflow status.
 
 
@@ -38,18 +38,18 @@ SWH Task Model
 Each swh-task-type is the declaration of a type of swh-task. Each swh-task-type
 have the following fields:
 
-- `type`: Name of the swh-task type; can be anything but must be unique,
-- `description`: Human-readable task description
-- `backend_name`: Name of the task in the job-running backend,
-- `default_interval`: Default interval for newly scheduled tasks,
-- `min_interval`: Minimum interval between two runs of a task,
-- `max_interval`: Maximum interval between two runs of a task,
-- `backoff_factor`: Adjustment factor for the backoff between two task runs,
-- `max_queue_length`: Maximum length of the queue for this type of tasks,
-- `num_retries`: Default number of retries on transient failures,
-- `retry_delay`: Retry delay for the task,
+- ``type``: Name of the swh-task type; can be anything but must be unique,
+- ``description``: Human-readable task description
+- ``backend_name``: Name of the task in the job-running backend,
+- ``default_interval``: Default interval for newly scheduled tasks,
+- ``min_interval``: Minimum interval between two runs of a task,
+- ``max_interval``: Maximum interval between two runs of a task,
+- ``backoff_factor``: Adjustment factor for the backoff between two task runs,
+- ``max_queue_length``: Maximum length of the queue for this type of tasks,
+- ``num_retries``: Default number of retries on transient failures,
+- ``retry_delay``: Retry delay for the task,
 
-Existing swh-task-types can be listed using the `swh scheduler` command line
+Existing swh-task-types can be listed using the ``swh scheduler`` command line
 tool::
 
   $ swh scheduler task-type list
@@ -78,17 +78,17 @@ You can see the details of a swh-task-type::
 
 An swh-task is an 'instance' of such a swh-task-type, and consists in:
 
-- `arguments`: Arguments passed to the underlying job scheduler,
-- `next_run`: Next run of this task should be run on or after that time,
-- `current_interval`: Interval between two runs of this task, taking into
+- ``arguments``: Arguments passed to the underlying job scheduler,
+- ``next_run``: Next run of this task should be run on or after that time,
+- ``current_interval``: Interval between two runs of this task, taking into
                       account the backoff factor,
-- `policy`: Whether the task is "one-shot" or "recurring",
-- `retries_left`: Number of "short delay" retries of the task in case of
+- ``policy``: Whether the task is "one-shot" or "recurring",
+- ``retries_left``: Number of "short delay" retries of the task in case of
                   transient failure,
-- `priority`: Priority of the task,
-- `id`: Internal task identifier,
-- `type`: References task_type table,
-- `status`: Task status ( among "next_run_not_scheduled", "next_run_scheduled",
+- ``priority``: Priority of the task,
+- ``id``: Internal task identifier,
+- ``type``: References task_type table,
+- ``status``: Task status ( among "next_run_not_scheduled", "next_run_scheduled",
             "completed", "disabled").
 
 So a swh-task consist basically in:
@@ -97,8 +97,8 @@ So a swh-task consist basically in:
   swh-task is handled,
 - a set of parameters to specify the retry policy in case of transient failure
   upon execution,
-- a set of parameters that defines the job to be done (`bakend_name` +
-  `arguments`).
+- a set of parameters that defines the job to be done (``bakend_name`` +
+  ``arguments``).
 
 
 You can list pending swh-tasks (tasks that are to be scheduled ASAP)::
@@ -152,9 +152,9 @@ When you want to add a new swh-task-type, you need a celery worker backend
 capable of executing this new task-type instances.
 
 Celery workers for swh-scheduler based tasks should be started using the Celery
-app in `swh.scheduler.celery_config`. This later, among other things, provides
+app in ``swh.scheduler.celery_config``. This later, among other things, provides
 a loading mechanism for task types based on pkg_resources declared plugins under
-the `[swh.workers]` entry point.
+the ``[swh.workers]`` entry point.
 
 TODO: add a fully working example of a dumb task.
 

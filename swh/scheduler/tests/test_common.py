@@ -10,7 +10,7 @@ from .common import TEMPLATES, tasks_from_template
 
 def test_tasks_from_template_no_priority():
     nb_tasks = 3
-    template = TEMPLATES["git"]
+    template = TEMPLATES["test-git"]
     next_run = datetime.datetime.utcnow()
     tasks = tasks_from_template(template, next_run, nb_tasks)
 
@@ -27,7 +27,7 @@ def test_tasks_from_template_no_priority():
 
 
 def test_tasks_from_template_priority():
-    template = TEMPLATES["hg"]
+    template = TEMPLATES["test-hg"]
     num_priorities = {
         None: 3,
         "high": 5,
