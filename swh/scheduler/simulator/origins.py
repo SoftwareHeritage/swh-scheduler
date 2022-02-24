@@ -54,7 +54,7 @@ def generate_listed_origin(
         now = datetime.now(tz=timezone.utc)
 
     url = f"https://example.com/{_nb_generated_origins:06d}.git"
-    visit_type = "git"
+    visit_type = "test-git"
     origin = OriginModel(visit_type, url)
 
     return ListedOrigin(

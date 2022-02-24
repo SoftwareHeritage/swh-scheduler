@@ -31,7 +31,7 @@ def stored_lister(swh_scheduler) -> Lister:
 @pytest.fixture
 def visit_types() -> List[str]:
     """Possible visit types in `ListedOrigin`s"""
-    return ["git", "svn"]
+    return ["test-git", "test-svn"]
 
 
 @pytest.fixture
