@@ -213,8 +213,7 @@ def add_task_type(
     max_interval,
     backoff_factor,
 ):
-    """Create a new task type
-    """
+    """Create a new task type"""
     task_type = dict(
         type=type,
         backend_name=task_name,

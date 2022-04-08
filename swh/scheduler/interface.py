@@ -265,7 +265,12 @@ class SchedulerInterface(Protocol):
 
     @remote_api_endpoint("task_run/end")
     def end_task_run(
-        self, backend_id, status, metadata=None, timestamp=None, result=None,
+        self,
+        backend_id,
+        status,
+        metadata=None,
+        timestamp=None,
+        result=None,
     ):
         """Mark a given task as ended, updating the corresponding task_run entry in the
         database.
@@ -313,7 +318,7 @@ class SchedulerInterface(Protocol):
     @remote_api_endpoint("task/delete_archived")
     def delete_archived_tasks(self, task_ids):
         """Delete archived tasks as much as possible. Only the task_ids whose
-           complete associated task_run have been cleaned up will be.
+        complete associated task_run have been cleaned up will be.
 
         """
         ...
@@ -325,8 +330,7 @@ class SchedulerInterface(Protocol):
 
     @remote_api_endpoint("listers/get")
     def get_listers(self) -> List[Lister]:
-        """Retrieve information about all listers from the database.
-        """
+        """Retrieve information about all listers from the database."""
         ...
 
     @remote_api_endpoint("lister/get")
@@ -434,8 +438,7 @@ class SchedulerInterface(Protocol):
     def origin_visit_stats_upsert(
         self, origin_visit_stats: Iterable[OriginVisitStats]
     ) -> None:
-        """Create a new origin visit stats
-        """
+        """Create a new origin visit stats"""
         ...
 
     @remote_api_endpoint("visit_stats/get")
@@ -451,7 +454,9 @@ class SchedulerInterface(Protocol):
         ...
 
     @remote_api_endpoint("visit_scheduler/get")
-    def visit_scheduler_queue_position_get(self,) -> Dict[str, int]:
+    def visit_scheduler_queue_position_get(
+        self,
+    ) -> Dict[str, int]:
         """Retrieve all current queue positions for the recurrent visit scheduler.
 
         Returns
@@ -464,9 +469,7 @@ class SchedulerInterface(Protocol):
     def visit_scheduler_queue_position_set(
         self, visit_type: str, position: int
     ) -> None:
-        """Set the current queue position of the recurrent visit scheduler for `visit_type`.
-
-        """
+        """Set the current queue position of the recurrent visit scheduler for `visit_type`."""
         ...
 
     @remote_api_endpoint("scheduler_metrics/update")

@@ -51,9 +51,7 @@ def format_query(query, keys):
 
 
 class SchedulerBackend:
-    """Backend for the Software Heritage scheduling database.
-
-    """
+    """Backend for the Software Heritage scheduling database."""
 
     current_version = 33
 
@@ -136,7 +134,8 @@ class SchedulerBackend:
     def get_task_type(self, task_type_name, db=None, cur=None):
         """Retrieve the task type with id task_type_name"""
         query = format_query(
-            "select {keys} from task_type where type=%s", self.task_type_keys,
+            "select {keys} from task_type where type=%s",
+            self.task_type_keys,
         )
         cur.execute(query, (task_type_name,))
         return cur.fetchone()
@@ -144,14 +143,16 @@ class SchedulerBackend:
     @db_transaction()
     def get_task_types(self, db=None, cur=None):
         """Retrieve all registered task types"""
-        query = format_query("select {keys} from task_type", self.task_type_keys,)
+        query = format_query(
+            "select {keys} from task_type",
+            self.task_type_keys,
+        )
         cur.execute(query)
         return cur.fetchall()
 
     @db_transaction()
     def get_listers(self, db=None, cur=None) -> List[Lister]:
-        """Retrieve information about all listers from the database.
-        """
+        """Retrieve information about all listers from the database."""
 
         select_cols = ", ".join(Lister.select_columns())
 
@@ -580,7 +581,8 @@ class SchedulerBackend:
             cur=cur,
         )
         query = format_query(
-            "select {keys} from swh_scheduler_create_tasks_from_temp()", self.task_keys,
+            "select {keys} from swh_scheduler_create_tasks_from_temp()",
+            self.task_keys,
         )
         cur.execute(query)
         return cur.fetchall()
@@ -942,7 +944,7 @@ class SchedulerBackend:
     @db_transaction()
     def delete_archived_tasks(self, task_ids, db=None, cur=None):
         """Delete archived tasks as much as possible. Only the task_ids whose
-           complete associated task_run have been cleaned up will be.
+        complete associated task_run have been cleaned up will be.
 
         """
         _task_ids = _task_run_ids = []
@@ -1049,7 +1051,11 @@ class SchedulerBackend:
 
     @db_transaction()
     def visit_scheduler_queue_position_set(
-        self, visit_type: str, position: int, db=None, cur=None,
+        self,
+        visit_type: str,
+        position: int,
+        db=None,
+        cur=None,
     ) -> None:
         query = """
             INSERT INTO visit_scheduler_queue_position(visit_type, position)

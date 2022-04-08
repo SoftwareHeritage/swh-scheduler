@@ -150,7 +150,9 @@ class ListedOrigin(BaseSchedulerModel):
     )
 
     last_update = attr.ib(
-        type=Optional[datetime.datetime], validator=[type_validator()], default=None,
+        type=Optional[datetime.datetime],
+        validator=[type_validator()],
+        default=None,
     )
 
     enabled = attr.ib(type=bool, validator=[type_validator()], default=True)
@@ -194,8 +196,7 @@ def convert_last_visit_status(
 
 @attr.s(frozen=True, slots=True)
 class OriginVisitStats(BaseSchedulerModel):
-    """Represents an aggregated origin visits view.
-    """
+    """Represents an aggregated origin visits view."""
 
     url = attr.ib(
         type=str, validator=[type_validator()], metadata={"primary_key": True}
@@ -216,7 +217,9 @@ class OriginVisitStats(BaseSchedulerModel):
         converter=convert_last_visit_status,
     )
     last_scheduled = attr.ib(
-        type=Optional[datetime.datetime], validator=[type_validator()], default=None,
+        type=Optional[datetime.datetime],
+        validator=[type_validator()],
+        default=None,
     )
     last_snapshot = attr.ib(
         type=Optional[bytes], validator=type_validator(), default=None
@@ -249,7 +252,9 @@ class SchedulerMetrics(BaseSchedulerModel):
     )
 
     last_update = attr.ib(
-        type=Optional[datetime.datetime], validator=[type_validator()], default=None,
+        type=Optional[datetime.datetime],
+        validator=[type_validator()],
+        default=None,
     )
 
     origins_known = attr.ib(type=int, validator=[type_validator()], default=0)

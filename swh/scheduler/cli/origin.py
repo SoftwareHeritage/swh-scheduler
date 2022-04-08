@@ -150,10 +150,15 @@ def schedule_next(ctx, policy: str, type: str, count: int):
     "--policy", "-p", default="oldest_scheduled_first", help="Scheduling policy"
 )
 @click.option(
-    "--queue", "-q", help="Target celery queue", type=str,
+    "--queue",
+    "-q",
+    help="Target celery queue",
+    type=str,
 )
 @click.option(
-    "--tablesample", help="Table sampling percentage", type=float,
+    "--tablesample",
+    help="Table sampling percentage",
+    type=float,
 )
 @click.option(
     "--only-enabled/--only-disabled",

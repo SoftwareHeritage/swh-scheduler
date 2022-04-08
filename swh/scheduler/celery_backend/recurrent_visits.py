@@ -153,7 +153,10 @@ def splay():
 
 
 def send_visits_for_visit_type(
-    scheduler: SchedulerInterface, app, visit_type: str, task_type: Dict,
+    scheduler: SchedulerInterface,
+    app,
+    visit_type: str,
+    task_type: Dict,
 ) -> float:
     """Schedule the next batch of visits for the given ``visit_type``.
 
@@ -217,7 +220,10 @@ def send_visits_for_visit_type(
         )
 
     logger.info(
-        "%s: %s visits scheduled in queue %s", visit_type, len(origins), queue_name,
+        "%s: %s visits scheduled in queue %s",
+        visit_type,
+        len(origins),
+        queue_name,
     )
 
     # When everything worked, we can try to schedule origins again ASAP.

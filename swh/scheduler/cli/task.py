@@ -275,7 +275,10 @@ def schedule_task(ctx, type, options, policy, priority, next_run):
         "type": type,
         "policy": policy,
         "priority": priority,
-        "arguments": {"args": args, "kwargs": kw,},
+        "arguments": {
+            "args": args,
+            "kwargs": kw,
+        },
         "next_run": next_run or now,
     }
     created = scheduler.create_tasks([task])
@@ -290,7 +293,8 @@ def schedule_task(ctx, type, options, policy, priority, next_run):
 
 
 def iter_origins(  # use string annotations to prevent some pkg loading
-    storage: "StorageInterface", page_token: "Optional[str]" = None,
+    storage: "StorageInterface",
+    page_token: "Optional[str]" = None,
 ) -> "Iterator[Origin]":
     """Iterate over origins in the storage. Optionally starting from page_token.
 
@@ -411,7 +415,9 @@ def list_pending_tasks(ctx, task_types, num_tasks, before):
     output = []
     for task_type in task_types:
         pending = scheduler.peek_ready_tasks(
-            task_type, timestamp=before, num_tasks=num_tasks,
+            task_type,
+            timestamp=before,
+            num_tasks=num_tasks,
         )
         output.append("Found %d %s tasks\n" % (len(pending), task_type))
 
@@ -498,8 +504,7 @@ def list_pending_tasks(ctx, task_types, num_tasks, before):
 def list_tasks(
     ctx, task_id, task_type, limit, status, policy, priority, before, after, list_runs
 ):
-    """List tasks.
-    """
+    """List tasks."""
     from operator import itemgetter
 
     scheduler = ctx.obj["scheduler"]

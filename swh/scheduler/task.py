@@ -39,12 +39,18 @@ class SWHTask(celery.app.task.Task):
         worker_name = current_app.conf.get("worker_name")
         if worker_name:
             self._statsd = Statsd(
-                constant_tags={"task": self.name, "worker": worker_name,}
+                constant_tags={
+                    "task": self.name,
+                    "worker": worker_name,
+                }
             )
             return self._statsd
         else:
             statsd = Statsd(
-                constant_tags={"task": self.name, "worker": "unknown worker",}
+                constant_tags={
+                    "task": self.name,
+                    "worker": "unknown worker",
+                }
             )
             return statsd
 

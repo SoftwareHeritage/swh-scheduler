@@ -206,7 +206,9 @@ class TestScheduler:
         task_type = TEMPLATES["test-git"]["type"]
         # Create tasks with and without priorities
         tasks = tasks_from_template(
-            TEMPLATES["test-git"], t, num_priorities=NUM_PRIORITY_TASKS,
+            TEMPLATES["test-git"],
+            t,
+            num_priorities=NUM_PRIORITY_TASKS,
         )
 
         count_priority = 0
@@ -261,13 +263,22 @@ class TestScheduler:
         num_tasks = 100
         # Create tasks with and without priorities
         tasks0 = tasks_with_priority_from_template(
-            TEMPLATES["test-git"], t, num_tasks, "high",
+            TEMPLATES["test-git"],
+            t,
+            num_tasks,
+            "high",
         )
         tasks1 = tasks_with_priority_from_template(
-            TEMPLATES["test-hg"], t, num_tasks, "low",
+            TEMPLATES["test-hg"],
+            t,
+            num_tasks,
+            "low",
         )
         tasks2 = tasks_with_priority_from_template(
-            TEMPLATES["test-hg"], t, num_tasks, "normal",
+            TEMPLATES["test-hg"],
+            t,
+            num_tasks,
+            "normal",
         )
         tasks = tasks0 + tasks1 + tasks2
 
@@ -319,7 +330,7 @@ class TestScheduler:
         self, task: Dict[str, Any], after: datetime.datetime, before: datetime.datetime
     ) -> None:
         """Ensure filtered tasks have the right expected properties
-           (within the range, recurring disabled, etc..)
+        (within the range, recurring disabled, etc..)
 
         """
         started = task["started"]
@@ -331,9 +342,7 @@ class TestScheduler:
             assert task["task_status"] in ["disabled"]
 
     def test_filter_task_to_archive(self, swh_scheduler):
-        """Filtering only list disabled recurring or completed oneshot tasks
-
-        """
+        """Filtering only list disabled recurring or completed oneshot tasks"""
         self._create_task_types(swh_scheduler)
         _time = utcnow()
         recurring = tasks_from_template(TEMPLATES["test-git"], _time, 12)
@@ -871,7 +880,9 @@ class TestScheduler:
         return visit_type, origins, expected
 
     def test_grab_next_visits_oldest_scheduled_first(
-        self, swh_scheduler, listed_origins_by_type,
+        self,
+        swh_scheduler,
+        listed_origins_by_type,
     ):
         visit_type, origins, expected = self._prepare_oldest_scheduled_first_origins(
             swh_scheduler, listed_origins_by_type
@@ -886,7 +897,11 @@ class TestScheduler:
     @pytest.mark.parametrize("which_cooldown", ("scheduled", "failed", "not_found"))
     @pytest.mark.parametrize("cooldown", (7, 15))
     def test_grab_next_visits_cooldowns(
-        self, swh_scheduler, listed_origins_by_type, which_cooldown, cooldown,
+        self,
+        swh_scheduler,
+        listed_origins_by_type,
+        which_cooldown,
+        cooldown,
     ):
         visit_type, origins, expected = self._prepare_oldest_scheduled_first_origins(
             swh_scheduler, listed_origins_by_type
@@ -953,7 +968,9 @@ class TestScheduler:
         ), "grab_next_visits didn't reschedule visits after the configured cooldown"
 
     def test_grab_next_visits_tablesample(
-        self, swh_scheduler, listed_origins_by_type,
+        self,
+        swh_scheduler,
+        listed_origins_by_type,
     ):
         visit_type, origins, expected = self._prepare_oldest_scheduled_first_origins(
             swh_scheduler, listed_origins_by_type
@@ -969,7 +986,9 @@ class TestScheduler:
         assert ret is not None
 
     def test_grab_next_visits_never_visited_oldest_update_first(
-        self, swh_scheduler, listed_origins_by_type,
+        self,
+        swh_scheduler,
+        listed_origins_by_type,
     ):
         visit_type, origins = self._grab_next_visits_setup(
             swh_scheduler, listed_origins_by_type
@@ -995,7 +1014,9 @@ class TestScheduler:
         )
 
     def test_grab_next_visits_already_visited_order_by_lag(
-        self, swh_scheduler, listed_origins_by_type,
+        self,
+        swh_scheduler,
+        listed_origins_by_type,
     ):
         visit_type, origins = self._grab_next_visits_setup(
             swh_scheduler, listed_origins_by_type
@@ -1060,9 +1081,7 @@ class TestScheduler:
     def test_grab_next_visits_no_last_update_nor_visit_stats(
         self, swh_scheduler, listed_origins_by_type
     ):
-        """grab_next_visits should retrieve tasks without last update (nor visit stats)
-
-        """
+        """grab_next_visits should retrieve tasks without last update (nor visit stats)"""
         visit_type = next(iter(listed_origins_by_type))
 
         origins = []
@@ -1087,7 +1106,9 @@ class TestScheduler:
 
         # Grab some new visits
         next_visits = swh_scheduler.grab_next_visits(
-            visit_type, count=len(origins), policy="origins_without_last_update",
+            visit_type,
+            count=len(origins),
+            policy="origins_without_last_update",
         )
         # we do have the one without any last update
         assert len(next_visits) == len(origins)
@@ -1163,7 +1184,9 @@ class TestScheduler:
 
         # Grab next visits
         actual_visits = swh_scheduler.grab_next_visits(
-            visit_type, count=len(origins), policy="origins_without_last_update",
+            visit_type,
+            count=len(origins),
+            policy="origins_without_last_update",
         )
         assert len(actual_visits) == len(origins)
 
@@ -1266,7 +1289,10 @@ class TestScheduler:
 
         new_visit_date = utcnow()
         visit_stats = OriginVisitStats(
-            url=url, visit_type="git", last_successful=None, last_visit=new_visit_date,
+            url=url,
+            visit_type="git",
+            last_successful=None,
+            last_visit=new_visit_date,
         )
         swh_scheduler.origin_visit_stats_upsert([visit_stats])
 
@@ -1321,9 +1347,7 @@ class TestScheduler:
             assert visit_stat is not None
 
     def test_origin_visit_stats_upsert_cardinality_failing(self, swh_scheduler) -> None:
-        """Batch upsert does not support altering multiple times the same origin-visit-status
-
-        """
+        """Batch upsert does not support altering multiple times the same origin-visit-status"""
         with pytest.raises(SchedulerException, match="CardinalityViolation"):
             swh_scheduler.origin_visit_stats_upsert(
                 [

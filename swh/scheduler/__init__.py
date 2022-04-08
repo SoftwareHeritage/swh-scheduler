@@ -12,7 +12,10 @@ import warnings
 DEFAULT_CONFIG = {
     "scheduler": (
         "dict",
-        {"cls": "local", "db": "dbname=softwareheritage-scheduler-dev",},
+        {
+            "cls": "local",
+            "db": "dbname=softwareheritage-scheduler-dev",
+        },
     )
 }
 # current configuration. To be set by the config loading mechanism

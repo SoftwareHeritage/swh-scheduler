@@ -12,9 +12,7 @@ from .serializers import DECODERS, ENCODERS
 
 
 class RemoteScheduler(RPCClient):
-    """Proxy to a remote scheduler API
-
-    """
+    """Proxy to a remote scheduler API"""
 
     backend_class = SchedulerInterface
 

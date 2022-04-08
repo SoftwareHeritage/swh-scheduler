@@ -21,7 +21,10 @@ class UtilsTest(unittest.TestCase):
             "policy": "oneshot",
             "type": "some-task-type",
             "next_run": "some-date",
-            "arguments": {"args": [], "kwargs": {},},
+            "arguments": {
+                "args": [],
+                "kwargs": {},
+            },
         }
 
         self.assertEqual(actual_task, expected_task)

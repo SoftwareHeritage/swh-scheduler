@@ -66,7 +66,12 @@ def test_load_and_check_config_remote_config_local_type_raise(tmpdir):
 
 def test_load_and_check_config_local_incomplete_configuration(tmpdir):
     """Incomplete 'local' configuration should raise"""
-    config = {"scheduler": {"cls": "local", "something": "needed-for-test",}}
+    config = {
+        "scheduler": {
+            "cls": "local",
+            "something": "needed-for-test",
+        }
+    }
 
     config_path = prepare_config_file(tmpdir, config)
     expected_error = "Invalid configuration; missing 'db' config entry"
@@ -76,7 +81,12 @@ def test_load_and_check_config_local_incomplete_configuration(tmpdir):
 
 def test_load_and_check_config_local_config_fine(tmpdir):
     """Local configuration is fine"""
-    config = {"scheduler": {"cls": "local", "db": "db",}}
+    config = {
+        "scheduler": {
+            "cls": "local",
+            "db": "db",
+        }
+    }
     config_path = prepare_config_file(tmpdir, config)
     cfg = load_and_check_config(config_path, type="local")
     assert cfg == config

@@ -83,7 +83,10 @@ def test_cli_schedule_recurrent_noop(swh_scheduler, mocker):
 
 
 def test_recurrent_visit_scheduling(
-    swh_scheduler, caplog, listed_origins_by_type, mocker,
+    swh_scheduler,
+    caplog,
+    listed_origins_by_type,
+    mocker,
 ):
     """Scheduling known tasks is ok."""
 
@@ -169,7 +172,8 @@ def scheduler_config(swh_scheduler_config):
 
 
 def test_visit_scheduler_thread_unknown_task(
-    swh_scheduler, scheduler_config,
+    swh_scheduler,
+    scheduler_config,
 ):
     """Starting a thread with unknown task type reports the error"""
 

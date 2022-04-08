@@ -97,7 +97,9 @@ def test_insert_primary_key():
 
 def test_listed_origin_as_task_dict():
     origin = model.ListedOrigin(
-        lister_id=uuid.uuid4(), url="http://example.com/", visit_type="git",
+        lister_id=uuid.uuid4(),
+        url="http://example.com/",
+        visit_type="git",
     )
 
     task = origin.as_task_dict()

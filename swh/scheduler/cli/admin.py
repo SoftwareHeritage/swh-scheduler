@@ -209,8 +209,7 @@ def schedule_recurrent(ctx, visit_types: List[str]):
 )
 @click.pass_context
 def rpc_server(ctx, host, port, debug):
-    """Starts a swh-scheduler API HTTP server.
-    """
+    """Starts a swh-scheduler API HTTP server."""
     if ctx.obj["config"]["scheduler"]["cls"] == "remote":
         click.echo(
             "The API server can only be started with a 'local' " "configuration",
