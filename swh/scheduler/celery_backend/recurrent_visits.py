@@ -1,4 +1,4 @@
-# Copyright (C) 2021 The Software Heritage developers
+# Copyright (C) 2021-2022 The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Tuple
 from kombu.utils.uuid import uuid
 
 from swh.scheduler.celery_backend.config import get_available_slots
+from swh.scheduler.utils import create_origin_task_dict
 
 if TYPE_CHECKING:
     from ..interface import SchedulerInterface
@@ -233,7 +234,7 @@ def send_visits_for_visit_type(
     random.shuffle(origins)
 
     for origin in origins:
-        task_dict = origin.as_task_dict()
+        task_dict = create_origin_task_dict(origin)
         app.send_task(
             queue_name,
             task_id=uuid(),

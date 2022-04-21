@@ -5,8 +5,9 @@
 
 from datetime import timezone
 from unittest.mock import patch
+import uuid
 
-from swh.scheduler import utils
+from swh.scheduler import model, utils
 
 
 @patch("swh.scheduler.utils.datetime")
@@ -80,3 +81,35 @@ def test_create_task_dict(mock_datetime):
 
     assert actual_task == expected_task
     mock_datetime.now.assert_called_once_with(tz=timezone.utc)
+
+
+def test_create_origin_task_dict():
+    origin = model.ListedOrigin(
+        lister_id=uuid.uuid4(),
+        url="http://example.com/",
+        visit_type="git",
+    )
+
+    task = utils.create_origin_task_dict(origin)
+    assert task == {
+        "type": "load-git",
+        "arguments": {"args": [], "kwargs": {"url": "http://example.com/"}},
+    }
+
+    loader_args = {"foo": "bar", "baz": {"foo": "bar"}}
+
+    origin_w_args = model.ListedOrigin(
+        lister_id=uuid.uuid4(),
+        url="http://example.com/svn/",
+        visit_type="svn",
+        extra_loader_arguments=loader_args,
+    )
+
+    task_w_args = utils.create_origin_task_dict(origin_w_args)
+    assert task_w_args == {
+        "type": "load-svn",
+        "arguments": {
+            "args": [],
+            "kwargs": {"url": "http://example.com/svn/", **loader_args},
+        },
+    }

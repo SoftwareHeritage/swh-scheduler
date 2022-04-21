@@ -1,10 +1,13 @@
-# Copyright (C) 2017-2018  The Software Heritage developers
+# Copyright (C) 2017-2022  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
 
 from datetime import datetime, timezone
+from typing import Any, Dict
+
+from .model import ListedOrigin
 
 
 def utcnow():
@@ -62,6 +65,16 @@ def create_task_dict(type, policy, *args, **kwargs):
     }
     task.update(task_extra)
     return task
+
+
+def create_origin_task_dict(origin: ListedOrigin) -> Dict[str, Any]:
+    return {
+        "type": f"load-{origin.visit_type}",
+        "arguments": {
+            "args": [],
+            "kwargs": {"url": origin.url, **origin.extra_loader_arguments},
+        },
+    }
 
 
 def create_oneshot_task_dict(type, *args, **kwargs):
