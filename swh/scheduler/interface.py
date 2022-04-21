@@ -333,6 +333,10 @@ class SchedulerInterface(Protocol):
         """Retrieve information about all listers from the database."""
         ...
 
+    @remote_api_endpoint("listers/get_by_id")
+    def get_listers_by_id(self, lister_ids: List[str]) -> List[Lister]:
+        """Retrieve listers in batch, using their UUID"""
+
     @remote_api_endpoint("lister/get")
     def get_lister(
         self, name: str, instance_name: Optional[str] = None

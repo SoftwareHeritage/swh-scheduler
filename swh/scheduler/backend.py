@@ -165,6 +165,22 @@ class SchedulerBackend:
         return [Lister(**ret) for ret in cur.fetchall()]
 
     @db_transaction()
+    def get_listers_by_id(
+        self, lister_ids: List[str], db=None, cur=None
+    ) -> List[Lister]:
+        """Retrieve listers in batch, using their UUID"""
+        select_cols = ", ".join(Lister.select_columns())
+
+        query = f"""
+            select {select_cols} from listers
+              where id in %s
+        """
+
+        cur.execute(query, (tuple(lister_ids),))
+
+        return [Lister(**row) for row in cur]
+
+    @db_transaction()
     def get_lister(
         self, name: str, instance_name: Optional[str] = None, db=None, cur=None
     ) -> Optional[Lister]:

@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Iterable, List, Optional
 import click
 
 from . import cli
-from ..utils import create_origin_task_dict
+from ..utils import create_origin_task_dicts
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -130,12 +130,12 @@ def schedule_next(ctx, policy: str, type: str, count: int):
     created = scheduler.create_tasks(
         [
             {
-                **create_origin_task_dict(origin),
+                **task_dict,
                 "policy": "oneshot",
                 "next_run": utcnow(),
                 "retries_left": 1,
             }
-            for origin in origins
+            for task_dict in create_origin_task_dicts(origins, scheduler)
         ]
     )
 
@@ -211,8 +211,7 @@ def send_to_celery(
     )
 
     click.echo(f"{len(origins)} visits to send to celery")
-    for origin in origins:
-        task_dict = create_origin_task_dict(origin)
+    for task_dict in create_origin_task_dicts(origins, scheduler):
         app.send_task(
             task_name,
             task_id=uuid(),

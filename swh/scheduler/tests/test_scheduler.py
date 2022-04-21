@@ -671,6 +671,27 @@ class TestScheduler:
 
         assert swh_scheduler.get_listers() == db_listers
 
+    def test_get_listers_by_id(self, swh_scheduler):
+        assert swh_scheduler.get_listers_by_id([str(uuid.uuid4())]) == []
+
+        db_listers = []
+        for lister_args in LISTERS:
+            db_listers.append(swh_scheduler.get_or_create_lister(**lister_args))
+
+        id0 = db_listers[0].id
+        id1 = db_listers[1].id
+
+        assert swh_scheduler.get_listers_by_id([id0]) == [db_listers[0]]
+        assert swh_scheduler.get_listers_by_id([id1]) == [db_listers[1]]
+        assert swh_scheduler.get_listers_by_id([id0, id1]) == [
+            db_listers[0],
+            db_listers[1],
+        ]
+
+        assert swh_scheduler.get_listers_by_id([id0, str(uuid.uuid4())]) == [
+            db_listers[0]
+        ]
+
     def test_update_lister(self, swh_scheduler, stored_lister):
         lister = attr.evolve(stored_lister, current_state={"updated": "now"})
 

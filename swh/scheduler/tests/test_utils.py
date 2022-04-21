@@ -9,6 +9,8 @@ import uuid
 
 from swh.scheduler import model, utils
 
+from .common import LISTERS
+
 
 @patch("swh.scheduler.utils.datetime")
 def test_create_oneshot_task_dict_simple(mock_datetime):
@@ -84,32 +86,98 @@ def test_create_task_dict(mock_datetime):
 
 
 def test_create_origin_task_dict():
+    lister = model.Lister(**LISTERS[1], id=uuid.uuid4())
     origin = model.ListedOrigin(
-        lister_id=uuid.uuid4(),
+        lister_id=lister.id,
         url="http://example.com/",
         visit_type="git",
     )
 
-    task = utils.create_origin_task_dict(origin)
+    task = utils.create_origin_task_dict(origin, lister)
     assert task == {
         "type": "load-git",
-        "arguments": {"args": [], "kwargs": {"url": "http://example.com/"}},
+        "arguments": {
+            "args": [],
+            "kwargs": {"url": "http://example.com/", "lister_name": LISTERS[1]["name"]},
+        },
     }
 
     loader_args = {"foo": "bar", "baz": {"foo": "bar"}}
 
     origin_w_args = model.ListedOrigin(
-        lister_id=uuid.uuid4(),
+        lister_id=lister.id,
         url="http://example.com/svn/",
         visit_type="svn",
         extra_loader_arguments=loader_args,
     )
 
-    task_w_args = utils.create_origin_task_dict(origin_w_args)
+    task_w_args = utils.create_origin_task_dict(origin_w_args, lister)
     assert task_w_args == {
         "type": "load-svn",
         "arguments": {
             "args": [],
-            "kwargs": {"url": "http://example.com/svn/", **loader_args},
+            "kwargs": {
+                "url": "http://example.com/svn/",
+                "lister_name": LISTERS[1]["name"],
+                **loader_args,
+            },
         },
     }
+
+
+def test_create_origin_task_dicts(swh_scheduler):
+    listers = []
+    for lister_args in LISTERS:
+        listers.append(swh_scheduler.get_or_create_lister(**lister_args))
+
+    origin1 = model.ListedOrigin(
+        lister_id=listers[0].id,
+        url="http://example.com/1",
+        visit_type="git",
+    )
+    origin2 = model.ListedOrigin(
+        lister_id=listers[0].id,
+        url="http://example.com/2",
+        visit_type="git",
+    )
+    origin3 = model.ListedOrigin(
+        lister_id=listers[1].id,
+        url="http://example.com/3",
+        visit_type="git",
+    )
+
+    origins = [origin1, origin2, origin3]
+
+    tasks = utils.create_origin_task_dicts(origins, swh_scheduler)
+    assert tasks == [
+        {
+            "type": "load-git",
+            "arguments": {
+                "args": [],
+                "kwargs": {
+                    "url": "http://example.com/1",
+                    "lister_name": LISTERS[0]["name"],
+                },
+            },
+        },
+        {
+            "type": "load-git",
+            "arguments": {
+                "args": [],
+                "kwargs": {
+                    "url": "http://example.com/2",
+                    "lister_name": LISTERS[0]["name"],
+                },
+            },
+        },
+        {
+            "type": "load-git",
+            "arguments": {
+                "args": [],
+                "kwargs": {
+                    "url": "http://example.com/3",
+                    "lister_name": LISTERS[1]["name"],
+                },
+            },
+        },
+    ]

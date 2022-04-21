@@ -17,7 +17,7 @@ from typing import Dict, Generator, Optional
 from simpy import Event
 
 from swh.scheduler.interface import SchedulerInterface
-from swh.scheduler.utils import create_origin_task_dict
+from swh.scheduler.utils import create_origin_task_dicts
 
 from . import origin_scheduler, task_scheduler
 from .common import Environment, Queue, SimulationReport, Task
@@ -122,12 +122,14 @@ def fill_test_data(scheduler: SchedulerInterface, num_origins: int = 100000):
     scheduler.create_tasks(
         [
             {
-                **create_origin_task_dict(origin),
+                **task_dict,
                 "policy": "recurring",
                 "next_run": origin.last_update,
                 "interval": timedelta(days=64),
             }
-            for origin in origins
+            for (origin, task_dict) in zip(
+                origins, create_origin_task_dicts(origins, scheduler)
+            )
         ]
     )
 
