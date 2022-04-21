@@ -98,7 +98,11 @@ def test_create_origin_task_dict():
         "type": "load-git",
         "arguments": {
             "args": [],
-            "kwargs": {"url": "http://example.com/", "lister_name": LISTERS[1]["name"]},
+            "kwargs": {
+                "url": "http://example.com/",
+                "lister_name": LISTERS[1]["name"],
+                "lister_instance_name": LISTERS[1]["instance_name"],
+            },
         },
     }
 
@@ -119,6 +123,7 @@ def test_create_origin_task_dict():
             "kwargs": {
                 "url": "http://example.com/svn/",
                 "lister_name": LISTERS[1]["name"],
+                "lister_instance_name": LISTERS[1]["instance_name"],
                 **loader_args,
             },
         },
@@ -157,6 +162,7 @@ def test_create_origin_task_dicts(swh_scheduler):
                 "kwargs": {
                     "url": "http://example.com/1",
                     "lister_name": LISTERS[0]["name"],
+                    "lister_instance_name": None,
                 },
             },
         },
@@ -167,6 +173,7 @@ def test_create_origin_task_dicts(swh_scheduler):
                 "kwargs": {
                     "url": "http://example.com/2",
                     "lister_name": LISTERS[0]["name"],
+                    "lister_instance_name": None,
                 },
             },
         },
@@ -177,6 +184,7 @@ def test_create_origin_task_dicts(swh_scheduler):
                 "kwargs": {
                     "url": "http://example.com/3",
                     "lister_name": LISTERS[1]["name"],
+                    "lister_instance_name": LISTERS[1]["instance_name"],
                 },
             },
         },

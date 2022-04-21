@@ -80,6 +80,7 @@ def create_origin_task_dict(origin: ListedOrigin, lister: Lister) -> Dict[str, A
             "kwargs": {
                 "url": origin.url,
                 "lister_name": lister.name,
+                "lister_instance_name": lister.instance_name or None,
                 **origin.extra_loader_arguments,
             },
         },
