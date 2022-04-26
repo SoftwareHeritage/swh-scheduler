@@ -16,7 +16,9 @@ logger = logging.getLogger(__name__)
 
 
 def scheduler_runner_process(
-    env: Environment, task_queues: Dict[str, Queue], min_batch_size: int,
+    env: Environment,
+    task_queues: Dict[str, Queue],
+    min_batch_size: int,
 ) -> Iterator[Event]:
     """Scheduler runner. Grabs next visits from the database according to the
     scheduling policy, and fills the task_queues accordingly."""
@@ -30,7 +32,10 @@ def scheduler_runner_process(
                 f"load-{visit_type}", num_tasks=remaining, timestamp=env.time
             )
             logger.debug(
-                "%s runner: running %s %s tasks", env.time, visit_type, len(next_tasks),
+                "%s runner: running %s %s tasks",
+                env.time,
+                visit_type,
+                len(next_tasks),
             )
 
             sim_tasks = [

@@ -23,7 +23,10 @@ from swh.core.cli import swh as swh_cli_group
     "--config-file",
     "-C",
     default=None,
-    type=click.Path(exists=True, dir_okay=False,),
+    type=click.Path(
+        exists=True,
+        dir_okay=False,
+    ),
     help="Configuration file.",
 )
 @click.option(

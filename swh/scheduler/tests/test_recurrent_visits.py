@@ -6,12 +6,12 @@
 from datetime import timedelta
 import logging
 from queue import Queue
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 from swh.scheduler.celery_backend.recurrent_visits import (
-    POLICY_ADDITIONAL_PARAMETERS,
+    DEFAULT_DVCS_POLICY,
     VisitSchedulerThreads,
     grab_next_visits_policy_weights,
     send_visits_for_visit_type,
@@ -83,7 +83,10 @@ def test_cli_schedule_recurrent_noop(swh_scheduler, mocker):
 
 
 def test_recurrent_visit_scheduling(
-    swh_scheduler, caplog, listed_origins_by_type, mocker,
+    swh_scheduler,
+    caplog,
+    listed_origins_by_type,
+    mocker,
 ):
     """Scheduling known tasks is ok."""
 
@@ -117,7 +120,11 @@ def test_recurrent_visit_scheduling(
     for visit_type in ["test-git", "test-svn"]:
         task_type = f"load-{visit_type}"
         send_visits_for_visit_type(
-            swh_scheduler, mock_celery_app, visit_type, all_task_types[task_type]
+            swh_scheduler,
+            mock_celery_app,
+            visit_type,
+            all_task_types[task_type],
+            DEFAULT_DVCS_POLICY,
         )
 
     assert mock_available_slots.called, "The available slots functions should be called"
@@ -140,27 +147,24 @@ def test_recurrent_visit_scheduling(
         assert expected_record in set(records)
 
 
-@patch.dict(
-    POLICY_ADDITIONAL_PARAMETERS, {"test-git": POLICY_ADDITIONAL_PARAMETERS["git"]}
-)
 @pytest.mark.parametrize(
-    "visit_type, tablesamples",
-    [("test-hg", {}), ("test-git", POLICY_ADDITIONAL_PARAMETERS["git"])],
+    "visit_type, extras",
+    [("test-hg", {}), ("test-git", {"tablesample": 0.1})],
 )
 def test_recurrent_visit_additional_parameters(
-    swh_scheduler, mocker, visit_type, tablesamples
+    swh_scheduler, mocker, visit_type, extras
 ):
     """Testing additional policy parameters"""
 
     mock_grab_next_visits = mocker.patch.object(swh_scheduler, "grab_next_visits")
     mock_grab_next_visits.return_value = []
-
-    grab_next_visits_policy_weights(swh_scheduler, visit_type, 10)
+    policy_cfg = DEFAULT_DVCS_POLICY[:]
+    for policy in policy_cfg:
+        policy.update(extras)
+    grab_next_visits_policy_weights(swh_scheduler, visit_type, 10, policy_cfg)
 
     for call in mock_grab_next_visits.call_args_list:
-        assert call[1].get("tablesample") == tablesamples.get(
-            call[1]["policy"], {}
-        ).get("tablesample")
+        assert call[1].get("tablesample") == extras.get("tablesample")
 
 
 @pytest.fixture
@@ -169,7 +173,8 @@ def scheduler_config(swh_scheduler_config):
 
 
 def test_visit_scheduler_thread_unknown_task(
-    swh_scheduler, scheduler_config,
+    swh_scheduler,
+    scheduler_config,
 ):
     """Starting a thread with unknown task type reports the error"""
 

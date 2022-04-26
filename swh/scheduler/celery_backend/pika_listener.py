@@ -38,7 +38,8 @@ def get_listener(broker_url, queue_name, scheduler_backend):
     channel.basic_qos(prefetch_count=1000)
 
     channel.basic_consume(
-        queue=queue_name, on_message_callback=get_on_message(scheduler_backend),
+        queue=queue_name,
+        on_message_callback=get_on_message(scheduler_backend),
     )
 
     return channel
@@ -76,7 +77,9 @@ def process_event(event, scheduler_backend):
 
     if event_type == "task-started":
         scheduler_backend.start_task_run(
-            uuid, timestamp=utcnow(), metadata={"worker": event.get("hostname")},
+            uuid,
+            timestamp=utcnow(),
+            metadata={"worker": event.get("hostname")},
         )
     elif event_type == "task-result":
         result = event["result"]

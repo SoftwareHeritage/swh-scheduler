@@ -46,6 +46,7 @@ def test_site_map(flask_app_client):
             "lister/get_or_create",
             "lister/update",
             "listers/get",
+            "listers/get_by_id",
             "origins/get",
             "origins/grab_next",
             "origins/record",

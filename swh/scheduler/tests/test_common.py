@@ -36,7 +36,11 @@ def test_tasks_from_template_priority():
     }
 
     next_run = datetime.datetime.utcnow()
-    tasks = tasks_from_template(template, next_run, num_priorities=num_priorities,)
+    tasks = tasks_from_template(
+        template,
+        next_run,
+        num_priorities=num_priorities,
+    )
 
     assert len(tasks) == sum(num_priorities.values())
 

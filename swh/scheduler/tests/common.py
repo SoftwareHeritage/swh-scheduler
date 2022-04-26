@@ -10,12 +10,18 @@ from typing import Dict, List, Optional
 TEMPLATES = {
     "test-git": {
         "type": "load-test-git",
-        "arguments": {"args": [], "kwargs": {},},
+        "arguments": {
+            "args": [],
+            "kwargs": {},
+        },
         "next_run": None,
     },
     "test-hg": {
         "type": "load-test-hg",
-        "arguments": {"args": [], "kwargs": {},},
+        "arguments": {
+            "args": [],
+            "kwargs": {},
+        },
         "next_run": None,
         "policy": "oneshot",
     },
@@ -75,9 +81,7 @@ def tasks_from_template(
     priority: Optional[str] = None,
     num_priorities: Dict[Optional[str], int] = {},
 ) -> List[Dict]:
-    """Build ``num`` tasks from template
-
-    """
+    """Build ``num`` tasks from template"""
     assert bool(num) != bool(num_priorities), "mutually exclusive"
     if not num_priorities:
         assert num is not None  # to please mypy
@@ -101,9 +105,7 @@ def tasks_from_template(
 def tasks_with_priority_from_template(
     template: Dict, max_timestamp: datetime.datetime, num: int, priority: str
 ) -> List[Dict]:
-    """Build tasks with priority from template
-
-    """
+    """Build tasks with priority from template"""
     return [
         _task_from_template(
             template,

@@ -36,7 +36,9 @@ def invoke(scheduler, catch_exceptions, args):
         config_fd.write(CLI_CONFIG)
         config_fd.seek(0)
         get_scheduler_mock.return_value = scheduler
-        args = ["-C" + config_fd.name,] + args
+        args = [
+            "-C" + config_fd.name,
+        ] + args
         result = runner.invoke(cli, args, obj={"log_level": logging.WARNING})
     if not catch_exceptions and result.exception:
         print(result.output)
@@ -133,7 +135,14 @@ def test_schedule_task(swh_scheduler):
     result = invoke(
         swh_scheduler,
         False,
-        ["task", "add", "swh-test-ping", "arg1", "arg2", "key=value",],
+        [
+            "task",
+            "add",
+            "swh-test-ping",
+            "arg1",
+            "arg2",
+            "key=value",
+        ],
     )
     expected = r"""
 Created 1 tasks
@@ -155,7 +164,15 @@ Task 1
 
 
 def test_list_pending_tasks_none(swh_scheduler):
-    result = invoke(swh_scheduler, False, ["task", "list-pending", "swh-test-ping",])
+    result = invoke(
+        swh_scheduler,
+        False,
+        [
+            "task",
+            "list-pending",
+            "swh-test-ping",
+        ],
+    )
 
     expected = r"""
 Found 0 swh-test-ping tasks
@@ -171,7 +188,15 @@ def test_list_pending_tasks(swh_scheduler):
     task2["next_run"] += datetime.timedelta(days=1)
     swh_scheduler.create_tasks([task1, task2])
 
-    result = invoke(swh_scheduler, False, ["task", "list-pending", "swh-test-ping",])
+    result = invoke(
+        swh_scheduler,
+        False,
+        [
+            "task",
+            "list-pending",
+            "swh-test-ping",
+        ],
+    )
 
     expected = r"""
 Found 1 swh-test-ping tasks
@@ -191,7 +216,15 @@ Task 1
 
     swh_scheduler.grab_ready_tasks("swh-test-ping")
 
-    result = invoke(swh_scheduler, False, ["task", "list-pending", "swh-test-ping",])
+    result = invoke(
+        swh_scheduler,
+        False,
+        [
+            "task",
+            "list-pending",
+            "swh-test-ping",
+        ],
+    )
 
     expected = r"""
 Found 0 swh-test-ping tasks
@@ -205,7 +238,15 @@ def test_list_pending_tasks_filter(swh_scheduler):
     task = create_task_dict("swh-test-multiping", "oneshot", key="value")
     swh_scheduler.create_tasks([task])
 
-    result = invoke(swh_scheduler, False, ["task", "list-pending", "swh-test-ping",])
+    result = invoke(
+        swh_scheduler,
+        False,
+        [
+            "task",
+            "list-pending",
+            "swh-test-ping",
+        ],
+    )
 
     expected = r"""
 Found 0 swh-test-ping tasks
@@ -223,7 +264,15 @@ def test_list_pending_tasks_filter_2(swh_scheduler):
         ]
     )
 
-    result = invoke(swh_scheduler, False, ["task", "list-pending", "swh-test-ping",])
+    result = invoke(
+        swh_scheduler,
+        False,
+        [
+            "task",
+            "list-pending",
+            "swh-test-ping",
+        ],
+    )
 
     expected = r"""
 Found 1 swh-test-ping tasks
@@ -254,7 +303,15 @@ def test_list_pending_tasks_limit(swh_scheduler):
     )
 
     result = invoke(
-        swh_scheduler, False, ["task", "list-pending", "swh-test-ping", "--limit", "3",]
+        swh_scheduler,
+        False,
+        [
+            "task",
+            "list-pending",
+            "swh-test-ping",
+            "--limit",
+            "3",
+        ],
     )
 
     expected = r"""
@@ -336,7 +393,14 @@ def test_list_tasks(swh_scheduler):
 
     swh_scheduler.grab_ready_tasks("swh-test-ping")
 
-    result = invoke(swh_scheduler, False, ["task", "list",])
+    result = invoke(
+        swh_scheduler,
+        False,
+        [
+            "task",
+            "list",
+        ],
+    )
 
     expected = r"""
 Found 2 tasks
@@ -374,7 +438,16 @@ def test_list_tasks_id(swh_scheduler):
     task3 = create_task_dict("swh-test-ping", "oneshot", key="value3")
     swh_scheduler.create_tasks([task1, task2, task3])
 
-    result = invoke(swh_scheduler, False, ["task", "list", "--task-id", "2",])
+    result = invoke(
+        swh_scheduler,
+        False,
+        [
+            "task",
+            "list",
+            "--task-id",
+            "2",
+        ],
+    )
 
     expected = r"""
 Found 1 tasks
@@ -481,7 +554,16 @@ def test_list_tasks_limit(swh_scheduler):
     task3 = create_task_dict("swh-test-ping", "oneshot", key="value3")
     swh_scheduler.create_tasks([task1, task2, task3])
 
-    result = invoke(swh_scheduler, False, ["task", "list", "--limit", "2",])
+    result = invoke(
+        swh_scheduler,
+        False,
+        [
+            "task",
+            "list",
+            "--limit",
+            "2",
+        ],
+    )
 
     expected = r"""
 Found 2 tasks
@@ -604,7 +686,12 @@ def test_task_schedule_origins_dry_run(swh_scheduler, storage):
     result = invoke(
         swh_scheduler,
         False,
-        ["task", "schedule_origins", "--dry-run", "swh-test-ping",],
+        [
+            "task",
+            "schedule_origins",
+            "--dry-run",
+            "swh-test-ping",
+        ],
     )
 
     # Check the output
@@ -647,7 +734,13 @@ def test_task_schedule_origins(swh_scheduler, storage):
     result = invoke(
         swh_scheduler,
         False,
-        ["task", "schedule_origins", "swh-test-ping", "--batch-size", "20",],
+        [
+            "task",
+            "schedule_origins",
+            "swh-test-ping",
+            "--batch-size",
+            "20",
+        ],
     )
 
     # Check the output
@@ -842,6 +935,12 @@ def test_cli_task_runner_no_task(swh_scheduler, storage):
 
     # The runner will just iterate over the existing tasks from the scheduler and do
     # noop. We are just checking the runner does not explode here.
-    result = invoke(swh_scheduler, False, ["start-runner",],)
+    result = invoke(
+        swh_scheduler,
+        False,
+        [
+            "start-runner",
+        ],
+    )
 
     assert result.exit_code == 0, result.output

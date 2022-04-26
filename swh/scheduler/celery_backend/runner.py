@@ -153,7 +153,11 @@ def run_ready_tasks(
 
         backend.mass_schedule_task_runs(backend_tasks)
         for with_priority, backend_name, backend_id, args, kwargs in celery_tasks:
-            kw = dict(task_id=backend_id, args=args, kwargs=kwargs,)
+            kw = dict(
+                task_id=backend_id,
+                args=args,
+                kwargs=kwargs,
+            )
             if with_priority:
                 kw["queue"] = f"save_code_now:{backend_name}"
             app.send_task(backend_name, **kw)
