@@ -13,7 +13,9 @@ from swh.scheduler.cli import cli
 
 def invoke(*args, catch_exceptions=False):
     result = CliRunner(mix_stderr=False).invoke(
-        cli, ["celery-monitor", *args], catch_exceptions=catch_exceptions,
+        cli,
+        ["celery-monitor", *args],
+        catch_exceptions=catch_exceptions,
     )
 
     return result

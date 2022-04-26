@@ -11,29 +11,76 @@ activities (e.g., loading a specific version of a source package).
 Description
 -----------
 
-This module provides a scheduler service for the Software Heritage platform. It
-allows to define tasks with a number of properties. In this documentation, we
-will call these swh-tasks to prevent confusion. These swh-tasks are stored in
-a database, and a HTTP-based RPC service is provided to create or find existing
-swh-task declarations.
+This module provides two independent scheduler services for the Software
+Heritage platform.
 
-The execution model for these swh-tasks is using Celery. Thus, each swh-task
-type defined in the database must have a (series of) celery worker capable of
-executing such a swh-task.
+The first one is a generic asynchronous task management system allowing to
+define tasks with a small number of scheduling properties. In this
+documentation, we will call these swh-tasks to prevent confusion. These
+swh-tasks are stored in the scheduler database, and a HTTP-based RPC service is
+provided to create or find existing swh-task declarations, or select swh-tasks
+ready for immediate scheduling.
 
-Then a number of services are also provided to manage the scheduling of these
-swh-tasks as Celery tasks.
+The second one is specific to the scheduling of origin visits (i.e. loading
+tasks). These visits used to be managed by the generic task system presented
+above, but this later proved to be less and less suitable to handle the billions
+of recurring tasks the origin visits require.
 
-The ``scheduler-runner`` service is a daemon that regularly looks for swh-tasks
-in the database that should be scheduled. For each of the selected swh-task, a
-Celery task is instantiated.
+The execution model for all the tasks (generic swh-tasks as well as origin
+visits) is using Celery. Thus, each swh-task type defined in the database must
+have a (series of) celery worker capable of executing such a swh-task, as well
+as there must exist celery workers for origin visits.
 
-The ``scheduler-listener`` service is a daemon that listen to the Celery event
-bus and maintain scheduled swh-tasks workflow status.
+As mentioned above, in addition to the original and generic task management
+system, ``swh-scheduler`` is now also responsible for keeping track of forge
+listing and origin loading statistics. These statistics are used to organize
+the scheduling of future loading tasks according to configurable scheduling
+policies.
+
+For each of these 2 scheduling management systems, several services are
+provided to orchestrate the scheduling of these swh-tasks as Celery tasks on
+the one hand, and origin visits as Celery tasks on the other hand.
+
+Generic task scheduler
+~~~~~~~~~~~~~~~~~~~~~~
+
+The generic task scheduler consists in a database and its access API, along
+with a couple of services.
+
+First, the ``scheduler-runner`` service is a daemon that regularly looks for
+swh-tasks in the database that should be scheduled. For each of the selected
+swh-task, a Celery task is instantiated.
+
+There is also a ``scheduler-runner-priority`` service running; this
+is a ``scheduler-runner`` dedicated to schedule tasks with high priority (e.g.
+tasks resulting from the ``save code now`` feature).
+
+Second, the ``scheduler-listener`` service is a daemon that listen to the
+Celery event bus to maintain scheduled swh-tasks workflow status in the
+database.
+
+Origin visits scheduler
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The scheduler system dedicated to origin visits also consists in a database (it
+is actually the same database as the generic task scheduler one, but using
+dedicated tables) and its access API.
+
+The ``scheduler-schedule-recurrent`` service is a daemon for choosing which
+origins are to be visited according to scheduling policies and visit
+statistics. It serves the same purpose as the ``scheduler-runner`` from the
+generic task scheduler, but it uses different data model and scheduling
+algorithms.
+
+Last, there is a ``scheduler-journal-client`` service which listen to the Kafka
+journal of the Storage to maintain the loading tasks status and statistics.
+Once again, the purpose is roughly similar to the ``scheduler-listener`` from
+the generic task scheduler, using Kafka instead of the Celery bus as feedback
+loop.
 
 
-SWH Task Model
-~~~~~~~~~~~~~~
+Generic SWH Task Model
+----------------------
 
 Each swh-task-type is the declaration of a type of swh-task. Each swh-task-type
 have the following fields:

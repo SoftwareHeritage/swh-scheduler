@@ -48,7 +48,7 @@ def generate_listed_origin(
     """
     global _nb_generated_origins
     _nb_generated_origins += 1
-    assert _nb_generated_origins < 10 ** 6, "Too many origins!"
+    assert _nb_generated_origins < 10**6, "Too many origins!"
 
     if now is None:
         now = datetime.now(tz=timezone.utc)

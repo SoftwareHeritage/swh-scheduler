@@ -24,10 +24,19 @@ from swh.scheduler.utils import utcnow
 
 
 def test_journal_client_origin_visit_status_from_journal_fail(swh_scheduler):
-    process_fn = functools.partial(process_journal_objects, scheduler=swh_scheduler,)
+    process_fn = functools.partial(
+        process_journal_objects,
+        scheduler=swh_scheduler,
+    )
 
     with pytest.raises(AssertionError, match="Got unexpected origin_visit"):
-        process_fn({"origin_visit": [{"url": "http://foobar.baz"},]})
+        process_fn(
+            {
+                "origin_visit": [
+                    {"url": "http://foobar.baz"},
+                ]
+            }
+        )
 
     with pytest.raises(AssertionError, match="Expected origin_visit_status"):
         process_fn({})
@@ -72,9 +81,7 @@ def test_max_date_raise():
 
 
 def test_journal_client_origin_visit_status_from_journal_ignored_status(swh_scheduler):
-    """Only final statuses (full, partial) are important, the rest remain ignored.
-
-    """
+    """Only final statuses (full, partial) are important, the rest remain ignored."""
     # Trace method calls on the swh_scheduler
     swh_scheduler = Mock(wraps=swh_scheduler)
 
@@ -451,9 +458,7 @@ VISIT_STATUSES = [
     "visit_statuses", permutations(VISIT_STATUSES, len(VISIT_STATUSES))
 )
 def test_journal_client_origin_visit_status_permutation0(visit_statuses, swh_scheduler):
-    """Ensure out of order topic subscription ends up in the same final state
-
-    """
+    """Ensure out of order topic subscription ends up in the same final state"""
     process_journal_objects(
         {"origin_visit_status": visit_statuses}, scheduler=swh_scheduler
     )
@@ -526,9 +531,7 @@ VISIT_STATUSES_1 = [
     "visit_statuses", permutations(VISIT_STATUSES_1, len(VISIT_STATUSES_1))
 )
 def test_journal_client_origin_visit_status_permutation1(visit_statuses, swh_scheduler):
-    """Ensure out of order topic subscription ends up in the same final state
-
-    """
+    """Ensure out of order topic subscription ends up in the same final state"""
     process_journal_objects(
         {"origin_visit_status": visit_statuses}, scheduler=swh_scheduler
     )
@@ -669,9 +672,7 @@ def test_journal_client_origin_visit_status_after_grab_next_visits(
 
 
 def test_journal_client_origin_visit_status_duplicated_messages(swh_scheduler):
-    """A duplicated message must be ignored
-
-    """
+    """A duplicated message must be ignored"""
     visit_status = {
         "origin": "foo",
         "visit": 1,
@@ -705,9 +706,7 @@ def test_journal_client_origin_visit_status_duplicated_messages(swh_scheduler):
 
 
 def test_journal_client_origin_visit_status_several_upsert(swh_scheduler):
-    """An old message updates old information
-
-    """
+    """An old message updates old information"""
     visit_status1 = {
         "origin": "foo",
         "visit": 1,
@@ -787,9 +786,7 @@ VISIT_STATUSES_SAME_SNAPSHOT = [
 def test_journal_client_origin_visit_statuses_same_snapshot_permutation(
     visit_statuses, swh_scheduler
 ):
-    """Ensure out of order topic subscription ends up in the same final state
-
-    """
+    """Ensure out of order topic subscription ends up in the same final state"""
     process_journal_objects(
         {"origin_visit_status": visit_statuses}, scheduler=swh_scheduler
     )
@@ -850,14 +847,24 @@ def test_journal_client_from_position_offset_to_days_only_positive_input():
 
 
 @pytest.mark.parametrize(
-    "fudge_factor,next_position_offset", [(0.01, 1), (-0.01, 5), (0.1, 8), (-0.1, 10),]
+    "fudge_factor,next_position_offset",
+    [
+        (0.01, 1),
+        (-0.01, 5),
+        (0.1, 8),
+        (-0.1, 10),
+    ],
 )
 def test_next_visit_queue_position(mocker, fudge_factor, next_position_offset):
     mock_random = mocker.patch("swh.scheduler.journal_client.random.uniform")
     mock_random.return_value = fudge_factor
 
     actual_position = next_visit_queue_position(
-        {}, {"next_position_offset": next_position_offset, "visit_type": "svn",}
+        {},
+        {
+            "next_position_offset": next_position_offset,
+            "visit_type": "svn",
+        },
     )
 
     assert actual_position == int(
@@ -871,7 +878,13 @@ def test_next_visit_queue_position(mocker, fudge_factor, next_position_offset):
 
 
 @pytest.mark.parametrize(
-    "fudge_factor,next_position_offset", [(0.02, 2), (-0.02, 3), (0, 7), (-0.09, 9),]
+    "fudge_factor,next_position_offset",
+    [
+        (0.02, 2),
+        (-0.02, 3),
+        (0, 7),
+        (-0.09, 9),
+    ],
 )
 def test_next_visit_queue_position_with_state(
     mocker, fudge_factor, next_position_offset
@@ -881,7 +894,10 @@ def test_next_visit_queue_position_with_state(
 
     actual_position = next_visit_queue_position(
         {"git": 0},
-        {"next_position_offset": next_position_offset, "visit_type": "git",},
+        {
+            "next_position_offset": next_position_offset,
+            "visit_type": "git",
+        },
     )
 
     assert actual_position == int(
@@ -895,7 +911,13 @@ def test_next_visit_queue_position_with_state(
 
 
 @pytest.mark.parametrize(
-    "fudge_factor,next_position_offset", [(0.03, 3), (-0.03, 4), (0.08, 7), (-0.08, 9),]
+    "fudge_factor,next_position_offset",
+    [
+        (0.03, 3),
+        (-0.03, 4),
+        (0.08, 7),
+        (-0.08, 9),
+    ],
 )
 def test_next_visit_queue_position_with_next_visit_queue(
     mocker, fudge_factor, next_position_offset
@@ -923,9 +945,7 @@ def test_next_visit_queue_position_with_next_visit_queue(
 
 
 def test_disable_failing_origins(swh_scheduler):
-    """Origin with too many failed attempts ends up being deactivated in the scheduler.
-
-    """
+    """Origin with too many failed attempts ends up being deactivated in the scheduler."""
 
     # actually store the origin in the scheduler so we can check it's deactivated in the
     # end.

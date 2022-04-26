@@ -21,7 +21,7 @@ plotille
 simpy<4,>=3
 
 [testing]
-pytest<7.0.0
+pytest
 pytest-mock
 celery>=4.3
 hypothesis>=3.11.0

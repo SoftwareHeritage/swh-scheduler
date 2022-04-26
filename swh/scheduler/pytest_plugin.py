@@ -92,7 +92,7 @@ def swh_scheduler_celery_app():
 @pytest.fixture(scope="session")
 def swh_scheduler_celery_includes():
     """List of task modules that should be loaded by the swh_scheduler_celery_worker on
-startup."""
+    startup."""
     task_modules = ["swh.scheduler.tests.tasks"]
 
     for entrypoint in pkg_resources.iter_entry_points("swh.workers"):
@@ -102,7 +102,8 @@ startup."""
 
 @pytest.fixture(scope="session")
 def swh_scheduler_celery_worker(
-    swh_scheduler_celery_app, swh_scheduler_celery_includes,
+    swh_scheduler_celery_app,
+    swh_scheduler_celery_includes,
 ):
     """Spawn a worker"""
     for module in swh_scheduler_celery_includes:

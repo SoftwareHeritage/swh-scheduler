@@ -1,10 +1,14 @@
-# Copyright (C) 2017-2018  The Software Heritage developers
+# Copyright (C) 2017-2022  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
 
 from datetime import datetime, timezone
+from typing import Any, Dict, List
+
+from .interface import SchedulerInterface
+from .model import ListedOrigin, Lister
 
 
 def utcnow():
@@ -62,6 +66,42 @@ def create_task_dict(type, policy, *args, **kwargs):
     }
     task.update(task_extra)
     return task
+
+
+def create_origin_task_dict(origin: ListedOrigin, lister: Lister) -> Dict[str, Any]:
+    if origin.lister_id != lister.id:
+        raise ValueError(
+            "origin.lister_id and lister.id differ", origin.lister_id, lister.id
+        )
+    return {
+        "type": f"load-{origin.visit_type}",
+        "arguments": {
+            "args": [],
+            "kwargs": {
+                "url": origin.url,
+                "lister_name": lister.name,
+                "lister_instance_name": lister.instance_name or None,
+                **origin.extra_loader_arguments,
+            },
+        },
+    }
+
+
+def create_origin_task_dicts(
+    origins: List[ListedOrigin], scheduler: SchedulerInterface
+) -> List[Dict[str, Any]]:
+    """Returns a task dict for each origin, in the same order."""
+
+    lister_ids = {o.lister_id for o in origins}
+    listers = {
+        lister.id: lister
+        for lister in scheduler.get_listers_by_id(list(map(str, lister_ids)))
+    }
+
+    missing_lister_ids = lister_ids - set(listers)
+    assert not missing_lister_ids, f"Missing listers: {missing_lister_ids}"
+
+    return [create_origin_task_dict(o, listers[o.lister_id]) for o in origins]
 
 
 def create_oneshot_task_dict(type, *args, **kwargs):

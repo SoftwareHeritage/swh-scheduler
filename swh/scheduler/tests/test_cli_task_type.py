@@ -26,14 +26,10 @@ def cli_runner():
 
 @pytest.fixture
 def mock_pkg_resources(monkeypatch):
-    """Monkey patch swh.scheduler's mock_pkg_resources.iter_entry_point call
-
-    """
+    """Monkey patch swh.scheduler's mock_pkg_resources.iter_entry_point call"""
 
     def fake_iter_entry_points(*args, **kwargs):
-        """Substitute fake function to return a fixed set of entrypoints
-
-        """
+        """Substitute fake function to return a fixed set of entrypoints"""
         from pkg_resources import Distribution, EntryPoint
 
         d = Distribution()
@@ -50,17 +46,13 @@ def mock_pkg_resources(monkeypatch):
 
 @pytest.fixture
 def local_sched_config(swh_scheduler_config):
-    """Expose the local scheduler configuration
-
-    """
+    """Expose the local scheduler configuration"""
     return {"scheduler": {"cls": "local", **swh_scheduler_config}}
 
 
 @pytest.fixture
 def local_sched_configfile(local_sched_config, tmp_path):
-    """Write in temporary location the local scheduler configuration
-
-    """
+    """Write in temporary location the local scheduler configuration"""
     configfile = tmp_path / "config.yml"
     configfile.write_text(yaml.dump(local_sched_config))
     return configfile.as_posix()
@@ -104,9 +96,7 @@ def test_register_ttypes_all(
 def test_register_ttypes_filter(
     mock_pkg_resources, cli_runner, local_sched_config, local_sched_configfile
 ):
-    """Filtering on one worker should only register its associated task type
-
-    """
+    """Filtering on one worker should only register its associated task type"""
     result = cli_runner.invoke(
         cli,
         [
