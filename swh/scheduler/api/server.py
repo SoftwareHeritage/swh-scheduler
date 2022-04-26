@@ -130,10 +130,10 @@ api_cfg = None
 
 def make_app_from_configfile():
     """Run the WSGI app from the webserver, loading the configuration from
-       a configuration file.
+    a configuration file.
 
-       SWH_CONFIG_FILENAME environment variable defines the
-       configuration path to load.
+    SWH_CONFIG_FILENAME environment variable defines the
+    configuration path to load.
 
     """
     global api_cfg

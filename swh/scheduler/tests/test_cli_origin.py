@@ -115,7 +115,10 @@ def test_schedule_next(swh_scheduler, listed_origins_by_type):
 
 
 def test_send_to_celery(
-    mocker, swh_scheduler, swh_scheduler_celery_app, listed_origins_by_type,
+    mocker,
+    swh_scheduler,
+    swh_scheduler_celery_app,
+    listed_origins_by_type,
 ):
     for task_type in TASK_TYPES.values():
         swh_scheduler.create_task_type(task_type)

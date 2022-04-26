@@ -4,7 +4,6 @@
 # See top-level LICENSE file for more information
 
 import datetime
-import uuid
 
 import attr
 
@@ -93,33 +92,3 @@ def test_insert_primary_key():
         test1 = attr.ib(type=str)
 
     assert TestModel2.primary_key_columns() == ("col1", "col2")
-
-
-def test_listed_origin_as_task_dict():
-    origin = model.ListedOrigin(
-        lister_id=uuid.uuid4(), url="http://example.com/", visit_type="git",
-    )
-
-    task = origin.as_task_dict()
-    assert task == {
-        "type": "load-git",
-        "arguments": {"args": [], "kwargs": {"url": "http://example.com/"}},
-    }
-
-    loader_args = {"foo": "bar", "baz": {"foo": "bar"}}
-
-    origin_w_args = model.ListedOrigin(
-        lister_id=uuid.uuid4(),
-        url="http://example.com/svn/",
-        visit_type="svn",
-        extra_loader_arguments=loader_args,
-    )
-
-    task_w_args = origin_w_args.as_task_dict()
-    assert task_w_args == {
-        "type": "load-svn",
-        "arguments": {
-            "args": [],
-            "kwargs": {"url": "http://example.com/svn/", **loader_args},
-        },
-    }

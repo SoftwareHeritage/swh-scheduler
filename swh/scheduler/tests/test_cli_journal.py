@@ -21,7 +21,10 @@ from swh.scheduler.tests.test_journal_client import VISIT_STATUSES_1
 def swh_scheduler_cfg(postgresql_scheduler, kafka_server):
     """Journal client configuration ready"""
     return {
-        "scheduler": {"cls": "local", "db": postgresql_scheduler.dsn,},
+        "scheduler": {
+            "cls": "local",
+            "db": postgresql_scheduler.dsn,
+        },
         "journal": {
             "brokers": [kafka_server],
             "group_id": "test-consume-visit-status",
@@ -43,9 +46,7 @@ def swh_scheduler_cfg_path(swh_scheduler_cfg, tmp_path):
 
 
 def invoke(args: List[str], config_path: str, catch_exceptions: bool = False) -> Result:
-    """Invoke swh scheduler journal subcommands
-
-    """
+    """Invoke swh scheduler journal subcommands"""
     runner = CliRunner()
     result = runner.invoke(cli, ["-C" + config_path] + args)
     if not catch_exceptions and result.exception:
@@ -62,7 +63,12 @@ def test_cli_journal_client_origin_visit_status_misconfiguration_no_scheduler(
     config_path = _write_configuration_path(config, tmp_path)
     with pytest.raises(ValueError, match="must be instantiated"):
         invoke(
-            ["journal-client", "--stop-after-objects", "1",], config_path,
+            [
+                "journal-client",
+                "--stop-after-objects",
+                "1",
+            ],
+            config_path,
         )
 
 
@@ -75,12 +81,18 @@ def test_cli_journal_client_origin_visit_status_misconfiguration_missing_journal
 
     with pytest.raises(ValueError, match="Missing 'journal'"):
         invoke(
-            ["journal-client", "--stop-after-objects", "1",], config_path,
+            [
+                "journal-client",
+                "--stop-after-objects",
+                "1",
+            ],
+            config_path,
         )
 
 
 def test_cli_journal_client_origin_visit_status(
-    swh_scheduler_cfg, swh_scheduler_cfg_path,
+    swh_scheduler_cfg,
+    swh_scheduler_cfg_path,
 ):
     kafka_server = swh_scheduler_cfg["journal"]["brokers"][0]
     swh_scheduler = get_scheduler(**swh_scheduler_cfg["scheduler"])
@@ -99,7 +111,12 @@ def test_cli_journal_client_origin_visit_status(
     producer.flush()
 
     result = invoke(
-        ["journal-client", "--stop-after-objects", "1",], swh_scheduler_cfg_path,
+        [
+            "journal-client",
+            "--stop-after-objects",
+            "1",
+        ],
+        swh_scheduler_cfg_path,
     )
 
     # Check the output
