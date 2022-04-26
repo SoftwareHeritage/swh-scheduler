@@ -1,3 +1,16 @@
+swh-scheduler (1.1.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 1.1.0     - (tagged by Valentin Lorentz
+    <vlorentz@softwareheritage.org> on 2022-04-26 12:29:19 +0200)
+  * Upstream changes:     - v1.1.0     - * Add 'lister_name' and
+    'lister_instance_name' arguments to all tasks created from
+    ListedOrigin     - * Make scheduling policy used in
+    schedule_recurrent configurable     - * Update a bit the
+    documentation for the new origin visit scheduler     - * test/lint
+    maitenance
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 26 Apr 2022 10:35:51 +0000
+
 swh-scheduler (1.0.0-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 1.0.0     - (tagged by David Douard
