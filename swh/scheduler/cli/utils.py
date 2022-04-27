@@ -53,6 +53,10 @@ def schedule_origin_batches(scheduler, task_type, origins, origin_batch_size, kw
 def parse_argument(option):
     import yaml
 
+    if option == "":
+        # yaml.safe_load("") returns None
+        return ""
+
     try:
         return yaml.safe_load(option)
     except Exception:
@@ -79,6 +83,14 @@ def parse_options(options):
     ([42], {'bar': False})
     >>> parse_options(['42', 'bar=false'])
     ([42], {'bar': False})
+    >>> parse_options(['foo', ''])
+    (['foo', ''], {})
+    >>> parse_options(['foo', 'bar='])
+    (['foo'], {'bar': ''})
+    >>> parse_options(['foo', 'null'])
+    (['foo', None], {})
+    >>> parse_options(['foo', 'bar=null'])
+    (['foo'], {'bar': None})
     >>> parse_options(['42', '"foo'])
     Traceback (most recent call last):
       ...
