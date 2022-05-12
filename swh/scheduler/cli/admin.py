@@ -12,6 +12,7 @@ import time
 from typing import List, Tuple
 
 import click
+import sentry_sdk
 
 from . import cli
 
@@ -77,6 +78,7 @@ def runner(ctx, period, task_type_names, with_priority):
                     logger.info("Scheduled %s tasks", ntasks)
             except Exception:
                 logger.exception("Unexpected error in run_ready_tasks()")
+                sentry_sdk.capture_exception()
             if not period:
                 break
             time.sleep(period)
@@ -176,6 +178,7 @@ def schedule_recurrent(ctx, visit_types: List[str]):
                 visit_type,
                 exc_info=exc_info,
             )
+            sentry_sdk.capture_exception(exc_info)
 
             dead_thread = threads[visit_type][0]
             dead_thread.join(timeout=1)

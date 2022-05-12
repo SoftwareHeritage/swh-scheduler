@@ -12,5 +12,6 @@ pika >= 1.1.0
 psycopg2
 pyyaml
 requests
+sentry-sdk
 setuptools
 typing-extensions
