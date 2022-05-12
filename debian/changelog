@@ -1,8 +1,10 @@
-swh-scheduler (1.1.1-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-scheduler (1.1.2-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 1.1.2     - (tagged by Antoine Lambert
+    <anlambert@softwareheritage.org> on 2022-05-12 13:49:42 +0200)
+  * Upstream changes:     - version 1.1.2
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 28 Apr 2022 09:40:07 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 12 May 2022 11:55:14 +0000
 
 swh-scheduler (1.1.1-1~swh1) unstable-swh; urgency=medium
 

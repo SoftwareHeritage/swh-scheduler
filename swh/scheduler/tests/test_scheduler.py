@@ -1,4 +1,4 @@
-# Copyright (C) 2017-2021  The Software Heritage developers
+# Copyright (C) 2017-2022  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -794,6 +794,38 @@ class TestScheduler:
         ret = swh_scheduler.get_listed_origins(limit=len(listed_origins) + 1)
         assert ret.next_page_token is None
         assert len(ret.results) == len(listed_origins)
+
+    def test_get_listed_origins_with_enabled_parameter(
+        self, swh_scheduler, listed_origins_with_non_enabled
+    ) -> None:
+        swh_scheduler.record_listed_origins(listed_origins_with_non_enabled)
+
+        # get all enabled listed origins
+        ret = swh_scheduler.get_listed_origins(
+            enabled=True, limit=len(listed_origins_with_non_enabled) + 1
+        )
+        assert ret.next_page_token is None
+        assert len(ret.results) == len(
+            [lo for lo in listed_origins_with_non_enabled if lo.enabled]
+        )
+        assert all([lo.enabled for lo in ret.results])
+
+        # get all disabled listed origins
+        ret = swh_scheduler.get_listed_origins(
+            enabled=False, limit=len(listed_origins_with_non_enabled) + 1
+        )
+        assert ret.next_page_token is None
+        assert len(ret.results) == len(
+            [lo for lo in listed_origins_with_non_enabled if not lo.enabled]
+        )
+        assert all([not lo.enabled for lo in ret.results])
+
+        # get all listed origins
+        ret = swh_scheduler.get_listed_origins(
+            enabled=None, limit=len(listed_origins_with_non_enabled) + 1
+        )
+        assert ret.next_page_token is None
+        assert len(ret.results) == len(listed_origins_with_non_enabled)
 
     def _grab_next_visits_setup(self, swh_scheduler, listed_origins_by_type):
         """Basic origins setup for scheduling policy tests"""

@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2021  The Software Heritage developers
+# Copyright (C) 2015-2022  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -314,6 +314,7 @@ class SchedulerBackend:
         self,
         lister_id: Optional[UUID] = None,
         url: Optional[str] = None,
+        enabled: Optional[bool] = True,
         limit: int = 1000,
         page_token: Optional[ListedOriginPageToken] = None,
         db=None,
@@ -333,6 +334,10 @@ class SchedulerBackend:
         if url is not None:
             query_filters.append("url = %s")
             query_params.append(url)
+
+        if enabled is not None:
+            query_filters.append("enabled = %s")
+            query_params.append(enabled)
 
         if page_token is not None:
             query_filters.append("(lister_id, url) > %s")

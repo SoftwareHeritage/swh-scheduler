@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2021  The Software Heritage developers
+# Copyright (C) 2016-2022  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -61,6 +61,14 @@ def listed_origins_by_type(
 def listed_origins(listed_origins_by_type) -> List[ListedOrigin]:
     """Return a (fixed) set of listed origins"""
     return sum(listed_origins_by_type.values(), [])
+
+
+@pytest.fixture
+def listed_origins_with_non_enabled(listed_origins) -> List[ListedOrigin]:
+    """Return a (fixed) set of listed origins"""
+    for i, origin in enumerate(listed_origins):
+        origin.enabled = i % 2 == 0
+    return listed_origins
 
 
 @pytest.fixture
