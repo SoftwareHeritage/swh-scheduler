@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2021  The Software Heritage developers
+# Copyright (C) 2015-2022  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -385,14 +385,23 @@ class SchedulerInterface(Protocol):
         self,
         lister_id: Optional[UUID] = None,
         url: Optional[str] = None,
+        enabled: Optional[bool] = True,
         limit: int = 1000,
         page_token: Optional[ListedOriginPageToken] = None,
     ) -> PaginatedListedOriginList:
-        """Get information on the listed origins matching either the `url` or
-        `lister_id`, or both arguments.
+        """Get information on listed origins, possibly filtered, in a paginated way.
 
-        Use the `limit` and `page_token` arguments for continuation. The next
-        page token, if any, is returned in the PaginatedListedOriginList object.
+        Args:
+            lister_id: if provided, return origins discovered with that lister
+            url: if provided, return origins matching that URL
+            enabled: If :const:`True` return only enabled origins, if :const:`False`
+                return only disabled origins, if :const:`None` return all origins.
+            limit: maximum number of origins per page
+            page_token: to get the next page of origins, is returned in the
+                :class:`PaginatedListedOriginList` object
+
+        Returns:
+            A page of listed origins
         """
         ...
 
