@@ -1,4 +1,4 @@
-# Copyright (C) 2021  The Software Heritage developers
+# Copyright (C) 2021-2022  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -1003,7 +1003,7 @@ def test_disable_failing_origins(swh_scheduler):
     )
 
     # Now check that the origin in question is disabled
-    actual_page = swh_scheduler.get_listed_origins(url="bar")
+    actual_page = swh_scheduler.get_listed_origins(url="bar", enabled=False)
 
     assert len(actual_page.results) == 1
     assert actual_page.next_page_token is None

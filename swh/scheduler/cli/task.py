@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     import datetime
 
     # importing swh.storage.interface triggers the load of 300+ modules, so...
-    from swh.model.model import Origin
+    import swh.model.model
     from swh.storage.interface import StorageInterface
 
 
@@ -293,9 +293,9 @@ def schedule_task(ctx, type, options, policy, priority, next_run):
 
 
 def iter_origins(  # use string annotations to prevent some pkg loading
-    storage: "StorageInterface",
-    page_token: "Optional[str]" = None,
-) -> "Iterator[Origin]":
+    storage: StorageInterface,
+    page_token: Optional[str] = None,
+) -> Iterator[swh.model.model.Origin]:
     """Iterate over origins in the storage. Optionally starting from page_token.
 
     This logs regularly an info message during pagination with the page_token. This, in
