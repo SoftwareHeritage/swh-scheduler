@@ -1,4 +1,4 @@
-# Copyright (C) 2020  The Software Heritage developers
+# Copyright (C) 2020-2022  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -12,7 +12,7 @@ import pkg_resources
 import pytest
 from pytest_postgresql import factories
 
-from swh.core.db.pytest_plugin import initialize_database_for_module, postgresql_fact
+from swh.core.db.pytest_plugin import initialize_database_for_module
 from swh.scheduler import get_scheduler
 from swh.scheduler.backend import SchedulerBackend
 
@@ -22,7 +22,6 @@ TASK_NAMES = ["ping", "multiping", "add", "error", "echo"]
 
 
 scheduler_postgresql_proc = factories.postgresql_proc(
-    dbname="scheduler",
     load=[
         partial(
             initialize_database_for_module,
@@ -33,7 +32,7 @@ scheduler_postgresql_proc = factories.postgresql_proc(
 )
 
 
-postgresql_scheduler = postgresql_fact("scheduler_postgresql_proc")
+postgresql_scheduler = factories.postgresql("scheduler_postgresql_proc")
 
 
 @pytest.fixture
