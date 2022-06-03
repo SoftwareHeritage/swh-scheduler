@@ -73,9 +73,6 @@ class SchedulerBackend:
             )
             self._db = None
 
-    def get_current_version(self):
-        return self.current_version
-
     def get_db(self):
         if self._db:
             return self._db
