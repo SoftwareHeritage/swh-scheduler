@@ -33,7 +33,7 @@ from swh.core.cli import swh as swh_cli_group
     "--database",
     "-d",
     default=None,
-    help="Scheduling database DSN (imply cls is 'local')",
+    help="Scheduling database DSN (imply cls is 'postgresql')",
 )
 @click.option(
     "--url", "-u", default=None, help="Scheduler's url access (imply cls is 'remote')"
@@ -67,7 +67,7 @@ def cli(ctx, config_file, database, url, no_stdout):
         raise ValueError("missing 'scheduler' configuration")
 
     if database:
-        conf["scheduler"]["cls"] = "local"
+        conf["scheduler"]["cls"] = "postgresql"
         conf["scheduler"]["db"] = database
     elif url:
         conf["scheduler"]["cls"] = "remote"

@@ -58,7 +58,7 @@ def test_load_and_check_config_remote_config_local_type_raise(tmpdir):
     config = {"scheduler": {"cls": "remote"}}
     config_path = prepare_config_file(tmpdir, config)
     expected_error = (
-        "The scheduler backend can only be started with a 'local'" " configuration"
+        "The scheduler backend can only be started with a 'postgresql'" " configuration"
     )
     with pytest.raises(ValueError, match=expected_error):
         load_and_check_config(config_path, type="local")
@@ -68,7 +68,7 @@ def test_load_and_check_config_local_incomplete_configuration(tmpdir):
     """Incomplete 'local' configuration should raise"""
     config = {
         "scheduler": {
-            "cls": "local",
+            "cls": "postgresql",
             "something": "needed-for-test",
         }
     }
@@ -83,7 +83,7 @@ def test_load_and_check_config_local_config_fine(tmpdir):
     """Local configuration is fine"""
     config = {
         "scheduler": {
-            "cls": "local",
+            "cls": "postgresql",
             "db": "db",
         }
     }

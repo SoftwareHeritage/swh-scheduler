@@ -104,7 +104,9 @@ def process_event(event, scheduler_backend):
 if __name__ == "__main__":
     url = sys.argv[1]
     logging.basicConfig(level=logging.DEBUG)
-    scheduler_backend = get_scheduler("local", args={"db": "service=swh-scheduler"})
+    scheduler_backend = get_scheduler(
+        "postgresql", args={"db": "service=swh-scheduler"}
+    )
     channel = get_listener(url, "celeryev.test", scheduler_backend)
     logger.info("Start consuming")
     channel.start_consuming()
