@@ -112,9 +112,9 @@ def load_and_check_config(config_path, type="local"):
 
     if type == "local":
         cls = vcfg.get("cls")
-        if cls != "local":
+        if cls not in ("local", "postgresql"):
             raise ValueError(
-                "The scheduler backend can only be started with a 'local' "
+                "The scheduler backend can only be started with a 'postgresql' "
                 "configuration"
             )
 

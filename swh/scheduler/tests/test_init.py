@@ -14,7 +14,7 @@ from swh.scheduler.interface import SchedulerInterface
 
 SERVER_IMPLEMENTATIONS = [
     ("remote", RemoteScheduler, {"url": "localhost"}),
-    ("local", SchedulerBackend, {"db": "something"}),
+    ("postgresql", SchedulerBackend, {"db": "something"}),
 ]
 
 
