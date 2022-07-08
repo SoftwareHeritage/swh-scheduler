@@ -13,7 +13,7 @@ DEFAULT_CONFIG = {
     "scheduler": (
         "dict",
         {
-            "cls": "local",
+            "cls": "postgresql",
             "db": "dbname=softwareheritage-scheduler-dev",
         },
     )

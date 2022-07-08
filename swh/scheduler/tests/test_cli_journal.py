@@ -22,7 +22,7 @@ def swh_scheduler_cfg(postgresql_scheduler, kafka_server):
     """Journal client configuration ready"""
     return {
         "scheduler": {
-            "cls": "local",
+            "cls": "postgresql",
             "db": postgresql_scheduler.dsn,
         },
         "journal": {

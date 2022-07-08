@@ -172,7 +172,7 @@ def main():
     for module in main_app.conf.CELERY_IMPORTS:
         __import__(module)
 
-    main_backend = get_scheduler("local")
+    main_backend = get_scheduler("postgresql")
     try:
         run_ready_tasks(main_backend, main_app)
     except Exception:
