@@ -169,7 +169,7 @@ def test_recurrent_visit_additional_parameters(
 
 @pytest.fixture
 def scheduler_config(swh_scheduler_config):
-    return {"scheduler": {"cls": "local", **swh_scheduler_config}, "celery": {}}
+    return {"scheduler": {"cls": "postgresql", **swh_scheduler_config}, "celery": {}}
 
 
 def test_visit_scheduler_thread_unknown_task(
