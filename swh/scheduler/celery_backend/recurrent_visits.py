@@ -68,7 +68,7 @@ QUEUE_FULL_BACKOFF = 60
 """Backoff time (in seconds) if there's fewer than :py:data:`MIN_SLOTS_RATIO` slots
 available in the queue."""
 
-NO_ORIGINS_SCHEDULED_BACKOFF = 20 * 60
+DEFAULT_NO_ORIGINS_SCHEDULED_BACKOFF = 20 * 60
 """Backoff time (in seconds) if no origins have been scheduled in the current
 iteration"""
 
@@ -175,6 +175,7 @@ def send_visits_for_visit_type(
     visit_type: str,
     task_type: Dict,
     policy_cfg: List[Dict[str, Any]],
+    no_origins_scheduled_backoff: int = DEFAULT_NO_ORIGINS_SCHEDULED_BACKOFF,
 ) -> float:
     """Schedule the next batch of visits for the given ``visit_type``.
 
@@ -190,8 +191,8 @@ def send_visits_for_visit_type(
     :py:func:`grab_next_visits_policy_weights` to retrieve the next set of origin visits
     to schedule, and we send them to celery.
 
-    If the last scheduling attempt didn't return any origins, we sleep for
-    :py:data:`NO_ORIGINS_SCHEDULED_BACKOFF` seconds. This avoids running the expensive
+    If the last scheduling attempt didn't return any origins, we sleep by default for
+    :py:data:`DEFAULT_NO_ORIGINS_SCHEDULED_BACKOFF` seconds. This avoids running the expensive
     :py:func:`~swh.scheduler.interface.SchedulerInterface.grab_next_visits` queries too
     often if there's nothing left to schedule.
 
@@ -227,7 +228,7 @@ def send_visits_for_visit_type(
 
     if not origins:
         logger.debug("No origins to visit for type %s", visit_type)
-        return current_iteration_start + NO_ORIGINS_SCHEDULED_BACKOFF
+        return current_iteration_start + no_origins_scheduled_backoff
 
     # Try to smooth the ingestion load, origins pulled by different
     # scheduling policies have different resource usage patterns
@@ -307,6 +308,9 @@ def visit_scheduler_thread(
                 visit_type,
                 task_type,
                 policy_cfg.get(visit_type, policy_cfg["default"]),
+                config.get(
+                    "no_origins_scheduled_backoff", DEFAULT_NO_ORIGINS_SCHEDULED_BACKOFF
+                ),
             )
 
     except BaseException as e:
