@@ -26,14 +26,14 @@ scheduler:
 """
 
 
-def invoke(scheduler, catch_exceptions, args):
+def invoke(scheduler, catch_exceptions, args, config=CLI_CONFIG):
     runner = CliRunner()
     with patch(
         "swh.scheduler.get_scheduler"
     ) as get_scheduler_mock, tempfile.NamedTemporaryFile(
         "a", suffix=".yml"
     ) as config_fd:
-        config_fd.write(CLI_CONFIG)
+        config_fd.write(config)
         config_fd.seek(0)
         get_scheduler_mock.return_value = scheduler
         args = [

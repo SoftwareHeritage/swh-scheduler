@@ -54,14 +54,10 @@ def test_load_and_check_config_wrong_configuration(tmpdir):
 
 
 def test_load_and_check_config_remote_config_local_type_raise(tmpdir):
-    """Configuration without 'local' storage is rejected"""
-    config = {"scheduler": {"cls": "remote"}}
-    config_path = prepare_config_file(tmpdir, config)
-    expected_error = (
-        "The scheduler backend can only be started with a 'postgresql'" " configuration"
-    )
-    with pytest.raises(ValueError, match=expected_error):
-        load_and_check_config(config_path, type="local")
+    """Configuration without 'postgresql' storage is rejected"""
+    config_path = prepare_config_file(tmpdir, {"scheduler": {"cls": "remote"}})
+    with pytest.raises(ValueError, match="'postgresql'"):
+        load_and_check_config(config_path)
 
 
 def test_load_and_check_config_local_incomplete_configuration(tmpdir):
@@ -79,16 +75,17 @@ def test_load_and_check_config_local_incomplete_configuration(tmpdir):
         load_and_check_config(config_path)
 
 
-def test_load_and_check_config_local_config_fine(tmpdir):
+@pytest.mark.parametrize("clazz", ["local", "postgresql"])
+def test_load_and_check_config_local_config_fine(tmpdir, clazz):
     """Local configuration is fine"""
     config = {
         "scheduler": {
-            "cls": "postgresql",
+            "cls": clazz,
             "db": "db",
         }
     }
     config_path = prepare_config_file(tmpdir, config)
-    cfg = load_and_check_config(config_path, type="local")
+    cfg = load_and_check_config(config_path, type="postgresql")
     assert cfg == config
 
 

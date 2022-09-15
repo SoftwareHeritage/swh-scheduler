@@ -3,12 +3,7 @@
 DBNAME = softwareheritage-scheduler-dev
 DOCDIR = autodoc
 
-SQL_SCHEMA  = 30-swh-schema.sql
-SQL_FUNC    = 40-swh-func.sql
-SQL_DATA    = 50-swh-data.sql
-SQL_INDEXES = 60-swh-indexes.sql
-SQLS = $(SQL_SCHEMA) $(SQL_FUNC) $(SQL_DATA) $(SQL_INDEXES)
-SQL_FILES = $(abspath $(addprefix $(CURDIR)/../swh/scheduler/sql/,$(SQLS)))
+SQL_FILES = $(abspath $(shell ls $(CURDIR)/../swh/scheduler/sql/*.sql))
 
 PSQL_BIN = psql
 PSQL_FLAGS = --echo-all -X -v ON_ERROR_STOP=1
