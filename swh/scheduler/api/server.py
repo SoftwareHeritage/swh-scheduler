@@ -1,10 +1,11 @@
-# Copyright (C) 2018-2019  The Software Heritage developers
+# Copyright (C) 2018-2022  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
 import logging
 import os
+from typing import Dict
 
 from swh.core import config
 from swh.core.api import JSONFormatter, MsgpackFormatter, RPCServerApp
@@ -82,14 +83,14 @@ def site_map():
     return links
 
 
-def load_and_check_config(config_path, type="local"):
+def load_and_check_config(config_path: str, type: str = "postgresql") -> Dict:
     """Check the minimal configuration is set to run the api or raise an
        error explanation.
 
     Args:
-        config_path (str): Path to the configuration file to load
-        type (str): configuration type. For 'local' type, more
-                    checks are done.
+        config_path: Configuration file path to load
+        type: Configuration type, for 'postgresql' type (the default), more checks are
+              done.
 
     Raises:
         Error if the setup is not as expected
@@ -110,7 +111,7 @@ def load_and_check_config(config_path, type="local"):
     if not vcfg:
         raise KeyError("Missing '%scheduler' configuration")
 
-    if type == "local":
+    if type == "postgresql":
         cls = vcfg.get("cls")
         if cls not in ("local", "postgresql"):
             raise ValueError(

@@ -6,9 +6,10 @@
 from datetime import timedelta
 import logging
 from queue import Queue
-from unittest.mock import MagicMock
+import time
 
 import pytest
+import yaml
 
 from swh.scheduler.celery_backend.recurrent_visits import (
     DEFAULT_DVCS_POLICY,
@@ -50,6 +51,14 @@ def swh_scheduler(swh_scheduler):
     return swh_scheduler
 
 
+@pytest.fixture
+def all_task_types(swh_scheduler):
+    return {
+        task_type_d["type"]: task_type_d
+        for task_type_d in swh_scheduler.get_task_types()
+    }
+
+
 def test_cli_schedule_recurrent_unknown_visit_type(swh_scheduler):
     """When passed an unknown visit type, the recurrent visit scheduler should refuse
     to start."""
@@ -82,10 +91,61 @@ def test_cli_schedule_recurrent_noop(swh_scheduler, mocker):
     assert result.exit_code == 0, result.output
 
 
+def test_send_visits_for_type_no_origin_scheduled_backoff(
+    swh_scheduler, all_task_types, mocker
+):
+    visit_type = "test-git"
+    task_type = f"load-{visit_type}"
+    mocker.patch.object(time, "monotonic", lambda: 0)
+    no_origins_scheduled_backoff = 60
+    assert (
+        send_visits_for_visit_type(
+            swh_scheduler,
+            mocker.MagicMock(),
+            visit_type,
+            all_task_types[task_type],
+            DEFAULT_DVCS_POLICY,
+            no_origins_scheduled_backoff,
+        )
+        == no_origins_scheduled_backoff
+    )
+
+
+def test_cli_schedule_recurrent_no_origins_scheduled_backoff_in_config(
+    swh_scheduler, mocker
+):
+    """When passing no visit types, the recurrent visit scheduler should start."""
+
+    config = """
+    scheduler:
+        cls: foo
+        args: {}
+    no_origins_scheduled_backoff: 60
+    """
+
+    spawn_visit_scheduler_thread = mocker.patch(
+        f"{MODULE_NAME}.spawn_visit_scheduler_thread"
+    )
+    spawn_visit_scheduler_thread.side_effect = SystemExit
+    # The actual scheduling threads won't spawn, they'll immediately terminate. This
+    # only exercises the logic to pull task types out of the database
+
+    result = invoke(
+        swh_scheduler,
+        False,
+        ["schedule-recurrent", "--visit-type", "test-git"],
+        config=config,
+    )
+    assert result.exit_code == 0, result.output
+
+    assert yaml.safe_load(config) in spawn_visit_scheduler_thread.call_args[0]
+
+
 def test_recurrent_visit_scheduling(
     swh_scheduler,
     caplog,
     listed_origins_by_type,
+    all_task_types,
     mocker,
 ):
     """Scheduling known tasks is ok."""
@@ -93,16 +153,11 @@ def test_recurrent_visit_scheduling(
     caplog.set_level(logging.DEBUG, MODULE_NAME)
     nb_origins = 1000
 
-    mock_celery_app = MagicMock()
+    mock_celery_app = mocker.MagicMock()
     mock_available_slots = mocker.patch(f"{MODULE_NAME}.get_available_slots")
     mock_available_slots.return_value = nb_origins  # Slots available in queue
 
     # Make sure the scheduler is properly configured in terms of visit/task types
-    all_task_types = {
-        task_type_d["type"]: task_type_d
-        for task_type_d in swh_scheduler.get_task_types()
-    }
-
     visit_types = list(listed_origins_by_type.keys())
     assert len(visit_types) > 0
 
@@ -200,7 +255,7 @@ def test_spawn_visit_scheduler_thread_noop(scheduler_config, visit_types, mocker
     threads: VisitSchedulerThreads = {}
     exc_queue = Queue()
     mock_build_app = mocker.patch("swh.scheduler.celery_backend.config.build_app")
-    mock_build_app.return_value = MagicMock()
+    mock_build_app.return_value = mocker.MagicMock()
 
     assert len(threads) == 0
     for visit_type in visit_types:
