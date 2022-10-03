@@ -173,6 +173,9 @@ class SchedulerBackend:
               where id in %s
         """
 
+        if not lister_ids:
+            return []
+
         cur.execute(query, (tuple(lister_ids),))
 
         return [Lister(**row) for row in cur]
