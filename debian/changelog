@@ -1,3 +1,14 @@
+swh-scheduler (1.2.3-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 1.2.3     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2022-10-03 14:02:07
+    +0200)
+  * Upstream changes:     - v1.2.3     - Fix compatibility issue with
+    latest dependency version     - backend: Prevent query exception
+    when lister ids is empty
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 03 Oct 2022 12:07:44 +0000
+
 swh-scheduler (1.2.2-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 1.2.2     - (tagged by Antoine Lambert
