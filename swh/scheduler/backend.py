@@ -377,6 +377,7 @@ class SchedulerBackend:
         enabled: bool = True,
         lister_uuid: Optional[str] = None,
         timestamp: Optional[datetime.datetime] = None,
+        absolute_cooldown: Optional[datetime.timedelta] = datetime.timedelta(hours=12),
         scheduled_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=7),
         failed_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=14),
         not_found_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=31),
@@ -402,6 +403,15 @@ class SchedulerBackend:
         # Only schedule visits of the given type
         where_clauses.append("visit_type = %s")
         query_args.append(visit_type)
+
+        if absolute_cooldown:
+            # Don't schedule visits if they've been scheduled since the absolute cooldown
+            where_clauses.append(
+                """origin_visit_stats.last_scheduled IS NULL
+                   OR origin_visit_stats.last_scheduled < %s
+                """
+            )
+            query_args.append(timestamp - absolute_cooldown)
 
         if scheduled_cooldown:
             # Don't re-schedule visits if they're already scheduled but we haven't

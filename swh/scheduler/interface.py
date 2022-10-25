@@ -414,6 +414,7 @@ class SchedulerInterface(Protocol):
         enabled: bool = True,
         lister_uuid: Optional[str] = None,
         timestamp: Optional[datetime.datetime] = None,
+        absolute_cooldown: Optional[datetime.timedelta] = datetime.timedelta(hours=12),
         scheduled_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=7),
         failed_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=14),
         not_found_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=31),
@@ -435,8 +436,9 @@ class SchedulerInterface(Protocol):
           lister_uuid: Determine the list of origins listed from the lister with uuid
           timestamp: the mocked timestamp at which we're recording that the visits are
             being scheduled (defaults to the current time)
+          absolute_cooldown: the minimal interval between two visits of the same origin
           scheduled_cooldown: the minimal interval before which we can schedule
-            the same origin again
+            the same origin again if it's not been visited
           failed_cooldown: the minimal interval before which we can reschedule a
             failed origin
           not_found_cooldown: the minimal interval before which we can reschedule a

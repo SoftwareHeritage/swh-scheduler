@@ -947,7 +947,9 @@ class TestScheduler:
             expected=expected,
         )
 
-    @pytest.mark.parametrize("which_cooldown", ("scheduled", "failed", "not_found"))
+    @pytest.mark.parametrize(
+        "which_cooldown", ("scheduled", "failed", "not_found", "absolute")
+    )
     @pytest.mark.parametrize("cooldown", (7, 15))
     def test_grab_next_visits_cooldowns(
         self,
@@ -966,14 +968,22 @@ class TestScheduler:
             expected=expected,
         )
 
-        # Mark all the visits as scheduled, failed or notfound on the `after` timestamp
+        # Mark all the visits as scheduled, failed or not_found on the `after` timestamp.
+        # If we're testing the `absolute_cooldown`, mark the visit as successful.
         ovs_args = {
             "last_visit": None,
             "last_visit_status": None,
             "last_scheduled": None,
+            "last_successful": None,
+            "last_snapshot": None,
         }
         if which_cooldown == "scheduled":
             ovs_args["last_scheduled"] = after
+        elif which_cooldown == "absolute":
+            ovs_args["last_visit"] = after
+            ovs_args["last_successful"] = after
+            ovs_args["last_visit_status"] = LastVisitStatus.successful
+            ovs_args["last_snapshot"] = b"\x00" * 20
         else:
             ovs_args["last_visit"] = after
             ovs_args["last_visit_status"] = LastVisitStatus(which_cooldown)
@@ -982,8 +992,6 @@ class TestScheduler:
             OriginVisitStats(
                 url=origin.url,
                 visit_type=origin.visit_type,
-                last_snapshot=None,
-                last_successful=None,
                 **ovs_args,
             )
             for i, origin in enumerate(origins)
@@ -995,6 +1003,7 @@ class TestScheduler:
             "scheduled_cooldown": None,
             "failed_cooldown": None,
             "not_found_cooldown": None,
+            "absolute_cooldown": None,
         }
         cooldown_args[f"{which_cooldown}_cooldown"] = cooldown_td
 
