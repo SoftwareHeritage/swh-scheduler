@@ -162,7 +162,7 @@ def test_create_origin_task_dicts(swh_scheduler):
                 "kwargs": {
                     "url": "http://example.com/1",
                     "lister_name": LISTERS[0]["name"],
-                    "lister_instance_name": None,
+                    "lister_instance_name": LISTERS[0]["instance_name"],
                 },
             },
         },
@@ -173,7 +173,7 @@ def test_create_origin_task_dicts(swh_scheduler):
                 "kwargs": {
                     "url": "http://example.com/2",
                     "lister_name": LISTERS[0]["name"],
-                    "lister_instance_name": None,
+                    "lister_instance_name": LISTERS[0]["instance_name"],
                 },
             },
         },
