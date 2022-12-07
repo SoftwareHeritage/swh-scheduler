@@ -1,11 +1,11 @@
-# Copyright (C) 2021  The Software Heritage developers
+# Copyright (C) 2021-2022  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Iterable, List, Optional
+from typing import TYPE_CHECKING
 
 import click
 
@@ -13,6 +13,7 @@ from . import cli
 from ..utils import create_origin_task_dicts
 
 if TYPE_CHECKING:
+    from typing import Iterable, List, Optional
     from uuid import UUID
 
     from ..interface import SchedulerInterface
@@ -180,58 +181,39 @@ def schedule_next(ctx, policy: str, type: str, count: int):
     default=None,
     help="Limit origins to those listed from lister with instance name",
 )
-@click.argument("type", type=str)
+@click.argument("visit_type_name", type=str)
 @click.pass_context
-def send_to_celery(
+def send_to_celery_cli(
     ctx,
     policy: str,
     queue: Optional[str],
     tablesample: Optional[float],
-    type: str,
+    visit_type_name: str,
     enabled: bool,
     lister_name: Optional[str] = None,
     lister_instance_name: Optional[str] = None,
 ):
-    """Send the next origin visits of the TYPE loader to celery, filling the queue."""
-    from kombu.utils.uuid import uuid
+    """Send next origin visits of VISIT_TYPE_NAME to celery, filling the queue."""
 
-    from swh.scheduler.celery_backend.config import app, get_available_slots
+    from .utils import get_task_type, send_to_celery
 
     scheduler = ctx.obj["scheduler"]
 
-    task_type = scheduler.get_task_type(f"load-{type}")
+    task_type = get_task_type(scheduler, visit_type_name)
+    if not task_type:
+        raise ValueError(f"Unknown task type {task_type}.")
 
-    task_name = task_type["backend_name"]
-    queue_name = queue or task_name
+    queue_name = queue or task_type["backend_name"]
 
-    num_tasks = get_available_slots(app, queue_name, task_type["max_queue_length"])
-
-    click.echo(f"{num_tasks} slots available in celery queue")
-
-    lister_uuid: Optional[str] = None
-    if lister_name and lister_instance_name:
-        lister = scheduler.get_lister(lister_name, lister_instance_name)
-        if lister:
-            lister_uuid = lister.id
-
-    origins = scheduler.grab_next_visits(
-        type,
-        num_tasks,
+    send_to_celery(
+        scheduler,
+        visit_type_to_queue={visit_type_name: queue_name},
         policy=policy,
         tablesample=tablesample,
         enabled=enabled,
-        lister_uuid=lister_uuid,
+        lister_name=lister_name,
+        lister_instance_name=lister_instance_name,
     )
-
-    click.echo(f"{len(origins)} visits to send to celery")
-    for task_dict in create_origin_task_dicts(origins, scheduler):
-        app.send_task(
-            task_name,
-            task_id=uuid(),
-            args=task_dict["arguments"]["args"],
-            kwargs=task_dict["arguments"]["kwargs"],
-            queue=queue_name,
-        )
 
 
 @origin.command("update-metrics")
