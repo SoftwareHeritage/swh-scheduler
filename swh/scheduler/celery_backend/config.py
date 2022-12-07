@@ -309,9 +309,9 @@ CELERY_DEFAULT_CONFIG = dict(
     # A string identifying the default serialization method to use. Can
     # be json (default), pickle, yaml, msgpack, or any custom
     # serialization methods that have been registered with
-    task_serializer="msgpack",
+    task_serializer="json",
     # Result serialization format
-    result_serializer="msgpack",
+    result_serializer="json",
     # Acknowledge tasks as soon as they're received. We can do this as we have
     # external monitoring to decide if we need to retry tasks.
     task_acks_late=False,

@@ -232,7 +232,7 @@ def schedule_tasks(ctx, columns, delimiter, file):
 
 
 @task.command("add")
-@click.argument("type", nargs=1, required=True)
+@click.argument("task_type_name", nargs=1, required=True)
 @click.argument("options", nargs=-1)
 @click.option(
     "--policy", "-p", default="recurring", type=click.Choice(["recurring", "oneshot"])
@@ -242,12 +242,12 @@ def schedule_tasks(ctx, columns, delimiter, file):
 )
 @click.option("--next-run", "-n", default=None)
 @click.pass_context
-def schedule_task(ctx, type, options, policy, priority, next_run):
+def schedule_task(ctx, task_type_name, options, policy, priority, next_run):
     """Schedule one task from arguments.
 
-    The first argument is the name of the task type, further ones are
-    positional and keyword argument(s) of the task, in YAML format.
-    Keyword args are of the form key=value.
+    The first argument is the name of the task type. Flag options (policy, priority) are
+    task configuration. Further options are positional and keyword argument(s) of the
+    task, in YAML format. Keyword args are of the form key=value.
 
     Usage sample:
 
@@ -259,6 +259,7 @@ def schedule_task(ctx, type, options, policy, priority, next_run):
 
     Note: if the priority is not given, the task won't have the priority set,
     which is considered as the lowest priority level.
+
     """
     from swh.scheduler.utils import utcnow
 
@@ -268,11 +269,14 @@ def schedule_task(ctx, type, options, policy, priority, next_run):
     if not scheduler:
         raise ValueError("Scheduler class (local/remote) must be instantiated")
 
+    if scheduler.get_task_type(task_type_name) is None:
+        raise ValueError(f"Unknown task type {task_type_name}.")
+
     now = utcnow()
 
     (args, kw) = parse_options(options)
     task = {
-        "type": type,
+        "type": task_type_name,
         "policy": policy,
         "priority": priority,
         "arguments": {
