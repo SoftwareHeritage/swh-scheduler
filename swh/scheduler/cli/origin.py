@@ -171,9 +171,14 @@ def schedule_next(ctx, policy: str, type: str, count: int):
             might want the disabled ones.""",
 )
 @click.option(
-    "--lister-uuid",
+    "--lister-name",
     default=None,
-    help="Limit origins to those listed from such lister",
+    help="Limit origins to those listed from lister with provided name",
+)
+@click.option(
+    "--lister-instance-name",
+    default=None,
+    help="Limit origins to those listed from lister with instance name",
 )
 @click.argument("type", type=str)
 @click.pass_context
@@ -184,7 +189,8 @@ def send_to_celery(
     tablesample: Optional[float],
     type: str,
     enabled: bool,
-    lister_uuid: Optional[str] = None,
+    lister_name: Optional[str] = None,
+    lister_instance_name: Optional[str] = None,
 ):
     """Send the next origin visits of the TYPE loader to celery, filling the queue."""
     from kombu.utils.uuid import uuid
@@ -201,6 +207,13 @@ def send_to_celery(
     num_tasks = get_available_slots(app, queue_name, task_type["max_queue_length"])
 
     click.echo(f"{num_tasks} slots available in celery queue")
+
+    lister_uuid: Optional[str] = None
+    if lister_name and lister_instance_name:
+        lister = scheduler.get_lister(lister_name, lister_instance_name)
+        if lister:
+            lister_uuid = lister.id
+
     origins = scheduler.grab_next_visits(
         type,
         num_tasks,

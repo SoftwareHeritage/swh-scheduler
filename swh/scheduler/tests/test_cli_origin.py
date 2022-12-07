@@ -114,11 +114,16 @@ def test_schedule_next(swh_scheduler, listed_origins_by_type):
     assert scheduled_tasks <= all_possible_tasks
 
 
+@pytest.mark.parametrize(
+    "extra_cmd_args",
+    [[], ["--lister-name", "github", "--lister-instance-name", "github"]],
+)
 def test_send_to_celery(
     mocker,
     swh_scheduler,
     swh_scheduler_celery_app,
     listed_origins_by_type,
+    extra_cmd_args,
 ):
     for task_type in TASK_TYPES.values():
         swh_scheduler.create_task_type(task_type)
@@ -136,7 +141,9 @@ def test_send_to_celery(
     send_task = mocker.patch.object(swh_scheduler_celery_app, "send_task")
     send_task.return_value = None
 
-    result = invoke(swh_scheduler, args=("send-to-celery", visit_type))
+    cmd_args = ["send-to-celery", visit_type] + extra_cmd_args
+
+    result = invoke(swh_scheduler, args=tuple(cmd_args))
     assert result.exit_code == 0
 
     scheduled_tasks = {

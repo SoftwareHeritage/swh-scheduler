@@ -376,7 +376,10 @@ class SchedulerBackend:
         policy: str,
         enabled: bool = True,
         lister_uuid: Optional[str] = None,
+        lister_name: Optional[str] = None,
+        lister_instance_name: Optional[str] = None,
         timestamp: Optional[datetime.datetime] = None,
+        absolute_cooldown: Optional[datetime.timedelta] = datetime.timedelta(hours=12),
         scheduled_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=7),
         failed_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=14),
         not_found_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=31),
@@ -388,6 +391,10 @@ class SchedulerBackend:
             timestamp = utcnow()
 
         origin_select_cols = ", ".join(ListedOrigin.select_columns())
+
+        joins: Dict[str, str] = {
+            "origin_visit_stats": "USING (url, visit_type)",
+        }
 
         query_args: List[Any] = []
 
@@ -402,6 +409,15 @@ class SchedulerBackend:
         # Only schedule visits of the given type
         where_clauses.append("visit_type = %s")
         query_args.append(visit_type)
+
+        if absolute_cooldown:
+            # Don't schedule visits if they've been scheduled since the absolute cooldown
+            where_clauses.append(
+                """origin_visit_stats.last_scheduled IS NULL
+                   OR origin_visit_stats.last_scheduled < %s
+                """
+            )
+            query_args.append(timestamp - absolute_cooldown)
 
         if scheduled_cooldown:
             # Don't re-schedule visits if they're already scheduled but we haven't
@@ -501,14 +517,27 @@ class SchedulerBackend:
             where_clauses.append("lister_id = %s")
             query_args.append(lister_uuid)
 
+        if lister_name:
+            joins["listers"] = "on listed_origins.lister_id=listers.id"
+            where_clauses.append("listers.name = %s")
+            query_args.append(lister_name)
+
+        if lister_instance_name:
+            joins["listers"] = "on listed_origins.lister_id=listers.id"
+            where_clauses.append("listers.instance_name = %s")
+            query_args.append(lister_instance_name)
+
+        join_clause = "\n".join(
+            f"left join {table} {clause}" for table, clause in joins.items()
+        )
+
         # fmt: off
         common_table_expressions.insert(0, ("selected_origins", f"""
             SELECT
               {origin_select_cols}, next_visit_queue_position
             FROM
               {table}
-            LEFT JOIN
-              origin_visit_stats USING (url, visit_type)
+            {join_clause}
             WHERE
               ({") AND (".join(where_clauses)})
             ORDER BY
