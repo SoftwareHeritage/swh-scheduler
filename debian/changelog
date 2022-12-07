@@ -1,3 +1,19 @@
+swh-scheduler (1.3.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 1.3.0     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2022-12-07 13:45:04
+    +0100)
+  * Upstream changes:     - v1.3.0     - task add: Ensure task type
+    provided exist and raise otherwise     - grab_next_visits: Open
+    lister name and instance name filtering     - send-to-celery: Adapt
+    to schedule from lister name & instance_name     - Ensure origins
+    are not visited faster than twice a day     - Refresh task type data
+    from the database every time recurrent tasks are run     - Use json
+    instead of msgpack for serializers     - pre-commit, tox: Bump pre-
+    commit, codespell, black and flake8
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 07 Dec 2022 12:50:33 +0000
+
 swh-scheduler (1.2.3-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 1.2.3     - (tagged by Antoine R. Dumont
