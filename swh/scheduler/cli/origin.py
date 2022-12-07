@@ -122,7 +122,7 @@ def schedule_next(ctx, policy: str, type: str, count: int):
     """Send the next COUNT origin visits of the TYPE loader to the scheduler as
     one-shot tasks."""
     from ..utils import utcnow
-    from .task import pretty_print_task
+    from .utils import pretty_print_task
 
     scheduler = ctx.obj["scheduler"]
 
