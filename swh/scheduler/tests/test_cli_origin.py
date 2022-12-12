@@ -114,6 +114,14 @@ def test_schedule_next(swh_scheduler, listed_origins_by_type):
     assert scheduled_tasks <= all_possible_tasks
 
 
+def test_send_to_celery_unknown_visit_type(
+    swh_scheduler,
+):
+    "Calling cli without a known visit type should raise"
+    with pytest.raises(ValueError, match="Unknown"):
+        invoke(swh_scheduler, args=("send-to-celery", "unknown-visit-type"))
+
+
 @pytest.mark.parametrize(
     "extra_cmd_args",
     [[], ["--lister-name", "github", "--lister-instance-name", "github"]],
