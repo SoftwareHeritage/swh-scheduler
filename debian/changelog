@@ -1,3 +1,14 @@
+swh-scheduler (1.4.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 1.4.0     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2022-12-12 11:45:31
+    +0100)
+  * Upstream changes:     - v1.4.0     - cli.add_forge_now: Open
+    `register-lister` with sensible defaults     - cli.add_forge_now:
+    Open `schedule-first-visits` with sensible defaults
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 12 Dec 2022 10:51:31 +0000
+
 swh-scheduler (1.3.0-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 1.3.0     - (tagged by Antoine R. Dumont
