@@ -85,7 +85,16 @@ def cli(ctx, config_file, database, url, no_stdout):
     ctx.obj["config"] = conf
 
 
-from . import admin, celery_monitor, journal, origin, simulator, task, task_type  # noqa
+from . import (  # noqa
+    add_forge_now,
+    admin,
+    celery_monitor,
+    journal,
+    origin,
+    simulator,
+    task,
+    task_type,
+)
 
 
 def main():
