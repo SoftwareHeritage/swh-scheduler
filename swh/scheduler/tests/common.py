@@ -119,7 +119,7 @@ def tasks_with_priority_from_template(
 
 
 LISTERS = (
-    {"name": "github"},
+    {"name": "github", "instance_name": "github"},
     {"name": "gitlab", "instance_name": "gitlab"},
     {"name": "gitlab", "instance_name": "freedesktop"},
     {"name": "npm"},

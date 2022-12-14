@@ -271,9 +271,10 @@ def visit_scheduler_thread(
         # thread-safe
         app = build_app(config.get("celery"))
         scheduler = get_scheduler(**config["scheduler"])
-        task_type = scheduler.get_task_type(f"load-{visit_type}")
+        task_name = f"load-{visit_type}"
+        task_type = scheduler.get_task_type(task_name)
         if task_type is None:
-            raise ValueError(f"Unknown task type: load-{visit_type}")
+            raise ValueError(f"Unknown task type: {task_name}")
 
         policy_cfg = config.get("scheduling_policy", DEFAULT_POLICY_CONFIG)
         for policies in policy_cfg.values():
@@ -301,6 +302,12 @@ def visit_scheduler_thread(
                     return
                 else:
                     logger.warn("Received unexpected message %s in command queue", msg)
+
+            # Refresh the task_type object from the database for new parameters, e.g.
+            # the max queue length
+            task_type = scheduler.get_task_type(task_name)
+            if task_type is None:
+                raise ValueError(f"Unknown task type: {task_name}")
 
             next_iteration = send_visits_for_visit_type(
                 scheduler,

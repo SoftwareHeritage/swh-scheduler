@@ -27,128 +27,6 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 DATETIME = click.DateTime()
 
 
-def format_dict(d):
-    """Recursively format date objects in the dict passed as argument"""
-    import datetime
-
-    ret = {}
-    for k, v in d.items():
-        if isinstance(v, (datetime.date, datetime.datetime)):
-            v = v.isoformat()
-        elif isinstance(v, dict):
-            v = format_dict(v)
-        ret[k] = v
-    return ret
-
-
-def pretty_print_list(list, indent=0):
-    """Pretty-print a list"""
-    return "".join("%s%r\n" % (" " * indent, item) for item in list)
-
-
-def pretty_print_dict(dict, indent=0):
-    """Pretty-print a list"""
-    return "".join(
-        "%s%s: %r\n" % (" " * indent, click.style(key, bold=True), value)
-        for key, value in sorted(dict.items())
-    )
-
-
-def pretty_print_run(run, indent=4):
-    fmt = (
-        "{indent}{backend_id} [{status}]\n"
-        "{indent}  scheduled: {scheduled} [{started}:{ended}]"
-    )
-    return fmt.format(indent=" " * indent, **format_dict(run))
-
-
-def pretty_print_task(task, full=False):
-    """Pretty-print a task
-
-    If 'full' is True, also print the status and priority fields.
-
-    >>> import datetime
-    >>> task = {
-    ...     'id': 1234,
-    ...     'arguments': {
-    ...         'args': ['foo', 'bar', True],
-    ...         'kwargs': {'key': 'value', 'key2': 42},
-    ...     },
-    ...     'current_interval': datetime.timedelta(hours=1),
-    ...     'next_run': datetime.datetime(2019, 2, 21, 13, 52, 35, 407818),
-    ...     'policy': 'oneshot',
-    ...     'priority': None,
-    ...     'status': 'next_run_not_scheduled',
-    ...     'type': 'test_task',
-    ... }
-    >>> print(click.unstyle(pretty_print_task(task)))
-    Task 1234
-      Next run: ... (2019-02-21T13:52:35.407818)
-      Interval: 1:00:00
-      Type: test_task
-      Policy: oneshot
-      Args:
-        'foo'
-        'bar'
-        True
-      Keyword args:
-        key: 'value'
-        key2: 42
-    <BLANKLINE>
-    >>> print(click.unstyle(pretty_print_task(task, full=True)))
-    Task 1234
-      Next run: ... (2019-02-21T13:52:35.407818)
-      Interval: 1:00:00
-      Type: test_task
-      Policy: oneshot
-      Status: next_run_not_scheduled
-      Priority:\x20
-      Args:
-        'foo'
-        'bar'
-        True
-      Keyword args:
-        key: 'value'
-        key2: 42
-    <BLANKLINE>
-    """
-    import humanize
-
-    next_run = task["next_run"]
-    lines = [
-        "%s %s\n" % (click.style("Task", bold=True), task["id"]),
-        click.style("  Next run: ", bold=True),
-        "%s (%s)" % (humanize.naturaldate(next_run), next_run.isoformat()),
-        "\n",
-        click.style("  Interval: ", bold=True),
-        str(task["current_interval"]),
-        "\n",
-        click.style("  Type: ", bold=True),
-        task["type"] or "",
-        "\n",
-        click.style("  Policy: ", bold=True),
-        task["policy"] or "",
-        "\n",
-    ]
-    if full:
-        lines += [
-            click.style("  Status: ", bold=True),
-            task["status"] or "",
-            "\n",
-            click.style("  Priority: ", bold=True),
-            task["priority"] or "",
-            "\n",
-        ]
-    lines += [
-        click.style("  Args:\n", bold=True),
-        pretty_print_list(task["arguments"]["args"], indent=4),
-        click.style("  Keyword args:\n", bold=True),
-        pretty_print_dict(task["arguments"]["kwargs"], indent=4),
-    ]
-
-    return "".join(lines)
-
-
 @cli.group("task")
 @click.pass_context
 def task(ctx):
@@ -202,6 +80,8 @@ def schedule_tasks(ctx, columns, delimiter, file):
 
     from swh.scheduler.utils import utcnow
 
+    from .utils import pretty_print_task
+
     tasks = []
     now = utcnow()
     scheduler = ctx.obj["scheduler"]
@@ -232,7 +112,7 @@ def schedule_tasks(ctx, columns, delimiter, file):
 
 
 @task.command("add")
-@click.argument("type", nargs=1, required=True)
+@click.argument("task_type_name", nargs=1, required=True)
 @click.argument("options", nargs=-1)
 @click.option(
     "--policy", "-p", default="recurring", type=click.Choice(["recurring", "oneshot"])
@@ -242,12 +122,12 @@ def schedule_tasks(ctx, columns, delimiter, file):
 )
 @click.option("--next-run", "-n", default=None)
 @click.pass_context
-def schedule_task(ctx, type, options, policy, priority, next_run):
+def schedule_task(ctx, task_type_name, options, policy, priority, next_run):
     """Schedule one task from arguments.
 
-    The first argument is the name of the task type, further ones are
-    positional and keyword argument(s) of the task, in YAML format.
-    Keyword args are of the form key=value.
+    The first argument is the name of the task type. Flag options (policy, priority) are
+    task configuration. Further options are positional and keyword argument(s) of the
+    task, in YAML format. Keyword args are of the form key=value.
 
     Usage sample:
 
@@ -259,37 +139,28 @@ def schedule_task(ctx, type, options, policy, priority, next_run):
 
     Note: if the priority is not given, the task won't have the priority set,
     which is considered as the lowest priority level.
-    """
-    from swh.scheduler.utils import utcnow
 
-    from .utils import parse_options
+    """
+    from .utils import parse_options, task_add
 
     scheduler = ctx.obj["scheduler"]
     if not scheduler:
         raise ValueError("Scheduler class (local/remote) must be instantiated")
 
-    now = utcnow()
+    task_type = scheduler.get_task_type(task_type_name)
+    if not task_type:
+        raise ValueError(f"Unknown task name {task_type_name}.")
 
     (args, kw) = parse_options(options)
-    task = {
-        "type": type,
-        "policy": policy,
-        "priority": priority,
-        "arguments": {
-            "args": args,
-            "kwargs": kw,
-        },
-        "next_run": next_run or now,
-    }
-    created = scheduler.create_tasks([task])
-
-    output = [
-        "Created %d tasks\n" % len(created),
-    ]
-    for task in created:
-        output.append(pretty_print_task(task))
-
-    click.echo("\n".join(output))
+    task_add(
+        scheduler,
+        task_type_name=task_type_name,
+        policy=policy,
+        priority=priority,
+        next_run=next_run,
+        args=args,
+        kw=kw,
+    )
 
 
 def iter_origins(  # use string annotations to prevent some pkg loading
@@ -408,6 +279,8 @@ def list_pending_tasks(ctx, task_types, num_tasks, before):
     You can override the number of tasks to fetch with the --limit flag.
 
     """
+    from .utils import pretty_print_task
+
     scheduler = ctx.obj["scheduler"]
     if not scheduler:
         raise ValueError("Scheduler class (local/remote) must be instantiated")
@@ -506,6 +379,8 @@ def list_tasks(
 ):
     """List tasks."""
     from operator import itemgetter
+
+    from .utils import pretty_print_run, pretty_print_task
 
     scheduler = ctx.obj["scheduler"]
     if not scheduler:

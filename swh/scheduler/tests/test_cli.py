@@ -163,6 +163,20 @@ Task 1
     assert re.fullmatch(expected, result.output, re.MULTILINE), result.output
 
 
+def test_schedule_unknown_task_type(swh_scheduler):
+    """When scheduling unknown task type, the cli should raise."""
+    with pytest.raises(ValueError, match="Unknown"):
+        invoke(
+            swh_scheduler,
+            False,
+            [
+                "task",
+                "add",
+                "unknown-task-type-should-raise",
+            ],
+        )
+
+
 def test_list_pending_tasks_none(swh_scheduler):
     result = invoke(
         swh_scheduler,

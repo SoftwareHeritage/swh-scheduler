@@ -25,7 +25,6 @@ simpy<4,>=3
 [testing]
 pytest
 pytest-mock
-celery>=4.3
 hypothesis>=3.11.0
 swh.lister
 swh.storage[testing]

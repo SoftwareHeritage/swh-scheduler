@@ -827,15 +827,15 @@ class TestScheduler:
         assert ret.next_page_token is None
         assert len(ret.results) == len(listed_origins_with_non_enabled)
 
-    def _grab_next_visits_setup(self, swh_scheduler, listed_origins_by_type):
+    def _grab_next_visits_setup(self, swh_scheduler, listed_origins_by_type, limit=100):
         """Basic origins setup for scheduling policy tests"""
         visit_type = next(iter(listed_origins_by_type))
-        origins = listed_origins_by_type[visit_type][:100]
+
+        all_origins = listed_origins_by_type[visit_type]
+        origins = all_origins[:limit] if limit else all_origins
         assert len(origins) > 0
 
-        recorded_origins = swh_scheduler.record_listed_origins(origins)
-
-        return visit_type, recorded_origins
+        return visit_type, swh_scheduler.record_listed_origins(origins)
 
     def _check_grab_next_visit_basic(
         self, swh_scheduler, visit_type, policy, expected, **kwargs
@@ -947,7 +947,9 @@ class TestScheduler:
             expected=expected,
         )
 
-    @pytest.mark.parametrize("which_cooldown", ("scheduled", "failed", "not_found"))
+    @pytest.mark.parametrize(
+        "which_cooldown", ("scheduled", "failed", "not_found", "absolute")
+    )
     @pytest.mark.parametrize("cooldown", (7, 15))
     def test_grab_next_visits_cooldowns(
         self,
@@ -966,14 +968,22 @@ class TestScheduler:
             expected=expected,
         )
 
-        # Mark all the visits as scheduled, failed or notfound on the `after` timestamp
+        # Mark all the visits as scheduled, failed or not_found on the `after` timestamp.
+        # If we're testing the `absolute_cooldown`, mark the visit as successful.
         ovs_args = {
             "last_visit": None,
             "last_visit_status": None,
             "last_scheduled": None,
+            "last_successful": None,
+            "last_snapshot": None,
         }
         if which_cooldown == "scheduled":
             ovs_args["last_scheduled"] = after
+        elif which_cooldown == "absolute":
+            ovs_args["last_visit"] = after
+            ovs_args["last_successful"] = after
+            ovs_args["last_visit_status"] = LastVisitStatus.successful
+            ovs_args["last_snapshot"] = b"\x00" * 20
         else:
             ovs_args["last_visit"] = after
             ovs_args["last_visit_status"] = LastVisitStatus(which_cooldown)
@@ -982,8 +992,6 @@ class TestScheduler:
             OriginVisitStats(
                 url=origin.url,
                 visit_type=origin.visit_type,
-                last_snapshot=None,
-                last_successful=None,
                 **ovs_args,
             )
             for i, origin in enumerate(origins)
@@ -995,6 +1003,7 @@ class TestScheduler:
             "scheduled_cooldown": None,
             "failed_cooldown": None,
             "not_found_cooldown": None,
+            "absolute_cooldown": None,
         }
         cooldown_args[f"{which_cooldown}_cooldown"] = cooldown_td
 
@@ -1293,6 +1302,29 @@ class TestScheduler:
             policy="never_visited_oldest_update_first",
             expected=expected_origins,
         )
+
+    def test_grab_next_visit_for_specific_lister(
+        self, swh_scheduler, listed_origins_by_type, stored_lister
+    ):
+        """Checks grab_next_visits filters on the given lister {name, instance name}"""
+
+        visit_type, origins = self._grab_next_visits_setup(
+            swh_scheduler, listed_origins_by_type, limit=None
+        )
+
+        expected_origins = [origin for origin in listed_origins_by_type[visit_type]]
+
+        ret = swh_scheduler.grab_next_visits(
+            visit_type=visit_type,
+            count=len(expected_origins),
+            policy="never_visited_oldest_update_first",
+            lister_name=stored_lister.name,
+            lister_instance_name=stored_lister.instance_name,
+        )
+
+        assert len(ret) == len(expected_origins)
+        for origin in ret:
+            assert origin.lister_id == stored_lister.id
 
     def _create_task_types(self, scheduler):
         for tt in TASK_TYPES.values():

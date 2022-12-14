@@ -62,6 +62,7 @@ swh/scheduler/celery_backend/pika_listener.py
 swh/scheduler/celery_backend/recurrent_visits.py
 swh/scheduler/celery_backend/runner.py
 swh/scheduler/cli/__init__.py
+swh/scheduler/cli/add_forge_now.py
 swh/scheduler/cli/admin.py
 swh/scheduler/cli/celery_monitor.py
 swh/scheduler/cli/journal.py
@@ -69,6 +70,7 @@ swh/scheduler/cli/origin.py
 swh/scheduler/cli/simulator.py
 swh/scheduler/cli/task.py
 swh/scheduler/cli/task_type.py
+swh/scheduler/cli/test_cli_utils.py
 swh/scheduler/cli/utils.py
 swh/scheduler/simulator/__init__.py
 swh/scheduler/simulator/common.py
@@ -118,6 +120,7 @@ swh/scheduler/tests/tasks.py
 swh/scheduler/tests/test_api_client.py
 swh/scheduler/tests/test_celery_tasks.py
 swh/scheduler/tests/test_cli.py
+swh/scheduler/tests/test_cli_add_forge_now.py
 swh/scheduler/tests/test_cli_celery_monitor.py
 swh/scheduler/tests/test_cli_journal.py
 swh/scheduler/tests/test_cli_origin.py
