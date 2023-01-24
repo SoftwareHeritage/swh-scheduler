@@ -1,3 +1,15 @@
+swh-scheduler (1.5.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 1.5.0     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2023-01-24 14:14:56
+    +0100)
+  * Upstream changes:     - v1.5.0     - Allow logging configuration
+    from configuration yaml file     - Add missing __init__.py so
+    find_packages keep finding sql modules     - docs: Include module
+    indices only when building standalone package doc
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 24 Jan 2023 13:26:22 +0000
+
 swh-scheduler (1.4.0-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 1.4.0     - (tagged by Antoine R. Dumont
