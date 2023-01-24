@@ -79,10 +79,12 @@ def setup_log_handler(
     We use the command-line loglevel for tasks only, as we never
     really care about the debug messages from celery.
     """
+    from swh.core.logging import logging_configure
+
     if loglevel is None:
         loglevel = logging.DEBUG
     if isinstance(loglevel, str):
-        loglevel = logging._nameToLevel[loglevel]
+        loglevel = logging.getLevelName(loglevel)
 
     formatter = logging.Formatter(format)
 
@@ -118,23 +120,28 @@ def setup_log_handler(
             systemd_journal.setFormatter(formatter)
             root_logger.addHandler(systemd_journal)
 
-    logging.getLogger("celery").setLevel(logging.INFO)
+    # Retrieve a possible log_config path to a yaml log configuration file
+    log_config_path = kwargs.get("log_config")
 
-    # Silence amqp heartbeat_tick messages
+    logging_configure(
+        [
+            ("celery", logging.INFO)
+            # Silence amqp heartbeat_tick messages
+            ("amqp", loglevel),
+            # Silence useless "Starting new HTTP connection" messages
+            ("urllib3", logging.WARNING),
+            # Completely disable azure logspam
+            ("azure.core.pipeline.policies.http_logging_policy", logging.WARNING),
+            ("swh", loglevel),
+            # get_task_logger makes the swh tasks loggers children of celery.task
+            ("celery.task", loglevel),
+        ],
+        log_config_path,
+    )
+
+    # extra step for amqp
     logger = logging.getLogger("amqp")
     logger.addFilter(lambda record: not record.msg.startswith("heartbeat_tick"))
-    logger.setLevel(loglevel)
-
-    # Silence useless "Starting new HTTP connection" messages
-    logging.getLogger("urllib3").setLevel(logging.WARNING)
-
-    # Completely disable azure logspam
-    azure_logger = logging.getLogger("azure.core.pipeline.policies.http_logging_policy")
-    azure_logger.setLevel(logging.WARNING)
-
-    logging.getLogger("swh").setLevel(loglevel)
-    # get_task_logger makes the swh tasks loggers children of celery.task
-    logging.getLogger("celery.task").setLevel(loglevel)
     return loglevel
 
 
