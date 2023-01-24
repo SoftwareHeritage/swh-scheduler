@@ -82,6 +82,7 @@ swh/scheduler/sql/30-schema.sql
 swh/scheduler/sql/40-func.sql
 swh/scheduler/sql/50-data.sql
 swh/scheduler/sql/60-indexes.sql
+swh/scheduler/sql/__init__.py
 swh/scheduler/sql/upgrades/02.sql
 swh/scheduler/sql/upgrades/03.sql
 swh/scheduler/sql/upgrades/04.sql
@@ -113,6 +114,7 @@ swh/scheduler/sql/upgrades/30.sql
 swh/scheduler/sql/upgrades/31.sql
 swh/scheduler/sql/upgrades/32.sql
 swh/scheduler/sql/upgrades/33.sql
+swh/scheduler/sql/upgrades/__init__.py
 swh/scheduler/tests/__init__.py
 swh/scheduler/tests/common.py
 swh/scheduler/tests/conftest.py
