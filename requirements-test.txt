@@ -1,6 +1,6 @@
 pytest
 pytest-mock
-pytest-postgresql
+pytest-postgresql < 4.0.0  # version 4.0 depends on psycopg 3. https://github.com/ClearcodeHQ/pytest-postgresql/blob/main/CHANGES.rst#400
 hypothesis >= 3.11.0
 swh.lister
 swh.storage[testing]
