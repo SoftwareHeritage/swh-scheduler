@@ -10,6 +10,7 @@ from swh.scheduler.celery_backend.config import (
     app,
     get_available_slots,
     route_for_task,
+    setup_log_handler,
 )
 
 
@@ -63,3 +64,11 @@ def test_get_available_slots(mocker):
     actual_num = get_available_slots(app, "anything", max_length)
     assert actual_num == max_length - queue_length
     assert mock.called
+
+
+def test_setup_log_handler(capsys):
+    setup_log_handler()
+    # exceptions are caught and displayed by the setup_log_handler function
+    # as celery eats tracebacks in signal handler, check no traceback was
+    # displayed then
+    assert "Traceback" not in capsys.readouterr().err
