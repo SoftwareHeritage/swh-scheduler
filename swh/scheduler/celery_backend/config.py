@@ -125,7 +125,7 @@ def setup_log_handler(
 
     logging_configure(
         [
-            ("celery", logging.INFO)
+            ("celery", logging.INFO),
             # Silence amqp heartbeat_tick messages
             ("amqp", loglevel),
             # Silence useless "Starting new HTTP connection" messages
