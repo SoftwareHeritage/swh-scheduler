@@ -76,68 +76,74 @@ def setup_log_handler(
 ):
     """Setup logging according to Software Heritage preferences.
 
-    We use the command-line loglevel for tasks only, as we never
-    really care about the debug messages from celery.
+    If the environment variable SWH_LOG_CONFIG is provided, this uses the targeted
+    logging configuration file to configure logging. Otherwise, as before, this uses the
+    default enclosed coded configuration.
+
     """
     from swh.core.logging import logging_configure
 
-    if loglevel is None:
-        loglevel = logging.DEBUG
-    if isinstance(loglevel, str):
-        loglevel = logging.getLevelName(loglevel)
+    # Retrieve logger configuration yaml filepath from environment variable if any
+    log_config_path = os.environ.get("SWH_LOG_CONFIG")
+    if log_config_path is not None:
+        # Delegate configuration to the log_config_path
+        logging_configure([], log_config_path)
+    else:
+        # Keep the logging config coming from this code block
+        if loglevel is None:
+            loglevel = logging.DEBUG
+        if isinstance(loglevel, str):
+            loglevel = logging.getLevelName(loglevel)
 
-    formatter = logging.Formatter(format)
+        formatter = logging.Formatter(format)
 
-    root_logger = logging.getLogger("")
-    root_logger.setLevel(logging.INFO)
+        root_logger = logging.getLogger("")
+        root_logger.setLevel(logging.INFO)
 
-    log_target = os.environ.get("SWH_LOG_TARGET", "console")
-    if log_target == "console":
-        log_console = True
-    elif log_target == "journal":
-        log_journal = True
+        log_target = os.environ.get("SWH_LOG_TARGET", "console")
+        if log_target == "console":
+            log_console = True
+        elif log_target == "journal":
+            log_journal = True
 
-    # this looks for log levels *higher* than DEBUG
-    if loglevel <= logging.DEBUG and log_console is None:
-        log_console = True
+        # this looks for log levels *higher* than DEBUG
+        if loglevel <= logging.DEBUG and log_console is None:
+            log_console = True
 
-    if log_console:
-        color_formatter = ColorFormatter(format) if colorize else formatter
-        console = logging.StreamHandler()
-        console.setLevel(logging.DEBUG)
-        console.setFormatter(color_formatter)
-        root_logger.addHandler(console)
+        if log_console:
+            color_formatter = ColorFormatter(format) if colorize else formatter
+            console = logging.StreamHandler()
+            console.setLevel(logging.DEBUG)
+            console.setFormatter(color_formatter)
+            root_logger.addHandler(console)
 
-    if log_journal:
-        if not JournalHandler:
-            root_logger.warning(
-                "JournalHandler is not available, skipping. "
-                "Please install swh-core[logging]."
-            )
-        else:
-            systemd_journal = JournalHandler()
-            systemd_journal.setLevel(logging.DEBUG)
-            systemd_journal.setFormatter(formatter)
-            root_logger.addHandler(systemd_journal)
+        if log_journal:
+            if not JournalHandler:
+                root_logger.warning(
+                    "JournalHandler is not available, skipping. "
+                    "Please install swh-core[logging]."
+                )
+            else:
+                systemd_journal = JournalHandler()
+                systemd_journal.setLevel(logging.DEBUG)
+                systemd_journal.setFormatter(formatter)
+                root_logger.addHandler(systemd_journal)
 
-    # Retrieve a possible log_config path to a yaml log configuration file
-    log_config_path = kwargs.get("log_config")
-
-    logging_configure(
-        [
-            ("celery", logging.INFO),
-            # Silence amqp heartbeat_tick messages
-            ("amqp", loglevel),
-            # Silence useless "Starting new HTTP connection" messages
-            ("urllib3", logging.WARNING),
-            # Completely disable azure logspam
-            ("azure.core.pipeline.policies.http_logging_policy", logging.WARNING),
-            ("swh", loglevel),
-            # get_task_logger makes the swh tasks loggers children of celery.task
-            ("celery.task", loglevel),
-        ],
-        log_config_path,
-    )
+        # Historical configuration kept as-is
+        logging_configure(
+            [
+                ("celery", logging.INFO),
+                # Silence amqp heartbeat_tick messages
+                ("amqp", loglevel),
+                # Silence useless "Starting new HTTP connection" messages
+                ("urllib3", logging.WARNING),
+                # Completely disable azure logspam
+                ("azure.core.pipeline.policies.http_logging_policy", logging.WARNING),
+                ("swh", loglevel),
+                # get_task_logger makes the swh tasks loggers children of celery.task
+                ("celery.task", loglevel),
+            ]
+        )
 
     # extra step for amqp
     logger = logging.getLogger("amqp")

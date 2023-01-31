@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2021  The Software Heritage developers
+# Copyright (C) 2016-2023  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -76,10 +76,10 @@ def cli(ctx, config_file, database, url, no_stdout):
     try:
         logger.debug("Instantiating scheduler with %s", sched_conf)
         scheduler = get_scheduler(**sched_conf)
-    except (ValueError, OperationalError):
-        # it's the subcommand to decide whether not having a proper
-        # scheduler instance is a problem.
-        pass
+    except (ValueError, OperationalError) as e:
+        # Propagate scheduler instantiation exception context to subcommands, and let
+        # them report properly the issue
+        ctx.obj["scheduler_exc"] = e
 
     ctx.obj["scheduler"] = scheduler
     ctx.obj["config"] = conf

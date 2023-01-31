@@ -137,3 +137,5 @@ swh/scheduler/tests/test_scheduler.py
 swh/scheduler/tests/test_server.py
 swh/scheduler/tests/test_simulator.py
 swh/scheduler/tests/test_utils.py
+swh/scheduler/tests/data/__init__.py
+swh/scheduler/tests/data/logging-config.yaml

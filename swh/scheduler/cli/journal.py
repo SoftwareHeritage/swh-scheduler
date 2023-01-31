@@ -1,12 +1,16 @@
-# Copyright (C) 2021  The Software Heritage developers
+# Copyright (C) 2021-2023  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
 
+import logging
+
 import click
 
 from . import cli as cli_scheduler_group
+
+logger = logging.getLogger(__name__)
 
 
 @cli_scheduler_group.command("journal-client")
@@ -26,7 +30,13 @@ def visit_stats_journal_client(ctx, stop_after_objects):
     from swh.scheduler.journal_client import process_journal_objects
 
     if not ctx.obj["scheduler"]:
-        raise ValueError("Scheduler class (local/remote) must be instantiated")
+        message = "Scheduler class (local/remote) must be instantiated."
+        any_exception = ctx.obj.get("scheduler_exc")
+        if any_exception:
+            extra_message = f"Scheduler problems: {any_exception}"
+            message = "\n".join([message, extra_message])
+            logger.exception(any_exception)
+        raise ValueError(message)
 
     scheduler = ctx.obj["scheduler"]
     config = ctx.obj["config"]
