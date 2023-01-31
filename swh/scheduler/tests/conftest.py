@@ -1,10 +1,11 @@
-# Copyright (C) 2016-2022  The Software Heritage developers
+# Copyright (C) 2016-2023  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
 from datetime import datetime, timezone
 import os
+from pathlib import Path
 from typing import Dict, List
 from unittest.mock import patch
 
@@ -12,6 +13,9 @@ import pytest
 
 from swh.scheduler.model import ListedOrigin, Lister
 from swh.scheduler.tests.common import LISTERS
+
+DATADIR = Path(__file__).parent.absolute() / "data"
+
 
 # make sure we are not fooled by CELERY_ config environment vars
 for var in [x for x in os.environ.keys() if x.startswith("CELERY")]:
@@ -78,3 +82,8 @@ def storage(swh_storage):
     with patch("swh.storage.get_storage") as get_storage_mock:
         get_storage_mock.return_value = swh_storage
         yield swh_storage
+
+
+@pytest.fixture
+def datadir():
+    return DATADIR

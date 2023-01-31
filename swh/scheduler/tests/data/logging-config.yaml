@@ -1,0 +1,29 @@
+---
+version: 1
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    formatter: task
+    stream: ext://sys.stdout
+  systemd:
+    class: swh.core.logger.JournalHandler
+    formatter: task
+
+formatters:
+  task:
+    fmt: "[%(asctime)s: %(levelname)s/%(processName)s] %(task_name)s[%(task_id)s]: %(message)s"
+    use_color: false
+
+loggers:
+  # Only swh.scheduler modules to ease testing (no need to deal with missing deps)
+  swh.scheduler:
+    level: DEBUG
+  swh.scheduler.backend:
+    level: INFO
+
+root:
+  level: INFO
+  handlers:
+  - console
+  - systemd
