@@ -1,8 +1,13 @@
-swh-scheduler (1.5.1-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-scheduler (1.6.0-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 1.6.0     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2023-01-31 18:05:18
+    +0100)
+  * Upstream changes:     - v1.6.0     - Configure logging from
+    environment variable SWH_LOG_CONFIG     - swh.scheduler.cli: Pass
+    initialization exceptions to subcommands
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 27 Jan 2023 11:34:07 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 31 Jan 2023 17:19:08 +0000
 
 swh-scheduler (1.5.1-1~swh1) unstable-swh; urgency=medium
 
