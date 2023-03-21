@@ -23,12 +23,6 @@ from swh.core.config import load_named_config, merge_configs
 from swh.core.sentry import init_sentry
 from swh.scheduler import CONFIG as SWH_CONFIG
 
-try:
-    from swh.core.logger import JournalHandler
-except ImportError:
-    JournalHandler = None  # type: ignore
-
-
 DEFAULT_CONFIG_NAME = "worker"
 CONFIG_NAME_ENVVAR = "SWH_WORKER_INSTANCE"
 CONFIG_NAME_TEMPLATE = "worker/%s"
@@ -118,16 +112,18 @@ def setup_log_handler(
             root_logger.addHandler(console)
 
         if log_journal:
-            if not JournalHandler:
-                root_logger.warning(
-                    "JournalHandler is not available, skipping. "
-                    "Please install swh-core[logging]."
-                )
-            else:
+            try:
+                from swh.core.logger import JournalHandler
+
                 systemd_journal = JournalHandler()
                 systemd_journal.setLevel(logging.DEBUG)
                 systemd_journal.setFormatter(formatter)
                 root_logger.addHandler(systemd_journal)
+            except ImportError:
+                root_logger.warning(
+                    "JournalHandler is not available, skipping. "
+                    "Please install swh-core[logging]."
+                )
 
         # Historical configuration kept as-is
         logging_configure(
