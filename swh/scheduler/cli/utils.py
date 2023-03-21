@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2022  The Software Heritage developers
+# Copyright (C) 2019-2023 The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -332,5 +332,10 @@ def task_add(
     click.echo("\n".join(output))
 
 
-def lister_task_type(lister_name: str, lister_type: str) -> str:
-    return f"list-{lister_name}-{lister_type}"
+def lister_task_type(lister_name: str, lister_type: Optional[str] = None) -> str:
+    """Compute expected scheduler task type from the lister name and its optional
+    listing type (full, incremental).
+
+    """
+    prefix = f"list-{lister_name}"
+    return f"{prefix}-{lister_type}" if lister_type else prefix
