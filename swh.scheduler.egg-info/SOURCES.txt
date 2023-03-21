@@ -127,6 +127,7 @@ swh/scheduler/tests/test_cli_celery_monitor.py
 swh/scheduler/tests/test_cli_journal.py
 swh/scheduler/tests/test_cli_origin.py
 swh/scheduler/tests/test_cli_task_type.py
+swh/scheduler/tests/test_cli_utils.py
 swh/scheduler/tests/test_common.py
 swh/scheduler/tests/test_config.py
 swh/scheduler/tests/test_init.py

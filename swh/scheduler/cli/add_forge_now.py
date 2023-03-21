@@ -65,7 +65,7 @@ def register_lister_cli(
     # Map the associated task types for the lister
     task_type_names: Dict[str, str] = {
         listing_type: lister_task_type(lister_name, listing_type)
-        for listing_type in ["full", "incremental"]
+        for listing_type in ["full", "incremental", None]
     }
 
     task_types: Dict[str, Dict] = {}
