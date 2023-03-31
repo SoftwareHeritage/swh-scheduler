@@ -12,7 +12,7 @@ from typing import Any, Dict, Optional
 import urllib.parse
 
 from celery import Celery
-from celery.signals import celeryd_after_setup, setup_logging, worker_init
+from celery.signals import celeryd_after_setup, setup_logging, task_prerun, worker_init
 from celery.utils.log import ColorFormatter
 from celery.worker.control import Panel
 from kombu import Exchange, Queue
@@ -163,17 +163,21 @@ def setup_queues_and_tasks(sender, instance, **kwargs):
     instance.app.conf["worker_name"] = sender
 
 
-@worker_init.connect
-@_print_errors
-def on_worker_init(*args, **kwargs):
+def _init_sentry(sentry_dsn: str, main_package: Optional[str] = None):
     try:
         from sentry_sdk.integrations.celery import CeleryIntegration
     except ImportError:
         integrations = []
     else:
         integrations = [CeleryIntegration()]
+    init_sentry(sentry_dsn, integrations=integrations, main_package=main_package)
+
+
+@worker_init.connect
+@_print_errors
+def on_worker_init(*args, **kwargs):
     sentry_dsn = None  # will be set in `init_sentry` function
-    init_sentry(sentry_dsn, integrations=integrations)
+    _init_sentry(sentry_dsn)
 
 
 @Panel.register
@@ -372,6 +376,23 @@ def build_app(config=None):
 
 
 app = build_app(CONFIG)
+
+
+@task_prerun.connect
+def celery_task_prerun(task_id, task, *args, **kwargs):
+    task_sentry_settings = CONFIG.get("sentry_settings_for_celery_tasks", {})
+    task_name_parts = task.name.split(".")
+    for i in reversed(range(len(task_name_parts) + 1)):
+        # sentry settings can be defined for task name or package name
+        object_name = ".".join(task_name_parts[:i])
+        sentry_settings = task_sentry_settings.get(object_name)
+        if sentry_settings:
+            _init_sentry(
+                sentry_settings.get("dsn"),
+                main_package=sentry_settings.get("main_package"),
+            )
+            break
+
 
 # XXX for BW compat
 Celery.get_queue_length = get_queue_length

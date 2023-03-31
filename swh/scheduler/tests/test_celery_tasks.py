@@ -5,6 +5,7 @@
 
 """Module in charge of testing the scheduler runner module"""
 
+import copy
 from itertools import count
 from time import sleep
 
@@ -12,6 +13,7 @@ from celery.result import AsyncResult, GroupResult
 from kombu import Exchange, Queue
 import pytest
 
+from swh.scheduler.celery_backend import config
 from swh.scheduler.celery_backend.runner import run_ready_tasks
 from swh.scheduler.tests.tasks import (
     TASK_ADD,
@@ -281,3 +283,50 @@ def test_statsd_with_status(
         "swh_task_success_count:1|c|"
         "#task:swh.scheduler.tests.tasks.echo,worker:unknown worker"
     )
+
+
+@pytest.mark.parametrize(
+    "sentry_settings",
+    [
+        # define sentry settings for specific tasks
+        {
+            TASK_PING: {
+                "dsn": "https://public@sentry.softwareheritage.org/1",
+                "main_package": "swh.scheduler",
+            },
+            TASK_ERROR: {
+                "dsn": "https://public@sentry.softwareheritage.org/2",
+                "main_package": "swh.scheduler",
+            },
+        },
+        # define sentry settings for all tasks in a package
+        {
+            "swh.scheduler": {
+                "dsn": "https://public@sentry.softwareheritage.org/1",
+                "main_package": "swh.scheduler",
+            },
+        },
+    ],
+)
+def test_sentry_dispatch(
+    swh_scheduler_celery_app, swh_scheduler_celery_worker, mocker, sentry_settings
+):
+    updated_config = copy.deepcopy(config.CONFIG)
+    updated_config.update({"sentry_settings_for_celery_tasks": sentry_settings})
+    mocker.patch.object(config, "CONFIG", updated_config)
+
+    init_sentry = mocker.patch.object(config, "init_sentry")
+
+    def _sentry_settings(task):
+        return sentry_settings.get(task, sentry_settings.get("swh.scheduler"))
+
+    for task in (TASK_PING, TASK_ERROR):
+        res = swh_scheduler_celery_app.send_task(task)
+        assert res
+        res.wait(propagate=False)
+        init_sentry.assert_called()
+        assert _sentry_settings(task)["dsn"] in init_sentry.call_args_list[-1][0]
+        assert (
+            init_sentry.call_args_list[-1][1]["main_package"]
+            == _sentry_settings(task)["main_package"]
+        )
