@@ -1,3 +1,13 @@
+swh-scheduler (1.8.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 1.8.0     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2023-03-31 12:33:50
+    +0200)
+  * Upstream changes:     - v1.8.0     - celery_backend/config: Enable
+    to set Sentry DSN per task type
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 31 Mar 2023 10:40:07 +0000
+
 swh-scheduler (1.7.0-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 1.7.0     - (tagged by Antoine R. Dumont
