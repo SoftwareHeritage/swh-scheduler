@@ -95,7 +95,7 @@ def register_lister_cli(
 
     for listing_type, task_type in task_types.items():
         now = utcnow()
-        next_run = now if listing_type == "full" else now + timedelta(days=1)
+        next_run = now + timedelta(days=1) if listing_type == "incremental" else now
         task_add(
             scheduler,
             task_type_name=task_type["type"],
