@@ -125,15 +125,21 @@ def register_lister_cli(
     default=None,
     help="Limit origins to those listed from lister with instance name",
 )
+@click.option(
+    "--queue-name-prefix",
+    default="add_forge_now",
+    help='Prefix queue to use when scheduling tasks. Default to "add_forge_now".',
+)
 @click.pass_context
 def schedule_first_visits_cli(
     ctx,
     visit_type_names: List[str],
     lister_name: Optional[str] = None,
     lister_instance_name: Optional[str] = None,
+    queue_name_prefix: str = "add_forge_now",
 ):
     """Send next origin visits of VISIT_TYPE_NAME(S) loader to celery, filling the
-    associated add_forge_now queue(s).
+    associated "prefixed" add_forge_now queue(s).
 
     """
     from .utils import get_task_type, send_to_celery
@@ -149,7 +155,7 @@ def schedule_first_visits_cli(
             unknown_task_types.append(visit_type_name)
             continue
         queue_name = task_type["backend_name"]
-        visit_type_to_queue[visit_type_name] = f"add_forge_now:{queue_name}"
+        visit_type_to_queue[visit_type_name] = f"{queue_name_prefix}:{queue_name}"
 
     if unknown_task_types:
         raise ValueError(f"Unknown task types {','.join(unknown_task_types)}.")
