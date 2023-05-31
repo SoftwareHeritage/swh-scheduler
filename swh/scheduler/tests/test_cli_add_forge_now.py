@@ -43,6 +43,7 @@ def test_schedule_first_visits_cli_unknown_visit_type(
         ([], []),
         ([], ["--lister-name", "github", "--lister-instance-name", "github"]),
         (["--preset", "staging"], []),
+        ([], ["--queue-name-prefix", "add_forge_now_slow"]),
     ],
 )
 def test_schedule_first_visits_cli(
@@ -91,6 +92,19 @@ def test_schedule_first_visits_cli(
     }
 
     assert scheduled_tasks == expected_tasks
+
+    # Ensure the scheduling happens on the right queue
+    queue_name = send_task.call_args[1]["queue"]
+    queue_name_prefix, queue_name_suffix = queue_name.split(":")
+
+    try:
+        arg_index = subcmd_args.index("--queue-name-prefix")
+        expected_queue_name_prefix = subcmd_args[arg_index + 1]
+    except ValueError:
+        expected_queue_name_prefix = "add_forge_now"
+
+    assert queue_name_prefix == expected_queue_name_prefix
+    assert queue_name_suffix == "swh.loader.git.tasks.UpdateGitRepository"
 
 
 def _create_task_type(
