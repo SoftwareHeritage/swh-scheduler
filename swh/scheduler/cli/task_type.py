@@ -41,7 +41,13 @@ PLUGIN_WORKER_DESCRIPTIONS = {
 @cli.group("task-type")
 @click.pass_context
 def task_type(ctx):
-    """Manipulate task types."""
+    """Manipulate task types.
+
+    Expected configuration:
+
+    \b
+    * :ref:`cli-config-scheduler`
+    """
     scheduler = ctx.obj["scheduler"]
     if not scheduler:
         ctx.fail("Scheduler class (local/remote) must be instantiated")

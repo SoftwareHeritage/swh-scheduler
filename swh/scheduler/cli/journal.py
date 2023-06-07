@@ -23,7 +23,14 @@ logger = logging.getLogger(__name__)
     help="Maximum number of objects to replay. Default is to run forever.",
 )
 def visit_stats_journal_client(ctx, stop_after_objects):
-    """Keep the the origin visits stats table up to date from a swh kafka journal"""
+    """Keep the the origin visits stats table up to date from a swh kafka journal
+
+    Expected configuration:
+
+    \b
+    * :ref:`cli-config-journal`
+    * :ref:`cli-config-scheduler`
+    """
     from functools import partial
 
     from swh.journal.client import get_journal_client
