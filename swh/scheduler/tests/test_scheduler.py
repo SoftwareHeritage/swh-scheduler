@@ -1,12 +1,11 @@
-# Copyright (C) 2017-2022  The Software Heritage developers
+# Copyright (C) 2017-2023  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
 from collections import defaultdict
 import copy
-import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 import inspect
 import random
 from typing import Any, Dict, List, Optional, Tuple
@@ -25,7 +24,7 @@ from swh.scheduler.model import (
     OriginVisitStats,
     SchedulerMetrics,
 )
-from swh.scheduler.utils import utcnow
+from swh.scheduler.utils import create_oneshot_task_dict, utcnow
 
 from .common import (
     LISTERS,
@@ -157,6 +156,69 @@ class TestScheduler:
         expected_priorities = NUM_PRIORITY_TASKS.copy()
         expected_priorities[None] += num_git
         assert dict(actual_priorities) == expected_priorities
+
+    def test_create_tasks_with_custom_next_run(self, swh_scheduler):
+        self._create_task_types(swh_scheduler)
+        first_next_run = utcnow()
+        second_next_run = utcnow() + timedelta(hours=6)
+        task_type = TEMPLATES["test-git"]["type"]
+
+        tasks = swh_scheduler.create_tasks(
+            [create_oneshot_task_dict(task_type, next_run=first_next_run)]
+        )
+        assert tasks
+        assert tasks[0]["next_run"] == first_next_run
+
+        tasks += swh_scheduler.create_tasks(
+            [create_oneshot_task_dict(task_type, next_run=second_next_run)]
+        )
+        assert len(tasks) > 1
+        assert tasks[1]["next_run"] == second_next_run
+
+        ready_tasks = swh_scheduler.peek_ready_tasks(task_type, timestamp=utcnow())
+        assert ready_tasks
+        assert ready_tasks[0]["id"] == tasks[0]["id"]
+
+        ready_tasks = swh_scheduler.peek_ready_tasks(
+            task_type, timestamp=utcnow() + timedelta(hours=6)
+        )
+        assert len(ready_tasks) > 1
+        assert ready_tasks[1]["id"] == tasks[1]["id"]
+
+        grabbed_tasks = swh_scheduler.grab_ready_tasks(
+            task_type, timestamp=utcnow() + timedelta(hours=6)
+        )
+        assert len(grabbed_tasks) == len(ready_tasks)
+
+        backend_tasks = [
+            {
+                "task": task["id"],
+                "backend_id": str(uuid.uuid4()),
+                "scheduled": utcnow() + timedelta(hours=i * 6),
+            }
+            for i, task in enumerate(grabbed_tasks)
+        ]
+
+        swh_scheduler.mass_schedule_task_runs(backend_tasks)
+
+        task_runs = swh_scheduler.get_task_runs(task_ids=[task["id"] for task in tasks])
+        assert len(task_runs) == len(tasks)
+        for i, task in enumerate(backend_tasks):
+            status = "eventful"
+            start = utcnow() + timedelta(hours=i * 6)
+            end = start + timedelta(minutes=5)
+            task_run = swh_scheduler.start_task_run(
+                task["backend_id"],
+                timestamp=start,
+            )
+            task_run = swh_scheduler.end_task_run(
+                task["backend_id"],
+                status=status,
+                timestamp=end,
+            )
+            assert task_run["status"] == status
+            assert task_run["started"] == start
+            assert task_run["ended"] == end
 
     def test_peek_ready_tasks_no_priority(self, swh_scheduler):
         self._create_task_types(swh_scheduler)
@@ -327,7 +389,7 @@ class TestScheduler:
         assert make_real_dicts(swh_scheduler.search_tasks()) == make_real_dicts(tasks)
 
     def assert_filtered_task_ok(
-        self, task: Dict[str, Any], after: datetime.datetime, before: datetime.datetime
+        self, task: Dict[str, Any], after: datetime, before: datetime
     ) -> None:
         """Ensure filtered tasks have the right expected properties
         (within the range, recurring disabled, etc..)
@@ -912,7 +974,7 @@ class TestScheduler:
         )
 
         # Give all origins but one a last_scheduled date
-        base_date = datetime.datetime(2020, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+        base_date = datetime(2020, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
         visit_stats = [
             OriginVisitStats(
                 url=origin.url,
@@ -1057,7 +1119,7 @@ class TestScheduler:
         )
 
         # Update known origins with a `last_update` field that we control
-        base_date = datetime.datetime(2020, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+        base_date = datetime(2020, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
         updated_origins = [
             attr.evolve(origin, last_update=base_date - timedelta(seconds=i))
             for i, origin in enumerate(origins)
@@ -1085,7 +1147,7 @@ class TestScheduler:
         )
 
         # Update known origins with a `last_update` field that we control
-        base_date = datetime.datetime(2020, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+        base_date = datetime(2020, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
         updated_origins = [
             attr.evolve(origin, last_update=base_date - timedelta(seconds=i))
             for i, origin in enumerate(origins)
@@ -1288,7 +1350,7 @@ class TestScheduler:
         origin2 = attr.evolve(
             origin1,
             lister_id=lister2.id,
-            last_update=origin1.last_update + datetime.timedelta(seconds=10),
+            last_update=origin1.last_update + timedelta(seconds=10),
         )
 
         origins = [origin1, origin2]
@@ -1561,7 +1623,7 @@ class TestScheduler:
     def test_update_metrics_explicit_timestamp(self, swh_scheduler, listed_origins):
         swh_scheduler.record_listed_origins(listed_origins)
 
-        ts = datetime.datetime(2020, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+        ts = datetime(2020, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
 
         ret = swh_scheduler.update_metrics(timestamp=ts)
 
