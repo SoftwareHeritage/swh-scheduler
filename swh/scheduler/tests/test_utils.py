@@ -3,25 +3,31 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-from datetime import timezone
-from unittest.mock import patch
+from datetime import datetime, timedelta, timezone
 import uuid
+
+import pytest
 
 from swh.scheduler import model, utils
 
 from .common import LISTERS
 
 
-@patch("swh.scheduler.utils.datetime")
-def test_create_oneshot_task_dict_simple(mock_datetime):
-    mock_datetime.now.return_value = "some-date"
+@pytest.fixture
+def mock_datetime(mocker):
+    now = datetime.now(tz=timezone.utc)
+    mock_datetime = mocker.patch("swh.scheduler.utils.datetime")
+    mock_datetime.now.return_value = now
+    return mock_datetime
 
+
+def test_create_oneshot_task_dict_simple(mock_datetime):
     actual_task = utils.create_oneshot_task_dict("some-task-type")
 
     expected_task = {
         "policy": "oneshot",
         "type": "some-task-type",
-        "next_run": "some-date",
+        "next_run": mock_datetime.now.return_value,
         "arguments": {
             "args": [],
             "kwargs": {},
@@ -32,10 +38,24 @@ def test_create_oneshot_task_dict_simple(mock_datetime):
     mock_datetime.now.assert_called_once_with(tz=timezone.utc)
 
 
-@patch("swh.scheduler.utils.datetime")
-def test_create_oneshot_task_dict_other_call(mock_datetime):
-    mock_datetime.now.return_value = "some-other-date"
+def test_create_oneshot_task_dict_with_next_run():
+    next_run = datetime.now(tz=timezone.utc) + timedelta(hours=1)
+    actual_task = utils.create_oneshot_task_dict("some-task-type", next_run=next_run)
 
+    expected_task = {
+        "policy": "oneshot",
+        "type": "some-task-type",
+        "next_run": next_run,
+        "arguments": {
+            "args": [],
+            "kwargs": {},
+        },
+    }
+
+    assert actual_task == expected_task
+
+
+def test_create_oneshot_task_dict_other_call(mock_datetime):
     actual_task = utils.create_oneshot_task_dict(
         "some-task-type", "arg0", "arg1", priority="high", other_stuff="normal"
     )
@@ -43,7 +63,7 @@ def test_create_oneshot_task_dict_other_call(mock_datetime):
     expected_task = {
         "policy": "oneshot",
         "type": "some-task-type",
-        "next_run": "some-other-date",
+        "next_run": mock_datetime.now.return_value,
         "arguments": {
             "args": ("arg0", "arg1"),
             "kwargs": {"other_stuff": "normal"},
@@ -55,10 +75,7 @@ def test_create_oneshot_task_dict_other_call(mock_datetime):
     mock_datetime.now.assert_called_once_with(tz=timezone.utc)
 
 
-@patch("swh.scheduler.utils.datetime")
 def test_create_task_dict(mock_datetime):
-    mock_datetime.now.return_value = "date"
-
     actual_task = utils.create_task_dict(
         "task-type",
         "recurring",
@@ -72,7 +89,7 @@ def test_create_task_dict(mock_datetime):
     expected_task = {
         "policy": "recurring",
         "type": "task-type",
-        "next_run": "date",
+        "next_run": mock_datetime.now.return_value,
         "arguments": {
             "args": ("arg0", "arg1"),
             "kwargs": {"other_stuff": "normal"},

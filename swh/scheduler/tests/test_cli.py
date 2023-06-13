@@ -165,16 +165,18 @@ Task 1
 
 def test_schedule_unknown_task_type(swh_scheduler):
     """When scheduling unknown task type, the cli should raise."""
-    with pytest.raises(ValueError, match="Unknown"):
-        invoke(
-            swh_scheduler,
-            False,
-            [
-                "task",
-                "add",
-                "unknown-task-type-should-raise",
-            ],
-        )
+    result = invoke(
+        swh_scheduler,
+        True,
+        [
+            "task",
+            "add",
+            "unknown-task-type-should-raise",
+        ],
+    )
+
+    assert "Unknown" in result.output
+    assert result.exit_code != 0
 
 
 def test_list_pending_tasks_none(swh_scheduler):
@@ -901,18 +903,19 @@ def test_cli_task_runner_unknown_task_types(swh_scheduler, storage):
     unknown_task_type = "unknown-task-type"
     assert unknown_task_type not in task_type_names
 
-    with pytest.raises(ValueError, match="Unknown"):
-        invoke(
-            swh_scheduler,
-            False,
-            [
-                "start-runner",
-                "--task-type",
-                known_task_type,
-                "--task-type",
-                unknown_task_type,
-            ],
-        )
+    result = invoke(
+        swh_scheduler,
+        True,
+        [
+            "start-runner",
+            "--task-type",
+            known_task_type,
+            "--task-type",
+            unknown_task_type,
+        ],
+    )
+    assert "Unknown" in result.output
+    assert result.exit_code != 0
 
 
 @pytest.mark.parametrize("flag_priority", ["--with-priority", "--without-priority"])
@@ -951,7 +954,7 @@ def test_cli_task_runner_no_task(swh_scheduler, storage):
     # noop. We are just checking the runner does not explode here.
     result = invoke(
         swh_scheduler,
-        False,
+        True,
         [
             "start-runner",
         ],

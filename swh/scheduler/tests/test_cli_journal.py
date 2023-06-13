@@ -45,14 +45,10 @@ def swh_scheduler_cfg_path(swh_scheduler_cfg, tmp_path):
     return _write_configuration_path(swh_scheduler_cfg, tmp_path)
 
 
-def invoke(args: List[str], config_path: str, catch_exceptions: bool = False) -> Result:
+def invoke(args: List[str], config_path: str) -> Result:
     """Invoke swh scheduler journal subcommands"""
     runner = CliRunner()
-    result = runner.invoke(cli, ["-C" + config_path] + args)
-    if not catch_exceptions and result.exception:
-        print(result.output)
-        raise result.exception
-    return result
+    return runner.invoke(cli, ["-C" + config_path] + args)
 
 
 def test_cli_journal_client_origin_visit_status_misconfiguration_no_scheduler(
@@ -61,15 +57,16 @@ def test_cli_journal_client_origin_visit_status_misconfiguration_no_scheduler(
     config = swh_scheduler_cfg.copy()
     config["scheduler"] = {"cls": "foo"}
     config_path = _write_configuration_path(config, tmp_path)
-    with pytest.raises(ValueError, match="must be instantiated"):
-        invoke(
-            [
-                "journal-client",
-                "--stop-after-objects",
-                "1",
-            ],
-            config_path,
-        )
+    result = invoke(
+        [
+            "journal-client",
+            "--stop-after-objects",
+            "1",
+        ],
+        config_path,
+    )
+    assert "must be instantiated" in result.output
+    assert result.exit_code != 0
 
 
 def test_cli_journal_client_origin_visit_status_misconfiguration_missing_journal_conf(
@@ -79,15 +76,16 @@ def test_cli_journal_client_origin_visit_status_misconfiguration_missing_journal
     config.pop("journal", None)
     config_path = _write_configuration_path(config, tmp_path)
 
-    with pytest.raises(ValueError, match="Missing 'journal'"):
-        invoke(
-            [
-                "journal-client",
-                "--stop-after-objects",
-                "1",
-            ],
-            config_path,
-        )
+    result = invoke(
+        [
+            "journal-client",
+            "--stop-after-objects",
+            "1",
+        ],
+        config_path,
+    )
+    assert "Missing 'journal'" in result.output
+    assert result.exit_code != 0
 
 
 def test_cli_journal_client_origin_visit_status(

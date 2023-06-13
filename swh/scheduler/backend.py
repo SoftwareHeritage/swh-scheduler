@@ -53,7 +53,7 @@ def format_query(query, keys):
 class SchedulerBackend:
     """Backend for the Software Heritage scheduling database."""
 
-    current_version = 33
+    current_version = 34
 
     def __init__(self, db, min_pool_conns=1, max_pool_conns=10):
         """

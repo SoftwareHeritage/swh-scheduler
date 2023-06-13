@@ -36,13 +36,13 @@ def visit_stats_journal_client(ctx, stop_after_objects):
             extra_message = f"Scheduler problems: {any_exception}"
             message = "\n".join([message, extra_message])
             logger.exception(any_exception)
-        raise ValueError(message)
+        ctx.fail(message)
 
     scheduler = ctx.obj["scheduler"]
     config = ctx.obj["config"]
 
     if "journal" not in config:
-        raise ValueError("Missing 'journal' configuration key")
+        ctx.fail("Missing 'journal' configuration key")
 
     journal_cfg = config["journal"]
     journal_cfg["stop_after_objects"] = stop_after_objects or journal_cfg.get(

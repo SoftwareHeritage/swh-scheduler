@@ -66,7 +66,7 @@ def runner(ctx, period, task_type_names, with_priority):
     for task_type_name in task_type_names:
         task_type = scheduler.get_task_type(task_type_name)
         if not task_type:
-            raise ValueError(f"Unknown {task_type_name}")
+            ctx.fail(f"Unknown {task_type_name}")
         task_types.append(task_type)
 
     try:
@@ -95,7 +95,7 @@ def listener(ctx):
     handle their workflow status in the database."""
     scheduler_backend = ctx.obj["scheduler"]
     if not scheduler_backend:
-        raise ValueError("Scheduler class (local/remote) must be instantiated")
+        ctx.fail("Scheduler class (local/remote) must be instantiated")
 
     broker = (
         ctx.obj["config"]
@@ -159,7 +159,7 @@ def schedule_recurrent(ctx, visit_types: List[str]):
             task_type_name = f"load-{visit_type}"
             task_type = scheduler.get_task_type(task_type_name)
             if not task_type:
-                raise ValueError(f"Unknown task type: {task_type_name}")
+                ctx.fail(f"Unknown task type: {task_type_name}")
 
     exc_queue: Queue[Tuple[str, BaseException]] = Queue()
     threads: VisitSchedulerThreads = {}

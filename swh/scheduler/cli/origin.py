@@ -25,10 +25,11 @@ if TYPE_CHECKING:
 def origin(ctx):
     """Manipulate listed origins."""
     if not ctx.obj["scheduler"]:
-        raise ValueError("Scheduler class (local/remote) must be instantiated")
+        ctx.fail("Scheduler class (local/remote) must be instantiated")
 
 
 def format_origins(
+    ctx: click.Context,
     origins: List[ListedOrigin],
     fields: Optional[List[str]] = None,
     with_header: bool = True,
@@ -53,9 +54,7 @@ def format_origins(
 
     unknown_fields = set(fields) - set(expected_fields)
     if unknown_fields:
-        raise ValueError(
-            "Unknown ListedOrigin field(s): %s" % ", ".join(unknown_fields)
-        )
+        ctx.fail("Unknown ListedOrigin field(s): %s" % ", ".join(unknown_fields))
 
     output = StringIO()
     writer = csv.writer(output)
@@ -107,7 +106,9 @@ def grab_next(
     scheduler = ctx.obj["scheduler"]
 
     origins = scheduler.grab_next_visits(type, count, policy=policy)
-    for line in format_origins(origins, fields=parsed_fields, with_header=with_header):
+    for line in format_origins(
+        ctx, origins, fields=parsed_fields, with_header=with_header
+    ):
         click.echo(line)
 
 
@@ -201,7 +202,8 @@ def send_to_celery_cli(
 
     task_type = get_task_type(scheduler, visit_type_name)
     if not task_type:
-        raise ValueError(f"Unknown task type {task_type}.")
+        ctx.fail(f"Unknown task type {task_type}.")
+        assert False  # for mypy
 
     queue_name = queue or task_type["backend_name"]
 

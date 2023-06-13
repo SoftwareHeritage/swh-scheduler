@@ -24,17 +24,19 @@ def test_schedule_first_visits_cli_unknown_visit_type(
     swh_scheduler,
 ):
     "Calling cli without a known visit type should raise"
-    with pytest.raises(ValueError, match="Unknown"):
-        invoke(
-            swh_scheduler,
-            args=(
-                "schedule-first-visits",
-                "-t",
-                "unknown-vt0",
-                "--type-name",
-                "unknown-visit-type1",
-            ),
-        )
+    result = invoke(
+        swh_scheduler,
+        (
+            "schedule-first-visits",
+            "-t",
+            "unknown-vt0",
+            "--type-name",
+            "unknown-visit-type1",
+        ),
+        True,
+    )
+    assert "Unknown" in result.output
+    assert result.exit_code != 0
 
 
 @pytest.mark.parametrize(
@@ -168,11 +170,13 @@ def test_schedule_register_lister(swh_scheduler, stored_lister, preset):
 
 def test_register_lister_unknown_task_type(swh_scheduler):
     """When scheduling unknown task type, the cli should raise."""
-    with pytest.raises(ValueError, match="Unknown"):
-        invoke(
-            swh_scheduler,
-            [
-                "register-lister",
-                "unknown-lister-type-should-raise",
-            ],
-        )
+    result = invoke(
+        swh_scheduler,
+        [
+            "register-lister",
+            "unknown-lister-type-should-raise",
+        ],
+        True,
+    )
+    assert "Unknown" in result.output
+    assert result.exit_code != 0
