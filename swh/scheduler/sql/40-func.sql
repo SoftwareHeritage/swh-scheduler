@@ -38,7 +38,8 @@ begin
                            arguments = t.arguments and
                            policy = t.policy and
                            priority is not distinct from t.priority and
-                           status = t.status);
+                           status = t.status and
+                           (policy != 'oneshot' or next_run = t.next_run));
 
   return query
     select distinct t.*
@@ -48,7 +49,8 @@ begin
       tt.arguments = t.arguments and
       tt.policy = t.policy and
       tt.priority is not distinct from t.priority and
-      tt.status = t.status
+      tt.status = t.status and
+      tt.next_run = t.next_run
     );
 end;
 $$;

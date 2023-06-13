@@ -4,6 +4,7 @@
 # See top-level LICENSE file for more information
 
 from typing import Tuple
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -29,28 +30,36 @@ def test_cli_origin(swh_scheduler):
 def test_format_origins_basic(listed_origins):
     listed_origins = listed_origins[:100]
 
-    basic_output = list(format_origins(listed_origins))
+    ctx = MagicMock()
+
+    basic_output = list(format_origins(ctx, listed_origins))
+    assert ctx.method_calls == []
     # 1 header line + all origins
     assert len(basic_output) == len(listed_origins) + 1
 
-    no_header_output = list(format_origins(listed_origins, with_header=False))
+    no_header_output = list(format_origins(ctx, listed_origins, with_header=False))
+    assert ctx.method_calls == []
     assert basic_output[1:] == no_header_output
 
 
 def test_format_origins_fields_unknown(listed_origins):
     listed_origins = listed_origins[:10]
 
-    it = format_origins(listed_origins, fields=["unknown_field"])
+    ctx = MagicMock()
+    it = format_origins(ctx, listed_origins, fields=["unknown_field"])
+    assert ctx.method_calls == []
 
-    with pytest.raises(ValueError, match="unknown_field"):
-        next(it)
+    next(it)
+    ctx.fail.assert_called()
 
 
 def test_format_origins_fields(listed_origins):
     listed_origins = listed_origins[:10]
     fields = ["lister_id", "url", "visit_type"]
 
-    output = list(format_origins(listed_origins, fields=fields))
+    ctx = MagicMock()
+    output = list(format_origins(ctx, listed_origins, fields=fields))
+    assert ctx.method_calls == []
     assert output[0] == ",".join(fields)
     for i, origin in enumerate(listed_origins):
         assert output[i + 1] == f"{origin.lister_id},{origin.url},{origin.visit_type}"
@@ -118,8 +127,13 @@ def test_send_to_celery_unknown_visit_type(
     swh_scheduler,
 ):
     "Calling cli without a known visit type should raise"
-    with pytest.raises(ValueError, match="Unknown"):
-        invoke(swh_scheduler, args=("send-to-celery", "unknown-visit-type"))
+    result = invoke(
+        swh_scheduler,
+        args=("send-to-celery", "unknown-visit-type"),
+        catch_exceptions=True,
+    )
+    assert "Unknown" in result.output
+    assert result.exit_code != 0
 
 
 @pytest.mark.parametrize(

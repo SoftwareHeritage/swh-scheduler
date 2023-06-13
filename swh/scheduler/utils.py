@@ -5,7 +5,7 @@
 
 
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from .interface import SchedulerInterface
 from .model import ListedOrigin, Lister
@@ -34,15 +34,19 @@ def get_task(task_name):
     return app.tasks[task_name]
 
 
-def create_task_dict(type, policy, *args, **kwargs):
+def create_task_dict(
+    type: str, policy: str, *args, next_run: Optional[datetime] = None, **kwargs
+) -> Dict[str, Any]:
     """Create a task with type and policy, scheduled for as soon as
        possible.
 
     Args:
-        type (str): Type of oneshot task as per swh-scheduler's db
+        type: Type of oneshot task as per swh-scheduler's db
                     table task_type's column (Ex: load-git,
                     check-deposit)
-        policy (str): oneshot or recurring policy
+        policy: oneshot or recurring policy
+        next_run: optional date and time from which the task can be executed,
+            use current time otherwise
 
     Returns:
         Expected dictionary for the one-shot task scheduling api
@@ -58,7 +62,7 @@ def create_task_dict(type, policy, *args, **kwargs):
     task = {
         "policy": policy,
         "type": type,
-        "next_run": utcnow(),
+        "next_run": next_run or utcnow(),
         "arguments": {
             "args": args if args else [],
             "kwargs": kwargs if kwargs else {},
@@ -104,17 +108,20 @@ def create_origin_task_dicts(
     return [create_origin_task_dict(o, listers[o.lister_id]) for o in origins]
 
 
-def create_oneshot_task_dict(type, *args, **kwargs):
+def create_oneshot_task_dict(
+    type: str, *args, next_run: Optional[datetime] = None, **kwargs
+):
     """Create a oneshot task scheduled for as soon as possible.
 
     Args:
-        type (str): Type of oneshot task as per swh-scheduler's db
-                    table task_type's column (Ex: load-git,
-                    check-deposit)
+        type: Type of oneshot task as per swh-scheduler's db
+            table task_type's column (Ex: load-git, check-deposit)
+        next_run: optional date and time from which the task can be executed,
+            use current time otherwise
 
     Returns:
         Expected dictionary for the one-shot task scheduling api
-        (swh.scheduler.backend.create_tasks)
+        (:func:`swh.scheduler.backend.create_tasks`)
 
     """
-    return create_task_dict(type, "oneshot", *args, **kwargs)
+    return create_task_dict(type, "oneshot", *args, next_run=next_run, **kwargs)

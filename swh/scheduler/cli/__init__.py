@@ -64,7 +64,7 @@ def cli(ctx, config_file, database, url, no_stdout):
     scheduler = None
     conf = config.read(config_file, DEFAULT_CONFIG)
     if "scheduler" not in conf:
-        raise ValueError("missing 'scheduler' configuration")
+        ctx.fail("missing 'scheduler' configuration")
 
     if database:
         conf["scheduler"]["cls"] = "postgresql"

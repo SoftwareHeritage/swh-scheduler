@@ -31,7 +31,8 @@ DATETIME = click.DateTime()
 @click.pass_context
 def task(ctx):
     """Manipulate tasks."""
-    pass
+    if not ctx.obj["scheduler"]:
+        ctx.fail("Scheduler class (local/remote) must be instantiated")
 
 
 @task.command("schedule")
@@ -85,8 +86,6 @@ def schedule_tasks(ctx, columns, delimiter, file):
     tasks = []
     now = utcnow()
     scheduler = ctx.obj["scheduler"]
-    if not scheduler:
-        raise ValueError("Scheduler class (local/remote) must be instantiated")
 
     reader = csv.reader(file, delimiter=delimiter)
     for line in reader:
@@ -144,12 +143,10 @@ def schedule_task(ctx, task_type_name, options, policy, priority, next_run):
     from .utils import parse_options, task_add
 
     scheduler = ctx.obj["scheduler"]
-    if not scheduler:
-        raise ValueError("Scheduler class (local/remote) must be instantiated")
 
     task_type = scheduler.get_task_type(task_type_name)
     if not task_type:
-        raise ValueError(f"Unknown task name {task_type_name}.")
+        ctx.fail(f"Unknown task name {task_type_name}.")
 
     (args, kw) = parse_options(options)
     task_add(
@@ -282,8 +279,6 @@ def list_pending_tasks(ctx, task_types, num_tasks, before):
     from .utils import pretty_print_task
 
     scheduler = ctx.obj["scheduler"]
-    if not scheduler:
-        raise ValueError("Scheduler class (local/remote) must be instantiated")
 
     output = []
     for task_type in task_types:
@@ -383,8 +378,6 @@ def list_tasks(
     from .utils import pretty_print_run, pretty_print_task
 
     scheduler = ctx.obj["scheduler"]
-    if not scheduler:
-        raise ValueError("Scheduler class (local/remote) must be instantiated")
 
     if not task_type:
         task_type = [x["type"] for x in scheduler.get_task_types()]
@@ -454,8 +447,6 @@ def respawn_tasks(ctx, task_ids: List[str], next_run: datetime.datetime):
     from swh.scheduler.utils import utcnow
 
     scheduler = ctx.obj["scheduler"]
-    if not scheduler:
-        raise ValueError("Scheduler class (local/remote) must be instantiated")
     if next_run is None:
         next_run = utcnow()
     output = []

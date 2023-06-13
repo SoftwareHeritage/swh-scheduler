@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 def add_forge_now(ctx, preset):
     """Manipulate add-forge-now requests."""
     if not ctx.obj["scheduler"]:
-        raise ValueError("Scheduler class (local/remote) must be instantiated")
+        ctx.fail("Scheduler class (local/remote) must be instantiated")
 
     ctx.obj["preset"] = preset
 
@@ -75,7 +75,7 @@ def register_lister_cli(
             task_types[listing_type] = task_type
 
     if not task_types:
-        raise ValueError(f"Unknown lister type {lister_name}.")
+        ctx.fail(f"Unknown lister type {lister_name}.")
 
     (args, kw) = parse_options(options)
 
@@ -158,7 +158,7 @@ def schedule_first_visits_cli(
         visit_type_to_queue[visit_type_name] = f"{queue_name_prefix}:{queue_name}"
 
     if unknown_task_types:
-        raise ValueError(f"Unknown task types {','.join(unknown_task_types)}.")
+        ctx.fail(f"Unknown task types {','.join(unknown_task_types)}.")
 
     send_to_celery(
         scheduler,
