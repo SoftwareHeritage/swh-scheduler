@@ -63,18 +63,19 @@ def test_cli_schedule_recurrent_unknown_visit_type(swh_scheduler):
     """When passed an unknown visit type, the recurrent visit scheduler should refuse
     to start."""
 
-    with pytest.raises(ValueError, match="Unknown"):
-        invoke(
-            swh_scheduler,
-            False,
-            [
-                "schedule-recurrent",
-                "--visit-type",
-                "unknown",
-                "--visit-type",
-                "test-git",
-            ],
-        )
+    result = invoke(
+        swh_scheduler,
+        True,
+        [
+            "schedule-recurrent",
+            "--visit-type",
+            "unknown",
+            "--visit-type",
+            "test-git",
+        ],
+    )
+    assert "Unknown" in result.output
+    assert result.exit_code != 0
 
 
 def test_cli_schedule_recurrent_noop(swh_scheduler, mocker):

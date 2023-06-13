@@ -125,5 +125,6 @@ def test_register_ttypes_filter(
 @pytest.mark.parametrize("cli_command", ["list", "register", "add"])
 def test_cli_task_type_raise(cli_runner, cli_command):
     """Without a proper configuration, the cli raises"""
-    with pytest.raises(ValueError, match="Scheduler class"):
-        cli_runner.invoke(cli, ["task-type", cli_command], catch_exceptions=False)
+    result = cli_runner.invoke(cli, ["task-type", cli_command])
+    assert "Scheduler class" in result.output
+    assert result.exit_code != 0

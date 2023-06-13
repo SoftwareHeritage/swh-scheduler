@@ -44,7 +44,7 @@ def task_type(ctx):
     """Manipulate task types."""
     scheduler = ctx.obj["scheduler"]
     if not scheduler:
-        raise ValueError("Scheduler class (local/remote) must be instantiated")
+        ctx.fail("Scheduler class (local/remote) must be instantiated")
 
 
 @task_type.command("list")
