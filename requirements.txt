@@ -17,4 +17,5 @@ requests
 tabulate
 sentry-sdk
 setuptools
+testing.postgresql
 typing-extensions
