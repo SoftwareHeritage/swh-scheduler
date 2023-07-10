@@ -52,29 +52,27 @@ def schedule_tasks(ctx, columns, delimiter, file):
 
     The following columns are expected, and can be set through the -c option:
 
-     - type: the type of the task to be scheduled (mandatory)
-
-     - args: the arguments passed to the task (JSON list, defaults to an empty
-       list)
-
-     - kwargs: the keyword arguments passed to the task (JSON object, defaults
-       to an empty dict)
-
-     - next_run: the date at which the task should run (datetime, defaults to
-       now)
+    \b
+    - type: the type of the task to be scheduled (mandatory)
+    - args: the arguments passed to the task (JSON list, defaults to an empty
+      list)
+    - kwargs: the keyword arguments passed to the task (JSON object, defaults
+      to an empty dict)
+    - next_run: the date at which the task should run (datetime, defaults to
+      now)
 
     The CSV can be read either from a named file, or from stdin (use - as
     filename).
 
-    Use sample:
+    Use sample::
 
-    cat scheduling-task.txt | \
-        python3 -m swh.scheduler.cli \
-            --database 'service=swh-scheduler-dev' \
-            task schedule \
-                --columns type --columns kwargs --columns policy \
-                --delimiter ';' -
-
+        \b
+        cat scheduling-task.txt | \\
+            python3 -m swh.scheduler.cli \\
+                --database 'service=swh-scheduler-dev' \\
+                task schedule \\
+                    --columns type --columns kwargs --columns policy \\
+                    --delimiter ';' -
     """
     import csv
     import json
@@ -128,13 +126,15 @@ def schedule_task(ctx, task_type_name, options, policy, priority, next_run):
     task configuration. Further options are positional and keyword argument(s) of the
     task, in YAML format. Keyword args are of the form key=value.
 
-    Usage sample:
+    Usage sample::
 
-    swh-scheduler --database 'service=swh-scheduler' \
-        task add list-pypi
+        \b
+        swh-scheduler --database 'service=swh-scheduler' \\
+            task add list-pypi
 
-    swh-scheduler --database 'service=swh-scheduler' \
-        task add list-debian-distribution --policy=oneshot distribution=stretch
+        \b
+        swh-scheduler --database 'service=swh-scheduler' \\
+            task add list-debian-distribution --policy=oneshot distribution=stretch
 
     Note: if the priority is not given, the task won't have the priority set,
     which is considered as the lowest priority level.
@@ -224,10 +224,11 @@ def schedule_origin_metadata_index(
     keyword argument(s) of the task in the form key=value, where value is
     in YAML format.
 
-    Usage sample:
+    Usage sample::
 
-    swh-scheduler --database 'service=swh-scheduler' \
-        task schedule_origins index-origin-metadata
+        \b
+        swh-scheduler --database 'service=swh-scheduler' \\
+            task schedule_origins index-origin-metadata
     """
     from itertools import islice
 
@@ -440,9 +441,10 @@ def respawn_tasks(ctx, task_ids: List[str], next_run: datetime.datetime):
     Respawn tasks given by their ids (see the 'task list' command to
     find task ids) at the given date (immediately by default).
 
-    Eg.
+    For example::
 
-       swh-scheduler task respawn 1 3 12
+        \b
+        swh-scheduler task respawn 1 3 12
     """
     from swh.scheduler.utils import utcnow
 

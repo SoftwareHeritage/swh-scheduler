@@ -49,13 +49,14 @@ def register_lister_cli(
 
     The specifics of what tasks are registered depends on the add-forge-now --preset
     option:
+
+    \b
     - staging preset: a single oneshot full listing task is scheduled. This "full"
       listing is limited to 3 pages and 10 origins per page. The origins are recorded as
       disabled (to avoid their recurrent loading).
     - production preset: a recurrent full and incremental (if the loader has such a
       task) listing task are scheduled. The first run of the full lister is scheduled
       immediately, and the first run of the incremental lister is delayed by a day.
-
     """
     from .utils import lister_task_type, parse_options, task_add
 
