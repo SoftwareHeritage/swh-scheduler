@@ -34,8 +34,9 @@ logger = logging.getLogger(__name__)
 
 
 DEFAULT_POLICY = [
-    {"policy": "already_visited_order_by_lag", "weight": 50},
-    {"policy": "never_visited_oldest_update_first", "weight": 50},
+    {"policy": "already_visited_order_by_lag", "weight": 40},
+    {"policy": "never_visited_oldest_update_first", "weight": 40},
+    {"policy": "origins_without_last_update", "weight": 20},
 ]
 DEFAULT_DVCS_POLICY = [
     {"policy": "already_visited_order_by_lag", "weight": 49},
