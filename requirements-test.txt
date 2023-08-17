@@ -10,3 +10,4 @@ types-flask
 types-pyyaml
 types-requests
 types-Deprecated
+types-tabulate
