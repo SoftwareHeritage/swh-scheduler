@@ -1,3 +1,14 @@
+swh-scheduler (1.10.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 1.10.0     - (tagged by Guillaume Samson
+    <guillaume.samson@softwareheritage.org> on 2023-08-17 15:22:43
+    +0200)
+  * Upstream changes:     - v1.10.0     - Changelog:     - add-forge-
+    now/cli: add check-ingested-origins command     - add-forge-now/cli:
+    add check-listed-origins command
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 17 Aug 2023 13:30:36 +0000
+
 swh-scheduler (1.9.2-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 1.9.2     - (tagged by Antoine R. Dumont
