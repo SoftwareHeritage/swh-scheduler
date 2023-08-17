@@ -253,3 +253,116 @@ def update_metrics(ctx, lister: Optional[str], instance: Optional[str]):
 
     ret = scheduler.update_metrics(lister_id=lister_id)
     click.echo(json.dumps(list(map(dictify_metrics, ret)), indent=4, sort_keys=True))
+
+
+@origin.command("check-listed-origins")
+@click.option(
+    "--list",
+    "-l",
+    is_flag=True,
+    help="Display listed origins (disabled by default).",
+    required=False,
+)
+@click.argument("lister_name", nargs=1, required=True)
+@click.argument("instance_name", nargs=1, required=True)
+@click.pass_context
+def check_listed_origins_cli(ctx, list, lister_name, instance_name):
+
+    """
+    Check listed origins registered in the scheduler database.
+    """
+
+    from tabulate import tabulate
+
+    from .utils import check_listed_origins
+
+    scheduler = ctx.obj["scheduler"]
+    listed_origins = check_listed_origins(
+        scheduler=scheduler,
+        lister_name=lister_name,
+        instance_name=instance_name,
+    )
+    listed_origins_table = [
+        (origin.url, str(origin.last_seen), str(origin.last_update))
+        for origin in listed_origins
+    ]
+    headers = ["url", "last_seen", "last_update"]
+
+    if list:
+        print(tabulate(listed_origins_table, headers))
+    print(
+        f"\nForge {instance_name} ({lister_name}) has {len(listed_origins)} \
+listed origins in the scheduler database."
+    )
+
+
+@origin.command("check-ingested-origins")
+@click.option(
+    "--list",
+    "-l",
+    is_flag=True,
+    help="Display listed origins (disabled by default).",
+    required=False,
+)
+@click.option(
+    "--watch",
+    "-w",
+    is_flag=True,
+    help="Watch for ingestion progress at intervals.",
+    required=False,
+    flag_value=600,
+)
+@click.argument("lister_name", nargs=1, required=True)
+@click.argument("instance_name", nargs=1, required=True)
+@click.pass_context
+def check_ingested_origins_cli(ctx, list, watch, lister_name, instance_name):
+
+    """
+    Check the origins marked as ingested in the scheduler database.
+    """
+
+    from time import sleep
+
+    from .utils import check_listed_origins, count_ingested_origins
+
+    scheduler = ctx.obj["scheduler"]
+    listed_origins = check_listed_origins(
+        scheduler=scheduler,
+        lister_name=lister_name,
+        instance_name=instance_name,
+    )
+    ids = [(origin.url, origin.visit_type) for origin in listed_origins]
+    status_counters = count_ingested_origins(
+        scheduler=scheduler,
+        ids=ids,
+        instance_name=instance_name,
+    )
+
+    if watch:
+        while status_counters["None"] != 0:
+            status_counters = count_ingested_origins(
+                scheduler=scheduler,
+                ids=ids,
+                instance_name=instance_name,
+            )
+            if status_counters["None"] > 0:
+                print(f"Forge {instance_name} ingestion is still in progress.")
+                for status, counter in status_counters.items():
+                    print("{0:<11}: {1}".format(status, counter))
+            sleep(watch)
+
+    status_counters = count_ingested_origins(
+        scheduler=scheduler,
+        ids=ids,
+        instance_name=instance_name,
+        displayed=list,
+    )
+    print(
+        f"\nForge {instance_name} ({lister_name}) has {status_counters['total']} \
+scheduled ingests in the scheduler."
+    )
+    for status, counter in status_counters.items():
+        print(f"{status:<13}: {counter}")
+
+    success_rate = status_counters["successful"] / status_counters["total"] * 100
+    print(f"{'success rate':<13}: {success_rate}%")

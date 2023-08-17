@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable
 
 import click
 
@@ -339,3 +339,82 @@ def lister_task_type(lister_name: str, lister_type: Optional[str] = None) -> str
     """
     prefix = f"list-{lister_name}"
     return f"{prefix}-{lister_type}" if lister_type else prefix
+
+
+def check_listed_origins(
+    scheduler: SchedulerInterface,
+    lister_name: str,
+    instance_name: str,
+    limit: int = 100000,
+):
+
+    listed_origins_lister = scheduler.get_lister(
+        name=lister_name, instance_name=instance_name
+    )
+
+    if listed_origins_lister is None:
+        exit(
+            f"Forge {instance_name} ({lister_name}) isn't registered \
+in the scheduler database."
+        )
+    else:
+        lister_id = listed_origins_lister.id
+
+    listed_origins = scheduler.get_listed_origins(
+        lister_id=lister_id,
+        enabled=None,
+        limit=limit,
+    ).results
+
+    if len(listed_origins) == 0:
+        exit(
+            f"Forge {instance_name} ({lister_name}) has {len(listed_origins)} \
+listed origin in the scheduler database."
+        )
+
+    return listed_origins
+
+
+def count_ingested_origins(
+    scheduler: SchedulerInterface,
+    ids: Iterable[Tuple[str, str]],
+    instance_name: str,
+    displayed: Optional[bool] = False,
+):
+
+    from tabulate import tabulate
+
+    ingested_origins = scheduler.origin_visit_stats_get(ids=ids)
+    status_counters = {
+        "failed": 0,
+        "None": 0,
+        "not_found": 0,
+        "successful": 0,
+        "total": len(ingested_origins),
+    }
+    ingested_origins_table = []
+    headers = ("url", "last_visit_status", "last_visit")
+
+    if status_counters["total"] == 0:
+        exit(
+            f"Forge {instance_name} has {len(ingested_origins)} \
+scheduled ingest in the scheduler database."
+        )
+
+    for ingested_origin in ingested_origins:
+        if ingested_origin.last_visit_status is not None:
+            ingested_origins_table.append(
+                [
+                    ingested_origin.url,
+                    ingested_origin.last_visit_status.value,
+                    str(ingested_origin.last_visit),
+                ]
+            )
+            status_counters[str(ingested_origin.last_visit_status.value)] += 1
+        else:
+            status_counters[str(ingested_origin.last_visit_status)] += 1
+
+    if displayed:
+        print(tabulate(ingested_origins_table, headers))
+
+    return status_counters

@@ -9,6 +9,7 @@ pika>=1.1.0
 psycopg2
 pyyaml
 requests
+tabulate
 sentry-sdk
 setuptools
 typing-extensions
@@ -35,6 +36,7 @@ types-flask
 types-pyyaml
 types-requests
 types-Deprecated
+types-tabulate
 swh.journal
 plotille
 simpy<4,>=3
