@@ -1,4 +1,4 @@
-# Copyright (C) 2019  The Software Heritage developers
+# Copyright (C) 2023  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -6,7 +6,6 @@
 import traceback
 
 from click.testing import CliRunner
-import pkg_resources
 import pytest
 import yaml
 
@@ -14,8 +13,8 @@ from swh.scheduler import get_scheduler
 from swh.scheduler.cli import cli
 
 FAKE_MODULE_ENTRY_POINTS = {
-    "lister.gnu=swh.lister.gnu:register",
-    "lister.pypi=swh.lister.pypi:register",
+    "lister.foo=swh.scheduler.tests.fixtures.lister.foo:register",
+    "loader.bar=swh.scheduler.tests.fixtures.loader.bar:register",
 }
 
 
@@ -24,24 +23,18 @@ def cli_runner():
     return CliRunner()
 
 
-@pytest.fixture
-def mock_pkg_resources(monkeypatch):
-    """Monkey patch swh.scheduler's mock_pkg_resources.iter_entry_point call"""
+@pytest.fixture(autouse=True)
+def mock_plugin_worker_descriptions(mocker):
+    """Register fake lister and loader for testing celery tasks registration."""
+    from pkg_resources import Distribution, EntryPoint
 
-    def fake_iter_entry_points(*args, **kwargs):
-        """Substitute fake function to return a fixed set of entrypoints"""
-        from pkg_resources import Distribution, EntryPoint
-
-        d = Distribution()
-        return [EntryPoint.parse(entry, dist=d) for entry in FAKE_MODULE_ENTRY_POINTS]
-
-    original_method = pkg_resources.iter_entry_points
-    monkeypatch.setattr(pkg_resources, "iter_entry_points", fake_iter_entry_points)
-
-    yield
-
-    # reset monkeypatch: is that needed?
-    monkeypatch.setattr(pkg_resources, "iter_entry_points", original_method)
+    d = Distribution()
+    entry_points = [
+        EntryPoint.parse(entry, dist=d) for entry in FAKE_MODULE_ENTRY_POINTS
+    ]
+    mocker.patch(
+        "swh.scheduler.cli.task_type._plugin_worker_descriptions",
+    ).return_value = {entry_point.name: entry_point for entry_point in entry_points}
 
 
 @pytest.fixture
@@ -58,8 +51,34 @@ def local_sched_configfile(local_sched_config, tmp_path):
     return configfile.as_posix()
 
 
-def test_register_ttypes_all(
-    cli_runner, mock_pkg_resources, local_sched_config, local_sched_configfile
+def test_register_unknown_task_type(
+    cli_runner,
+    local_sched_configfile,
+):
+    """Trying to register an unknown task type should return an error."""
+
+    command = [
+        "--config-file",
+        local_sched_configfile,
+        "task-type",
+        "register",
+        "-p",
+        "lister.baz",
+    ]
+
+    result = cli_runner.invoke(cli, command)
+
+    assert result.exit_code != 0
+    assert (
+        "That provided plugin is unknown: lister.baz.\n"
+        "Available ones are: lister.foo, loader.bar."
+    ) in result.output
+
+
+def test_register_task_types_all(
+    cli_runner,
+    local_sched_config,
+    local_sched_configfile,
 ):
     """Registering all task types"""
 
@@ -72,9 +91,9 @@ def test_register_ttypes_all(
             "task-type",
             "register",
             "-p",
-            "lister.gnu",
+            "lister.foo",
             "-p",
-            "lister.pypi",
+            "loader.bar",
         ],
     ]:
         result = cli_runner.invoke(cli, command)
@@ -82,10 +101,8 @@ def test_register_ttypes_all(
         assert result.exit_code == 0, traceback.print_exception(*result.exc_info)
 
         scheduler = get_scheduler(**local_sched_config["scheduler"])
-        all_tasks = [
-            "list-gnu-full",
-            "list-pypi",
-        ]
+
+        all_tasks = ["list-foo-full", "load-bar"]
         for task in all_tasks:
             task_type_desc = scheduler.get_task_type(task)
             assert task_type_desc
@@ -93,8 +110,10 @@ def test_register_ttypes_all(
             assert task_type_desc["backoff_factor"] == 1
 
 
-def test_register_ttypes_filter(
-    mock_pkg_resources, cli_runner, local_sched_config, local_sched_configfile
+def test_register_task_types_filter(
+    cli_runner,
+    local_sched_config,
+    local_sched_configfile,
 ):
     """Filtering on one worker should only register its associated task type"""
     result = cli_runner.invoke(
@@ -105,7 +124,7 @@ def test_register_ttypes_filter(
             "task-type",
             "register",
             "--plugins",
-            "lister.gnu",
+            "lister.foo",
         ],
     )
 
@@ -113,7 +132,7 @@ def test_register_ttypes_filter(
 
     scheduler = get_scheduler(**local_sched_config["scheduler"])
     all_tasks = [
-        "list-gnu-full",
+        "list-foo-full",
     ]
     for task in all_tasks:
         task_type_desc = scheduler.get_task_type(task)

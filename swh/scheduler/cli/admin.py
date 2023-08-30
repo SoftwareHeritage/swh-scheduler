@@ -51,7 +51,14 @@ def runner(ctx, period, task_type_names, with_priority):
     """Starts a swh-scheduler runner service.
 
     This process is responsible for checking for ready-to-run tasks and
-    schedule them."""
+    schedule them.
+
+    Expected configuration:
+
+    \b
+    * :ref:`cli-config-celery`
+    * :ref:`cli-config-scheduler`
+    """
     from swh.scheduler.celery_backend.config import build_app
     from swh.scheduler.celery_backend.runner import run_ready_tasks
 
@@ -92,7 +99,14 @@ def listener(ctx):
     """Starts a swh-scheduler listener service.
 
     This service is responsible for listening at task lifecycle events and
-    handle their workflow status in the database."""
+    handle their workflow status in the database.
+
+    Expected configuration:
+
+    \b
+    * :ref:`cli-config-celery`
+    * :ref:`cli-config-scheduler`
+    """
     scheduler_backend = ctx.obj["scheduler"]
     if not scheduler_backend:
         ctx.fail("Scheduler class (local/remote) must be instantiated")
@@ -130,6 +144,11 @@ def schedule_recurrent(ctx, visit_types: List[str]):
     This runs one thread for each visit type, which regularly sends new visits
     to celery.
 
+    Expected configuration:
+
+    \b
+    * :ref:`cli-config-celery`
+    * :ref:`cli-config-scheduler`
     """
     from queue import Queue
 
@@ -212,7 +231,14 @@ def schedule_recurrent(ctx, visit_types: List[str]):
 )
 @click.pass_context
 def rpc_server(ctx, host, port, debug):
-    """Starts a swh-scheduler API HTTP server."""
+    """Starts a swh-scheduler API HTTP server.
+
+    Expected configuration:
+
+    \b
+    * :ref:`cli-config-celery`
+    * :ref:`cli-config-scheduler`
+    """
     if ctx.obj["config"]["scheduler"]["cls"] == "remote":
         click.echo(
             "The API server can only be started with a 'local' " "configuration",

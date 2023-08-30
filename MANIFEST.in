@@ -4,3 +4,4 @@ include requirements*.txt
 include version.txt
 recursive-include swh/scheduler/sql *.sql
 recursive-include swh py.typed
+recursive-include swh/scheduler/tests/data *
