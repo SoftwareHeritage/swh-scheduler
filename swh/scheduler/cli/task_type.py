@@ -33,15 +33,23 @@ DEFAULT_TASK_TYPE = {
 }
 
 
-PLUGIN_WORKER_DESCRIPTIONS = {
-    entry_point.name: entry_point for entry_point in iter_entry_points("swh.workers")
-}
+def _plugin_worker_descriptions():
+    return {
+        entry_point.name: entry_point
+        for entry_point in iter_entry_points("swh.workers")
+    }
 
 
 @cli.group("task-type")
 @click.pass_context
 def task_type(ctx):
-    """Manipulate task types."""
+    """Manipulate task types.
+
+    Expected configuration:
+
+    \b
+    * :ref:`cli-config-scheduler`
+    """
     scheduler = ctx.obj["scheduler"]
     if not scheduler:
         ctx.fail("Scheduler class (local/remote) must be instantiated")
@@ -96,8 +104,6 @@ def list_task_types(ctx, verbose, task_type, task_name):
     "-p",
     "plugins",
     multiple=True,
-    default=("all",),
-    type=click.Choice(["all"] + list(PLUGIN_WORKER_DESCRIPTIONS)),
     help="Registers task-types for provided plugins. " "Defaults to all",
 )
 @click.pass_context
@@ -112,11 +118,24 @@ def register_task_types(ctx, plugins):
 
     scheduler = ctx.obj["scheduler"]
 
-    if plugins == ("all",):
-        plugins = list(PLUGIN_WORKER_DESCRIPTIONS)
+    plugin_worker_descriptions = _plugin_worker_descriptions()
+    plugin_names = list(sorted(plugin_worker_descriptions))
+
+    if not plugins or plugins == ("all",):
+        plugins = plugin_names
+    else:
+        unknown_plugins = [plugin for plugin in plugins if plugin not in plugin_names]
+        if unknown_plugins:
+            if len(unknown_plugins) == 1:
+                error_msg = f"That provided plugin is unknown: {unknown_plugins[0]}."
+            else:
+                error_msg = (
+                    f"Those provided plugins are unknown: {', '.join(unknown_plugins)}."
+                )
+            ctx.fail(f"{error_msg}\nAvailable ones are: {', '.join(plugin_names)}.")
 
     for plugin in plugins:
-        entrypoint = PLUGIN_WORKER_DESCRIPTIONS[plugin]
+        entrypoint = plugin_worker_descriptions[plugin]
         logger.info("Loading entrypoint for plugin %s", plugin)
         registry_entry = entrypoint.load()()
 
