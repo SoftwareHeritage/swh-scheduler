@@ -30,7 +30,13 @@ DATETIME = click.DateTime()
 @cli.group("task")
 @click.pass_context
 def task(ctx):
-    """Manipulate tasks."""
+    """Manipulate tasks.
+
+    Expected configuration:
+
+    \b
+    * :ref:`cli-config-scheduler`
+    """
     if not ctx.obj["scheduler"]:
         ctx.fail("Scheduler class (local/remote) must be instantiated")
 

@@ -29,7 +29,13 @@ if TYPE_CHECKING:
 )
 @click.pass_context
 def add_forge_now(ctx, preset):
-    """Manipulate add-forge-now requests."""
+    """Manipulate add-forge-now requests.
+
+    Expected configuration:
+
+    \b
+    * :ref:`cli-config-scheduler`
+    """
     if not ctx.obj["scheduler"]:
         ctx.fail("Scheduler class (local/remote) must be instantiated")
 

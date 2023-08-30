@@ -47,6 +47,10 @@ def cli(ctx, config_file, database, url, no_stdout):
 
     Use a local scheduler instance by default (plugged to the
     main scheduler db).
+
+    Expected configuration:
+
+    * :ref:`cli-config-scheduler`
     """
     try:
         from psycopg2 import OperationalError

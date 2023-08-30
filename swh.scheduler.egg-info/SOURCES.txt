@@ -141,3 +141,10 @@ swh/scheduler/tests/test_simulator.py
 swh/scheduler/tests/test_utils.py
 swh/scheduler/tests/data/__init__.py
 swh/scheduler/tests/data/logging-config.yaml
+swh/scheduler/tests/fixtures/__init__.py
+swh/scheduler/tests/fixtures/lister/__init__.py
+swh/scheduler/tests/fixtures/lister/foo/__init__.py
+swh/scheduler/tests/fixtures/lister/foo/tasks.py
+swh/scheduler/tests/fixtures/loader/__init__.py
+swh/scheduler/tests/fixtures/loader/bar/__init__.py
+swh/scheduler/tests/fixtures/loader/bar/tasks.py
