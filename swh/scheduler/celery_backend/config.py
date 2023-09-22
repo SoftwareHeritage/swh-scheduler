@@ -242,6 +242,7 @@ def get_queue_stats(app, queue_name):
     credentials = (conn_info["userid"], conn_info["password"])
     r = requests.get(url, auth=credentials)
     if r.status_code == 404:
+        logger.warning("Queue %s not found via the RabbitMQ api (%s)", queue_name, url)
         return {}
     if r.status_code != 200:
         raise ValueError(
