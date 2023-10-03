@@ -1,3 +1,13 @@
+swh-scheduler (1.10.2-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 1.10.2     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2023-10-03 09:49:37
+    +0200)
+  * Upstream changes:     - v1.10.2     - Provide a default
+    max_queue_length value to task_type
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 03 Oct 2023 07:55:07 +0000
+
 swh-scheduler (1.10.1-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 1.10.1     - (tagged by Antoine Lambert
