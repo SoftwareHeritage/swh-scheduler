@@ -6,7 +6,7 @@ create table task_type (
   min_interval interval,
   max_interval interval,
   backoff_factor float,
-  max_queue_length bigint,
+  max_queue_length bigint default 1000,
   num_retries bigint,
   retry_delay interval
 );

@@ -115,6 +115,7 @@ swh/scheduler/sql/upgrades/31.sql
 swh/scheduler/sql/upgrades/32.sql
 swh/scheduler/sql/upgrades/33.sql
 swh/scheduler/sql/upgrades/34.sql
+swh/scheduler/sql/upgrades/35.sql
 swh/scheduler/sql/upgrades/__init__.py
 swh/scheduler/tests/__init__.py
 swh/scheduler/tests/common.py
