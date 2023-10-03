@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: swh.scheduler
-Version: 1.10.1
+Version: 1.10.2
 Summary: Software Heritage Scheduler
 Home-page: https://forge.softwareheritage.org/diffusion/DSCH/
 Author: Software Heritage developers
@@ -16,12 +16,47 @@ Classifier: Operating System :: OS Independent
 Classifier: Development Status :: 5 - Production/Stable
 Requires-Python: >=3.7
 Description-Content-Type: text/markdown
-Provides-Extra: testing
-Provides-Extra: journal
-Provides-Extra: simulator
 License-File: LICENSE
 License-File: LICENSE.Celery
 License-File: AUTHORS
+Requires-Dist: attrs
+Requires-Dist: attrs-strict
+Requires-Dist: celery!=5.0.3,>=4.3
+Requires-Dist: click
+Requires-Dist: flask
+Requires-Dist: humanize
+Requires-Dist: importlib_metadata<5.0
+Requires-Dist: pika>=1.1.0
+Requires-Dist: psycopg2
+Requires-Dist: pyyaml
+Requires-Dist: requests
+Requires-Dist: tabulate
+Requires-Dist: sentry-sdk
+Requires-Dist: setuptools
+Requires-Dist: typing-extensions
+Requires-Dist: swh.core[db,http]>=2.19
+Requires-Dist: swh.storage>=0.11.1
+Provides-Extra: testing
+Requires-Dist: pytest; extra == "testing"
+Requires-Dist: pytest-mock; extra == "testing"
+Requires-Dist: pytest-postgresql<4.0.0; extra == "testing"
+Requires-Dist: hypothesis>=3.11.0; extra == "testing"
+Requires-Dist: swh.core[testing]; extra == "testing"
+Requires-Dist: swh.storage[testing]; extra == "testing"
+Requires-Dist: types-click; extra == "testing"
+Requires-Dist: types-flask; extra == "testing"
+Requires-Dist: types-pyyaml; extra == "testing"
+Requires-Dist: types-requests; extra == "testing"
+Requires-Dist: types-Deprecated; extra == "testing"
+Requires-Dist: types-tabulate; extra == "testing"
+Requires-Dist: swh.journal; extra == "testing"
+Requires-Dist: plotille; extra == "testing"
+Requires-Dist: simpy<4,>=3; extra == "testing"
+Provides-Extra: journal
+Requires-Dist: swh.journal; extra == "journal"
+Provides-Extra: simulator
+Requires-Dist: plotille; extra == "simulator"
+Requires-Dist: simpy<4,>=3; extra == "simulator"
 
 swh-scheduler
 =============
