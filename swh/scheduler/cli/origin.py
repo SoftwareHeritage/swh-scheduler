@@ -1,4 +1,4 @@
-# Copyright (C) 2021-2022  The Software Heritage developers
+# Copyright (C) 2021-2023  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -182,6 +182,30 @@ def schedule_next(ctx, policy: str, type: str, count: int):
     default=None,
     help="Limit origins to those listed from lister with instance name",
 )
+@click.option(
+    "--absolute-cooldown",
+    "absolute_cooldown_str",
+    default="12 hours",
+    help="Minimal interval between two visits of the same origin",
+)
+@click.option(
+    "--scheduled-cooldown",
+    "scheduled_cooldown_str",
+    default="7 days",
+    help="Minimal interval to wait before scheduling the same origins again",
+)
+@click.option(
+    "--not-found-cooldown",
+    "not_found_cooldown_str",
+    default="14 days",
+    help="The minimal interval to wait before rescheduling not_found origins",
+)
+@click.option(
+    "--failed-cooldown",
+    "failed_cooldown_str",
+    default="31 days",
+    help="Minimal interval to wait before rescheduling failed origins",
+)
 @click.argument("visit_type_name", type=str)
 @click.pass_context
 def send_to_celery_cli(
@@ -193,10 +217,27 @@ def send_to_celery_cli(
     enabled: bool,
     lister_name: Optional[str] = None,
     lister_instance_name: Optional[str] = None,
+    absolute_cooldown_str: Optional[str] = None,
+    scheduled_cooldown_str: Optional[str] = None,
+    failed_cooldown_str: Optional[str] = None,
+    not_found_cooldown_str: Optional[str] = None,
 ):
     """Send next origin visits of VISIT_TYPE_NAME to celery, filling the queue."""
 
-    from .utils import get_task_type, send_to_celery
+    from .utils import get_task_type, parse_time_interval, send_to_celery
+
+    absolute_cooldown = (
+        parse_time_interval(absolute_cooldown_str) if absolute_cooldown_str else None
+    )
+    scheduled_cooldown = (
+        parse_time_interval(scheduled_cooldown_str) if scheduled_cooldown_str else None
+    )
+    failed_cooldown = (
+        parse_time_interval(failed_cooldown_str) if failed_cooldown_str else None
+    )
+    not_found_cooldown = (
+        parse_time_interval(not_found_cooldown_str) if not_found_cooldown_str else None
+    )
 
     scheduler = ctx.obj["scheduler"]
 
@@ -215,6 +256,10 @@ def send_to_celery_cli(
         enabled=enabled,
         lister_name=lister_name,
         lister_instance_name=lister_instance_name,
+        absolute_cooldown=absolute_cooldown,
+        scheduled_cooldown=scheduled_cooldown,
+        failed_cooldown=failed_cooldown,
+        not_found_cooldown=not_found_cooldown,
     )
 
 
