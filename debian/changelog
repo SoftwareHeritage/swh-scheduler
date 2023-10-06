@@ -1,3 +1,14 @@
+swh-scheduler (1.11.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 1.11.0     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2023-10-06 16:11:58
+    +0200)
+  * Upstream changes:     - v1.11.0     - parse_time_interval: Improve
+    parsing to deal down to seconds     - cli.origin.send-to-celery:
+    Allow providing cooldown flags
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 06 Oct 2023 14:17:42 +0000
+
 swh-scheduler (1.10.2-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 1.10.2     - (tagged by Antoine R. Dumont
