@@ -24,11 +24,40 @@ TASK_BATCH_SIZE = 1000  # Number of tasks per query to the scheduler
 
 
 TIME_INTERVAL_REGEXP = re.compile(
-    r"^((?P<days>[\.\d]+?) day[s]?)?((?P<hours>[\.\d]+?) hour[s]?)?$"
+    r"""
+    # optional group for days
+    (?:
+        (?P<days>\d+\.?|\d*\.\d+) # floating point number, e.g. "1", "2.", "3.4" or ".5".
+        \x20*
+        (?:day|days|d)
+    )?
+    \x20? # optional space
+    # optional group for hours
+    (?:
+        (?P<hours>\d+\.?|\d*\.\d+)
+        \x20*
+        (?:h|hr|hrs|hour|hours)
+    )?
+    \x20? # optional space
+    # optional group for minutes
+    (?:
+        (?P<minutes>\d+\.?|\d*\.\d+)
+        \x20*
+        (?:m|min|mins|minute|minutes)
+    )?
+    \x20? # optional space
+    # optional group for seconds
+    (?:
+        (?P<seconds>\d+\.?|\d*\.\d+)
+        \x20*
+        (?:s|sec|second|seconds)
+    )?
+    """,
+    re.VERBOSE,
 )
 
 
-def parse_time_interval(time_str: str) -> Optional[timedelta]:
+def parse_time_interval(time_str: str) -> timedelta:
     """Parse a basic time interval e.g. '1 day' or '2 hours' into a timedelta object.
 
     Args:
@@ -37,13 +66,19 @@ def parse_time_interval(time_str: str) -> Optional[timedelta]:
     Returns:
         An equivalent representation of the string as a datetime.timedelta object.
 
+    Raises:
+        ValueError if the time interval could not be parsed.
+
     """
-    parts = TIME_INTERVAL_REGEXP.match(time_str)
+    parts = TIME_INTERVAL_REGEXP.fullmatch(time_str)
     if not parts:
-        return None
+        raise ValueError(f"{time_str!r} could not be parsed as a time interval")
     time_params = {
         name: float(param) for name, param in parts.groupdict().items() if param
     }
+    if not time_params:
+        # The regexp lets a bare space go through
+        raise ValueError(f"{time_str!r} could not be parsed as a time interval")
     return timedelta(**time_params)
 
 
