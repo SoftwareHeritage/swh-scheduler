@@ -70,7 +70,6 @@ swh/scheduler/cli/origin.py
 swh/scheduler/cli/simulator.py
 swh/scheduler/cli/task.py
 swh/scheduler/cli/task_type.py
-swh/scheduler/cli/test_cli_utils.py
 swh/scheduler/cli/utils.py
 swh/scheduler/simulator/__init__.py
 swh/scheduler/simulator/common.py

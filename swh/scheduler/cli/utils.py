@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
+import re
 from typing import TYPE_CHECKING, Iterable
 
 import click
@@ -19,6 +21,65 @@ if TYPE_CHECKING:
 
 
 TASK_BATCH_SIZE = 1000  # Number of tasks per query to the scheduler
+
+
+TIME_INTERVAL_REGEXP = re.compile(
+    r"""
+    # optional group for days
+    (?:
+        (?P<days>\d+\.?|\d*\.\d+) # floating point number, e.g. "1", "2.", "3.4" or ".5".
+        \x20*
+        (?:day|days|d)
+    )?
+    \x20? # optional space
+    # optional group for hours
+    (?:
+        (?P<hours>\d+\.?|\d*\.\d+)
+        \x20*
+        (?:h|hr|hrs|hour|hours)
+    )?
+    \x20? # optional space
+    # optional group for minutes
+    (?:
+        (?P<minutes>\d+\.?|\d*\.\d+)
+        \x20*
+        (?:m|min|mins|minute|minutes)
+    )?
+    \x20? # optional space
+    # optional group for seconds
+    (?:
+        (?P<seconds>\d+\.?|\d*\.\d+)
+        \x20*
+        (?:s|sec|second|seconds)
+    )?
+    """,
+    re.VERBOSE,
+)
+
+
+def parse_time_interval(time_str: str) -> timedelta:
+    """Parse a basic time interval e.g. '1 day' or '2 hours' into a timedelta object.
+
+    Args:
+        time_str: A string representing a basic time interval in days or hours.
+
+    Returns:
+        An equivalent representation of the string as a datetime.timedelta object.
+
+    Raises:
+        ValueError if the time interval could not be parsed.
+
+    """
+    parts = TIME_INTERVAL_REGEXP.fullmatch(time_str)
+    if not parts:
+        raise ValueError(f"{time_str!r} could not be parsed as a time interval")
+    time_params = {
+        name: float(param) for name, param in parts.groupdict().items() if param
+    }
+    if not time_params:
+        # The regexp lets a bare space go through
+        raise ValueError(f"{time_str!r} could not be parsed as a time interval")
+    return timedelta(**time_params)
 
 
 def schedule_origin_batches(scheduler, task_type, origins, origin_batch_size, kwargs):
@@ -125,6 +186,10 @@ def send_to_celery(
     lister_instance_name: Optional[str] = None,
     policy: str = "oldest_scheduled_first",
     tablesample: Optional[float] = None,
+    absolute_cooldown: Optional[timedelta] = None,
+    scheduled_cooldown: Optional[timedelta] = None,
+    failed_cooldown: Optional[timedelta] = None,
+    not_found_cooldown: Optional[timedelta] = None,
 ):
     """Utility function to read tasks from the scheduler and send those directly to
     celery.
@@ -141,6 +206,13 @@ def send_to_celery(
         policy: the scheduling policy used to select which visits to schedule
         tablesample: the percentage of the table on which we run the query
           (None: no sampling)
+        absolute_cooldown: the minimal interval between two visits of the same origin
+        scheduled_cooldown: the minimal interval before which we can schedule
+          the same origin again if it's not been visited
+        failed_cooldown: the minimal interval before which we can reschedule a
+          failed origin
+        not_found_cooldown: the minimal interval before which we can reschedule a
+          not_found origin
 
     """
 
@@ -166,6 +238,10 @@ def send_to_celery(
             enabled=enabled,
             lister_name=lister_name,
             lister_instance_name=lister_instance_name,
+            absolute_cooldown=absolute_cooldown,
+            scheduled_cooldown=scheduled_cooldown,
+            failed_cooldown=failed_cooldown,
+            not_found_cooldown=not_found_cooldown,
         )
 
         click.echo(f"{len(origins)} visits to send to celery")

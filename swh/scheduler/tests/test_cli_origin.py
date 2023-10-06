@@ -138,7 +138,20 @@ def test_send_to_celery_unknown_visit_type(
 
 @pytest.mark.parametrize(
     "extra_cmd_args",
-    [[], ["--lister-name", "github", "--lister-instance-name", "github"]],
+    [
+        [],
+        ["--lister-name", "github", "--lister-instance-name", "github"],
+        [
+            "--absolute-cooldown",
+            "24 days",
+            "--scheduled-cooldown",
+            "24 hours",
+            "--failed-cooldown",
+            "1 day",
+            "--not-found-cooldown",
+            "60 days",
+        ],
+    ],
 )
 def test_send_to_celery(
     mocker,
