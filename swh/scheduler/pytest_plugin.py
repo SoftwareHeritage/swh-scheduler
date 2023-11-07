@@ -36,15 +36,20 @@ postgresql_scheduler = factories.postgresql("scheduler_postgresql_proc")
 
 
 @pytest.fixture
-def swh_scheduler_config(request, postgresql_scheduler):
+def swh_scheduler_class():
+    return "postgresql"
+
+
+@pytest.fixture
+def swh_scheduler_config(postgresql_scheduler):
     return {
         "db": postgresql_scheduler.dsn,
     }
 
 
 @pytest.fixture
-def swh_scheduler(swh_scheduler_config):
-    scheduler = get_scheduler("postgresql", **swh_scheduler_config)
+def swh_scheduler(swh_scheduler_class, swh_scheduler_config):
+    scheduler = get_scheduler(swh_scheduler_class, **swh_scheduler_config)
     for taskname in TASK_NAMES:
         scheduler.create_task_type(
             {
