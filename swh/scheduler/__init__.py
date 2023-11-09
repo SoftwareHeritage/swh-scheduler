@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 BACKEND_TYPES: Dict[str, str] = {
     "postgresql": ".backend.SchedulerBackend",
     "remote": ".api.client.RemoteScheduler",
+    "temporary": ".backend.TemporarySchedulerBackend",
     # deprecated
     "local": ".backend.SchedulerBackend",
 }

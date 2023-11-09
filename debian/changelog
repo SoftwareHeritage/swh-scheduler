@@ -1,8 +1,16 @@
-swh-scheduler (1.11.0-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-scheduler (1.12.0-2~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * Add Build-Dependency on python3-testing.postgresql
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 06 Oct 2023 14:28:50 +0000
+ -- Nicolas Dandrimont <olasd@debian.org>  Thu, 09 Nov 2023 16:41:33 +0100
+
+swh-scheduler (1.12.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 1.12.0     - (tagged by Antoine Lambert
+    <anlambert@softwareheritage.org> on 2023-11-07 18:53:03 +0100)
+  * Upstream changes:     - version 1.12.0
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 07 Nov 2023 18:02:32 +0000
 
 swh-scheduler (1.11.0-1~swh1) unstable-swh; urgency=medium
 

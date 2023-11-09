@@ -4,7 +4,7 @@ celery!=5.0.3,>=4.3
 click
 flask
 humanize
-importlib_metadata<5.0
+importlib_metadata
 pika>=1.1.0
 psycopg2
 pyyaml
@@ -12,9 +12,13 @@ requests
 tabulate
 sentry-sdk
 setuptools
+testing.postgresql
 typing-extensions
 swh.core[db,http]>=2.19
 swh.storage>=0.11.1
+
+[:python_version <= "3.7"]
+importlib_metadata<5
 
 [journal]
 swh.journal
