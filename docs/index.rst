@@ -1,7 +1,6 @@
 .. _swh-scheduler:
 
-Software Heritage - Job scheduler
-=================================
+.. include:: README.rst
 
 Task manager for asynchronous/delayed tasks, used for both recurrent (e.g.,
 listing a forge, loading new stuff from a Git repository) and one-off
