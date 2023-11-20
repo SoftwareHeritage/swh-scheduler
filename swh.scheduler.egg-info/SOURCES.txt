@@ -8,7 +8,7 @@ LICENSE
 LICENSE.Celery
 MANIFEST.in
 Makefile
-README.md
+README.rst
 conftest.py
 mypy.ini
 pyproject.toml
@@ -79,7 +79,6 @@ swh/scheduler/simulator/task_scheduler.py
 swh/scheduler/sql/10-superuser-init.sql
 swh/scheduler/sql/30-schema.sql
 swh/scheduler/sql/40-func.sql
-swh/scheduler/sql/50-data.sql
 swh/scheduler/sql/60-indexes.sql
 swh/scheduler/sql/__init__.py
 swh/scheduler/sql/upgrades/02.sql
