@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: swh.scheduler
-Version: 1.12.0
+Version: 1.12.1
 Summary: Software Heritage Scheduler
 Home-page: https://forge.softwareheritage.org/diffusion/DSCH/
 Author: Software Heritage developers
@@ -15,7 +15,7 @@ Classifier: License :: OSI Approved :: GNU General Public License v3 (GPLv3)
 Classifier: Operating System :: OS Independent
 Classifier: Development Status :: 5 - Production/Stable
 Requires-Python: >=3.7
-Description-Content-Type: text/markdown
+Description-Content-Type: text/x-rst
 License-File: LICENSE
 License-File: LICENSE.Celery
 License-File: AUTHORS
