@@ -58,8 +58,8 @@ def register_lister_cli(
 
     \b
     - staging preset: a single oneshot full listing task is scheduled. This "full"
-      listing is limited to 3 pages and 10 origins per page. The origins are recorded as
-      disabled (to avoid their recurrent loading).
+      listing is limited to 3 pages (default is one) and 10 origins per page.
+      The origins are recorded as disabled (to avoid their recurrent loading).
     - production preset: a recurrent full and incremental (if the loader has such a
       task) listing task are scheduled. The first run of the full lister is scheduled
       immediately, and the first run of the incremental lister is delayed by a day.
@@ -86,12 +86,24 @@ def register_lister_cli(
 
     (args, kw) = parse_options(options)
 
+    if "max_pages" in kw:
+        if kw["max_pages"] <= 3:
+            max_pages = kw["max_pages"]
+    else:
+        max_pages = 1
+
     # Recurring policy on production
     if preset == "production":
         policy = "recurring"
     else:  # staging, "full" but limited listing as a oneshot
         policy = "oneshot"
-        kw.update({"max_pages": 3, "max_origins_per_page": 10, "enable_origins": False})
+        kw.update(
+            {
+                "max_pages": max_pages,
+                "max_origins_per_page": 10,
+                "enable_origins": False,
+            }
+        )
         # We want a "full" listing in production if both incremental and full exists
         if "full" in task_types:
             task_types.pop("incremental", None)
