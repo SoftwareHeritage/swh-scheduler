@@ -8,7 +8,6 @@ class FooLister:
 
 
 def register():
-
     return {
         "lister": FooLister,
         "task_modules": ["%s.tasks" % __name__],

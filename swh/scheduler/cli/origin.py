@@ -312,7 +312,6 @@ def update_metrics(ctx, lister: Optional[str], instance: Optional[str]):
 @click.argument("instance_name", nargs=1, required=True)
 @click.pass_context
 def check_listed_origins_cli(ctx, list, lister_name, instance_name):
-
     """
     Check listed origins registered in the scheduler database.
     """
@@ -361,7 +360,6 @@ listed origins in the scheduler database."
 @click.argument("instance_name", nargs=1, required=True)
 @click.pass_context
 def check_ingested_origins_cli(ctx, list, watch, lister_name, instance_name):
-
     """
     Check the origins marked as ingested in the scheduler database.
     """

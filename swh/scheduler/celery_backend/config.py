@@ -276,7 +276,7 @@ def register_task_class(app, name, cls):
 
 INSTANCE_NAME = os.environ.get(CONFIG_NAME_ENVVAR)
 CONFIG_NAME = os.environ.get("SWH_CONFIG_FILENAME")
-CONFIG = {}  # type: Dict[str, Any]
+CONFIG: Dict[str, Any] = {}
 
 if CONFIG_NAME:
     # load the celery config from the main config file given as

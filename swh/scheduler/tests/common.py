@@ -87,7 +87,7 @@ def tasks_from_template(
         assert num is not None  # to please mypy
         num_priorities = {None: num}
     tasks: List[Dict] = []
-    for (priority, num) in num_priorities.items():
+    for priority, num in num_priorities.items():
         for _ in range(num):
             i = len(tasks)
             tasks.append(

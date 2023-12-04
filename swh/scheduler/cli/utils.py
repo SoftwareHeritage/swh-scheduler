@@ -423,7 +423,6 @@ def check_listed_origins(
     instance_name: str,
     limit: int = 100000,
 ):
-
     listed_origins_lister = scheduler.get_lister(
         name=lister_name, instance_name=instance_name
     )
@@ -457,7 +456,6 @@ def count_ingested_origins(
     instance_name: str,
     displayed: Optional[bool] = False,
 ):
-
     from tabulate import tabulate
 
     ingested_origins = scheduler.origin_visit_stats_get(ids=ids)

@@ -19,7 +19,7 @@ DEFAULT_CONFIG = {
     )
 }
 # current configuration. To be set by the config loading mechanism
-CONFIG = {}  # type: Dict[str, Any]
+CONFIG: Dict[str, Any] = {}
 
 
 if TYPE_CHECKING:

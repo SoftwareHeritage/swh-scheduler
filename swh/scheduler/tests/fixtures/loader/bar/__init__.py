@@ -8,7 +8,6 @@ class BarLoader:
 
 
 def register():
-
     return {
         "loader": BarLoader,
         "task_modules": ["%s.tasks" % __name__],
