@@ -1,14 +1,13 @@
 Metadata-Version: 2.1
 Name: swh.scheduler
-Version: 1.12.1
-Summary: Software Heritage Scheduler
-Home-page: https://forge.softwareheritage.org/diffusion/DSCH/
-Author: Software Heritage developers
-Author-email: swh-devel@inria.fr
-Project-URL: Bug Reports, https://forge.softwareheritage.org/maniphest
+Version: 1.13.0
+Summary: Software Heritage scheduler
+Author-email: Software Heritage developers <swh-devel@inria.fr>
+Project-URL: Homepage, https://gitlab.softwareheritage.org/swh/devel/swh-scheduler
+Project-URL: Bug Reports, https://gitlab.softwareheritage.org/swh/devel/swh-scheduler/-/issues
 Project-URL: Funding, https://www.softwareheritage.org/donate
-Project-URL: Source, https://forge.softwareheritage.org/source/swh-scheduler
 Project-URL: Documentation, https://docs.softwareheritage.org/devel/swh-scheduler/
+Project-URL: Source, https://gitlab.softwareheritage.org/swh/devel/swh-scheduler.git
 Classifier: Programming Language :: Python :: 3
 Classifier: Intended Audience :: Developers
 Classifier: License :: OSI Approved :: GNU General Public License v3 (GPLv3)
@@ -38,6 +37,11 @@ Requires-Dist: testing.postgresql
 Requires-Dist: typing-extensions
 Requires-Dist: swh.core[db,http]>=2.19
 Requires-Dist: swh.storage>=0.11.1
+Provides-Extra: journal
+Requires-Dist: swh.journal; extra == "journal"
+Provides-Extra: simulator
+Requires-Dist: plotille; extra == "simulator"
+Requires-Dist: simpy<4,>=3; extra == "simulator"
 Provides-Extra: testing
 Requires-Dist: pytest; extra == "testing"
 Requires-Dist: pytest-mock; extra == "testing"
@@ -54,11 +58,6 @@ Requires-Dist: types-tabulate; extra == "testing"
 Requires-Dist: swh.journal; extra == "testing"
 Requires-Dist: plotille; extra == "testing"
 Requires-Dist: simpy<4,>=3; extra == "testing"
-Provides-Extra: journal
-Requires-Dist: swh.journal; extra == "journal"
-Provides-Extra: simulator
-Requires-Dist: plotille; extra == "simulator"
-Requires-Dist: simpy<4,>=3; extra == "simulator"
 
 swh-scheduler
 =============

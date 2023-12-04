@@ -1,3 +1,4 @@
+.copier-answers.yml
 .git-blame-ignore-revs
 .gitignore
 .pre-commit-config.yaml
@@ -6,7 +7,6 @@ CODE_OF_CONDUCT.md
 CONTRIBUTORS
 LICENSE
 LICENSE.Celery
-MANIFEST.in
 Makefile
 README.rst
 conftest.py
@@ -19,7 +19,6 @@ requirements-swh.txt
 requirements-test.txt
 requirements.txt
 setup.cfg
-setup.py
 tox.ini
 data/README.md
 data/elastic-template.json
@@ -34,7 +33,6 @@ docs/_static/.placeholder
 docs/_templates/.placeholder
 sql/.gitignore
 sql/Makefile
-swh/__init__.py
 swh.scheduler.egg-info/PKG-INFO
 swh.scheduler.egg-info/SOURCES.txt
 swh.scheduler.egg-info/dependency_links.txt
