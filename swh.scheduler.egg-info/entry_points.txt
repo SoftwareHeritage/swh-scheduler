@@ -1,3 +1,3 @@
 [swh.cli.subcommands]
-scheduler = swh.scheduler.cli
-scheduler-journal = swh.scheduler.cli.journal
+swh.scheduler = swh.scheduler.cli
+swh.scheduler.journal = swh.scheduler.cli.journal
