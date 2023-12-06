@@ -4,8 +4,7 @@ pytest-postgresql < 4.0.0  # version 4.0 depends on psycopg 3. https://github.co
 hypothesis >= 3.11.0
 swh.core[testing]
 swh.storage[testing]
-types-click
-types-flask
+
 types-pyyaml
 types-requests
 types-Deprecated
