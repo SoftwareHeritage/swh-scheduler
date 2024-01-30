@@ -12,7 +12,7 @@ import pkg_resources
 import pytest
 from pytest_postgresql import factories
 
-from swh.core.db.pytest_plugin import initialize_database_for_module
+from swh.core.db.db_utils import initialize_database_for_module
 from swh.scheduler import get_scheduler
 from swh.scheduler.backend import SchedulerBackend
 
@@ -43,7 +43,7 @@ def swh_scheduler_class():
 @pytest.fixture
 def swh_scheduler_config(postgresql_scheduler):
     return {
-        "db": postgresql_scheduler.dsn,
+        "db": postgresql_scheduler.info.dsn,
     }
 
 

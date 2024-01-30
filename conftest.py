@@ -14,6 +14,5 @@ settings.register_profile("slow", max_examples=20, deadline=5000)
 
 pytest_plugins = [
     "swh.scheduler.pytest_plugin",
-    "swh.core.db.pytest_plugin",
     "swh.storage.pytest_plugin",
 ]

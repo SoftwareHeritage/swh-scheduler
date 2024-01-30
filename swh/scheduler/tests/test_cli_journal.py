@@ -23,7 +23,7 @@ def swh_scheduler_cfg(postgresql_scheduler, kafka_server):
     return {
         "scheduler": {
             "cls": "postgresql",
-            "db": postgresql_scheduler.dsn,
+            "db": postgresql_scheduler.info.dsn,
         },
         "journal": {
             "brokers": [kafka_server],
