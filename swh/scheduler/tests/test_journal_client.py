@@ -1,4 +1,4 @@
-# Copyright (C) 2021-2022  The Software Heritage developers
+# Copyright (C) 2021-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -6,7 +6,7 @@
 import datetime
 import functools
 from itertools import permutations
-from typing import List
+from typing import Any, Dict, List
 from unittest.mock import Mock
 
 import attr
@@ -148,7 +148,7 @@ def assert_visit_stats_ok(
 
     """
     fields = attr.fields_dict(OriginVisitStats)
-    defaults = {field: fields[field].default for field in ignore_fields}
+    defaults: Dict[str, Any] = {field: fields[field].default for field in ignore_fields}
 
     actual_visit_stats = attr.evolve(actual_visit_stats, **defaults)
     assert actual_visit_stats == expected_visit_stats
