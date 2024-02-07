@@ -13,7 +13,7 @@ from . import cli
 from ..utils import create_origin_task_dicts
 
 if TYPE_CHECKING:
-    from typing import Iterable, List, Optional
+    from typing import Dict, Iterable, List, Optional
     from uuid import UUID
 
     from ..interface import SchedulerInterface
@@ -340,6 +340,24 @@ listed origins in the scheduler database."
     )
 
 
+def _print_status_summary(
+    lister_name: str, instance_name: str, status_counters: Dict, watch: bool = False
+) -> None:
+    """Print a status of the ingestion and a small success rate summary."""
+    if watch:
+        suffix_str = " ingestion is still in progress..."
+    else:
+        suffix_str = f" ({lister_name}) has {status_counters['total']} \
+scheduled ingests in the scheduler."
+
+    print(f"\nForge {instance_name}{suffix_str}")
+    for status, counter in status_counters.items():
+        print(f"{status:<12}: {counter}")
+
+    success_rate = status_counters["successful"] / status_counters["total"] * 100
+    print(f"{'success rate':<12}: {success_rate:.2f}%")
+
+
 @origin.command("check-ingested-origins")
 @click.option(
     "--list",
@@ -397,9 +415,10 @@ def check_ingested_origins_cli(
                 instance_name=instance_name,
             )
             if status_counters["None"] > 0:
-                print(f"Forge {instance_name} ingestion is still in progress.")
-                for status, counter in status_counters.items():
-                    print("{0:<11}: {1}".format(status, counter))
+                _print_status_summary(
+                    lister_name, instance_name, status_counters, watch
+                )
+
             sleep(watch_period_seconds)
 
     status_counters = count_ingested_origins(
@@ -408,12 +427,4 @@ def check_ingested_origins_cli(
         instance_name=instance_name,
         displayed=list,
     )
-    print(
-        f"\nForge {instance_name} ({lister_name}) has {status_counters['total']} \
-scheduled ingests in the scheduler."
-    )
-    for status, counter in status_counters.items():
-        print(f"{status:<13}: {counter}")
-
-    success_rate = status_counters["successful"] / status_counters["total"] * 100
-    print(f"{'success rate':<13}: {success_rate}%")
+    _print_status_summary(lister_name, instance_name, status_counters)
