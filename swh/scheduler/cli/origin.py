@@ -358,7 +358,7 @@ listed origins in the scheduler database."
 @click.option(
     "--watch-period",
     required=False,
-    default="10 minutes",
+    default="30 minutes",
     help="Watch period ingestion.",
 )
 @click.argument("lister_name", nargs=1, required=True)
