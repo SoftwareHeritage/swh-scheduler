@@ -1,4 +1,4 @@
-# Copyright (C) 2021-2023  The Software Heritage developers
+# Copyright (C) 2021-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -352,21 +352,28 @@ listed origins in the scheduler database."
     "--watch",
     "-w",
     is_flag=True,
-    help="Watch for ingestion progress at intervals.",
     required=False,
-    flag_value=600,
+    help="Watch periodically for ingestion status.",
+)
+@click.option(
+    "--watch-period",
+    required=False,
+    default="10 minutes",
+    help="Watch period ingestion.",
 )
 @click.argument("lister_name", nargs=1, required=True)
 @click.argument("instance_name", nargs=1, required=True)
 @click.pass_context
-def check_ingested_origins_cli(ctx, list, watch, lister_name, instance_name):
+def check_ingested_origins_cli(
+    ctx, list, watch, watch_period, lister_name, instance_name
+):
     """
     Check the origins marked as ingested in the scheduler database.
     """
 
     from time import sleep
 
-    from .utils import check_listed_origins, count_ingested_origins
+    from .utils import check_listed_origins, count_ingested_origins, parse_time_interval
 
     scheduler = ctx.obj["scheduler"]
     listed_origins = check_listed_origins(
@@ -382,6 +389,7 @@ def check_ingested_origins_cli(ctx, list, watch, lister_name, instance_name):
     )
 
     if watch:
+        watch_period_seconds = parse_time_interval(watch_period).total_seconds()
         while status_counters["None"] != 0:
             status_counters = count_ingested_origins(
                 scheduler=scheduler,
@@ -392,7 +400,7 @@ def check_ingested_origins_cli(ctx, list, watch, lister_name, instance_name):
                 print(f"Forge {instance_name} ingestion is still in progress.")
                 for status, counter in status_counters.items():
                     print("{0:<11}: {1}".format(status, counter))
-            sleep(watch)
+            sleep(watch_period_seconds)
 
     status_counters = count_ingested_origins(
         scheduler=scheduler,
