@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2023 The Software Heritage developers
+# Copyright (C) 2019-2024 The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -454,9 +454,9 @@ def count_ingested_origins(
     scheduler: SchedulerInterface,
     ids: Iterable[Tuple[str, str]],
     instance_name: str,
-    displayed: Optional[bool] = False,
-):
-    from tabulate import tabulate
+    with_listing: Optional[bool] = False,
+) -> Tuple[Dict[str, int], List]:
+    """Count number of ingested origins grouped by status."""
 
     ingested_origins = scheduler.origin_visit_stats_get(ids=ids)
     status_counters = {
@@ -466,8 +466,8 @@ def count_ingested_origins(
         "successful": 0,
         "total": len(ingested_origins),
     }
-    ingested_origins_table = []
-    headers = ("url", "last_visit_status", "last_visit")
+    if with_listing:
+        ingested_origins_table = []
 
     if status_counters["total"] == 0:
         exit(
@@ -477,18 +477,17 @@ scheduled ingest in the scheduler database."
 
     for ingested_origin in ingested_origins:
         if ingested_origin.last_visit_status is not None:
-            ingested_origins_table.append(
-                [
-                    ingested_origin.url,
-                    ingested_origin.last_visit_status.value,
-                    str(ingested_origin.last_visit),
-                ]
-            )
-            status_counters[str(ingested_origin.last_visit_status.value)] += 1
+            if with_listing:
+                ingested_origins_table.append(
+                    [
+                        ingested_origin.url,
+                        ingested_origin.last_visit_status.value,
+                        str(ingested_origin.last_visit),
+                    ]
+                )
+            counter_key = ingested_origin.last_visit_status.value
         else:
-            status_counters[str(ingested_origin.last_visit_status)] += 1
+            counter_key = None
+        status_counters[str(counter_key)] += 1
 
-    if displayed:
-        print(tabulate(ingested_origins_table, headers))
-
-    return status_counters
+    return status_counters, ingested_origins_table if with_listing else []

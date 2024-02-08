@@ -362,6 +362,7 @@ scheduled ingests in the scheduler."
 @click.option(
     "--list",
     "-l",
+    "with_listing",
     is_flag=True,
     help="Display listed origins (disabled by default).",
     required=False,
@@ -383,7 +384,7 @@ scheduled ingests in the scheduler."
 @click.argument("instance_name", nargs=1, required=True)
 @click.pass_context
 def check_ingested_origins_cli(
-    ctx, list, watch, watch_period, lister_name, instance_name
+    ctx, with_listing, watch, watch_period, lister_name, instance_name
 ):
     """
     Check the origins marked as ingested in the scheduler database.
@@ -400,7 +401,7 @@ def check_ingested_origins_cli(
         instance_name=instance_name,
     )
     ids = [(origin.url, origin.visit_type) for origin in listed_origins]
-    status_counters = count_ingested_origins(
+    status_counters, _ = count_ingested_origins(
         scheduler=scheduler,
         ids=ids,
         instance_name=instance_name,
@@ -409,7 +410,7 @@ def check_ingested_origins_cli(
     if watch:
         watch_period_seconds = parse_time_interval(watch_period).total_seconds()
         while status_counters["None"] != 0:
-            status_counters = count_ingested_origins(
+            status_counters, _ = count_ingested_origins(
                 scheduler=scheduler,
                 ids=ids,
                 instance_name=instance_name,
@@ -421,10 +422,17 @@ def check_ingested_origins_cli(
 
             sleep(watch_period_seconds)
 
-    status_counters = count_ingested_origins(
+    status_counters, ingested_origins_table = count_ingested_origins(
         scheduler=scheduler,
         ids=ids,
         instance_name=instance_name,
-        displayed=list,
+        with_listing=with_listing,
     )
+
+    if with_listing:
+        from tabulate import tabulate
+
+        headers = ("url", "last_visit_status", "last_visit")
+        print(tabulate(ingested_origins_table, headers))
+
     _print_status_summary(lister_name, instance_name, status_counters)
