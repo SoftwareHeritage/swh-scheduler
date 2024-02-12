@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2023  The Software Heritage developers
+# Copyright (C) 2016-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -87,3 +87,14 @@ def storage(swh_storage):
 @pytest.fixture
 def datadir():
     return DATADIR
+
+
+@pytest.fixture
+def task_types(swh_scheduler):
+    from swh.scheduler.tests.common import TASK_TYPES
+
+    all_task_types = {}
+    for task_type in TASK_TYPES.values():
+        swh_scheduler.create_task_type(task_type)
+        all_task_types[task_type["type"]] = task_type
+    return all_task_types

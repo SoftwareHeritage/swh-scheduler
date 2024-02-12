@@ -436,3 +436,193 @@ def check_ingested_origins_cli(
         print(tabulate(ingested_origins_table, headers))
 
     _print_status_summary(lister_name, instance_name, status_counters)
+
+
+@origin.command("send-origins-from-file-to-celery")
+@click.option(
+    "--queue-name-prefix",
+    help=(
+        "Prefix to add to the default queue name (if needed). Usually needed to treat "
+        "special origins (e.g. large repositories, fill-in-the-hole datasets, ... ) "
+        "in another dedicated queue."
+    ),
+)
+@click.option(
+    "--threshold",
+    help="Threshold override for the queue.",
+    type=click.INT,
+    default=1000,
+)
+@click.option(
+    "--limit",
+    help="Number of origins to send. Usually to limit to a small number for debug purposes.",
+    type=click.INT,
+    default=None,
+)
+@click.option(
+    "--waiting-period",
+    help="Waiting time between checks",
+    type=click.INT,
+    default=10,
+)
+@click.option("--dry-run", is_flag=True, help="Print only messages to send to celery")
+@click.option("--debug", is_flag=True, default=False, help="Print extra messages")
+# Scheduler task type (e.g. load-git, load-svn, ...)
+@click.argument(
+    "task_type",
+    nargs=1,
+    required=True,
+)
+# Dataset file of origins to schedule, use '-' when piping to the cli.
+@click.argument(
+    "file_input",
+    type=click.File("r"),
+    required=False,
+    default="-",
+)
+# Extra options passed directly to the task
+@click.argument(
+    "options",
+    nargs=-1,
+    required=False,
+)
+@click.pass_context
+def send_origins_from_file_to_celery(
+    ctx,
+    queue_name_prefix,
+    threshold,
+    waiting_period,
+    dry_run,
+    task_type,
+    options,
+    debug,
+    limit,
+    file_input,
+):
+    """Send origins directly from file/stdin to celery, filling the queue according to
+    its standard configuration (and some optional adjustments).
+
+    Arguments:
+
+        TASK_TYPE: Scheduler task type (e.g. load-git, load-svn, ...)
+
+        INPUT: Dataset file of origins to schedule, use '-' when piping to the cli.
+
+        OPTIONS: Extra options (in the key=value form, e.g. base_git_url=<foo>) passed
+                 directly to the task to be scheduled
+
+    """
+    from functools import partial
+    from time import sleep
+
+    from swh.scheduler.celery_backend.config import app, get_available_slots
+    from swh.scheduler.cli.utils import parse_options
+
+    from .origin_utils import (
+        TASK_ARGS_GENERATOR_CALLABLES,
+        get_scheduler_task_info,
+        lines_to_task_args,
+    )
+
+    scheduler = ctx.obj["scheduler"]
+
+    try:
+        task_info = get_scheduler_task_info(scheduler, task_type)
+    except ValueError as e:
+        ctx.fail(e)
+
+    if debug:
+        click.echo(f"Scheduler task information: {task_info}")
+
+    celery_task_name = task_info["backend_name"]
+    if queue_name_prefix:
+        queue_name = f"{queue_name_prefix}:{celery_task_name}"
+    else:
+        queue_name = celery_task_name
+
+    if debug:
+        click.echo(f"Destination queue: {queue_name}")
+
+    if not threshold:
+        threshold = task_info.get("max_queue_length") or 1000
+
+    # Compute the callable function to generate the tasks to schedule. Tasks are read
+    # out of the file_input.
+    task_fn = partial(
+        TASK_ARGS_GENERATOR_CALLABLES.get(
+            task_type, partial(lines_to_task_args, columns=["url"])
+        ),
+        lines=file_input,
+    )
+
+    (extra_args, extra_kwargs) = parse_options(options)
+
+    if debug:
+        print(f"Task extra_args: {extra_args}")
+        print(f"task Extra_kwargs: {extra_kwargs}")
+
+    limit_reached = False
+    while True:
+        throttled = False
+        remains_data = False
+        pending_tasks = []
+
+        if limit_reached:
+            break
+
+        # we can send new tasks, compute how many we can send
+        queue_length = get_available_slots(app, queue_name, 1000)
+        nb_tasks_to_send = abs(threshold - queue_length) if queue_length else threshold
+
+        if debug:
+            click.echo(f"Destination queue length: {queue_length}")
+            click.echo(f"Nb tasks to send : {nb_tasks_to_send}")
+
+        if nb_tasks_to_send > 0:
+            count = 0
+            for _task in task_fn(**extra_kwargs):
+                pending_tasks.append(_task)
+                count += 1
+
+                if debug:
+                    click.echo(f"Task: {_task}")
+
+                if limit is not None and count >= limit:
+                    click.echo(f"Limit {limit} messages specified reached, stopping.")
+                    limit_reached = True
+                    break
+
+                if count >= nb_tasks_to_send:
+                    throttled = True
+                    remains_data = True
+                    break
+
+            if not pending_tasks:
+                # check for some more data on stdin
+                if not remains_data:
+                    # if no more data, we break to exit
+                    break
+
+            from kombu.utils.uuid import uuid
+
+            for _task_args in pending_tasks:
+                send_task_kwargs = dict(
+                    name=celery_task_name,
+                    task_id=uuid(),
+                    args=tuple(_task_args["args"]) + tuple(extra_args),
+                    kwargs=_task_args["kwargs"],
+                    queue=queue_name,
+                )
+                if dry_run:
+                    click.echo(
+                        f"** DRY-RUN ** Call app.send_task with: {send_task_kwargs}"
+                    )
+                else:
+                    app.send_task(**send_task_kwargs)
+                    click.echo(send_task_kwargs)
+
+        else:
+            throttled = True
+
+        if throttled:
+            sleep(waiting_period)

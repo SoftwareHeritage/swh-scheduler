@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2021  The Software Heritage developers
+# Copyright (C) 2019-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -26,7 +26,7 @@ scheduler:
 """
 
 
-def invoke(scheduler, catch_exceptions, args, config=CLI_CONFIG):
+def invoke(scheduler, catch_exceptions, args, config=CLI_CONFIG, **kwargs):
     runner = CliRunner()
     with patch(
         "swh.scheduler.get_scheduler"
@@ -39,7 +39,7 @@ def invoke(scheduler, catch_exceptions, args, config=CLI_CONFIG):
         args = [
             "-C" + config_fd.name,
         ] + args
-        result = runner.invoke(cli, args, obj={"log_level": logging.WARNING})
+        result = runner.invoke(cli, args, obj={"log_level": logging.WARNING}, **kwargs)
     if not catch_exceptions and result.exception:
         print(result.output)
         raise result.exception

@@ -1,4 +1,4 @@
-# Copyright (C) 2021  The Software Heritage developers
+# Copyright (C) 2021-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -13,9 +13,11 @@ from swh.scheduler.tests.common import TASK_TYPES
 from swh.scheduler.tests.test_cli import invoke as basic_invoke
 
 
-def invoke(scheduler, args: Tuple[str, ...] = (), catch_exceptions: bool = False):
+def invoke(
+    scheduler, args: Tuple[str, ...] = (), catch_exceptions: bool = False, **kwargs
+):
     return basic_invoke(
-        scheduler, args=["origin", *args], catch_exceptions=catch_exceptions
+        scheduler, args=["origin", *args], catch_exceptions=catch_exceptions, **kwargs
     )
 
 
@@ -202,3 +204,81 @@ def test_update_metrics(swh_scheduler, listed_origins):
 
     assert result.exit_code == 0
     assert swh_scheduler.get_metrics() != []
+
+
+@pytest.mark.parametrize(
+    "limit,queue_name_prefix,dry_run,debug",
+    [
+        (None, "", False, False),
+        (10, "", False, False),
+        (None, "large-repository", False, False),
+        (None, "", True, False),
+        (None, "", False, True),
+    ],
+)
+def test_send_origins_from_file_to_celery_cli(
+    mocker,
+    swh_scheduler,
+    swh_scheduler_celery_app,
+    task_types,
+    listed_origins_by_type,
+    limit,
+    queue_name_prefix,
+    dry_run,
+    debug,
+):
+    visit_type = "test-git"
+    origins_to_schedule = listed_origins_by_type[visit_type][:20]
+
+    task_type_param = next(iter(task_types))
+    origins_to_send = [o.url for o in origins_to_schedule]
+
+    get_queue_length = mocker.patch(
+        "swh.scheduler.celery_backend.config.get_queue_length"
+    )
+    get_queue_length.return_value = None
+
+    send_task = mocker.patch.object(swh_scheduler_celery_app, "send_task")
+    send_task.return_value = None
+
+    extra_cmd_args = []
+    if limit:
+        extra_cmd_args += ["--limit", limit]
+    if queue_name_prefix:
+        extra_cmd_args += ["--queue-name-prefix", queue_name_prefix]
+    if dry_run:
+        extra_cmd_args += ["--dry-run"]
+    if debug:
+        extra_cmd_args += ["--debug"]
+
+    cmd_args = ["send-origins-from-file-to-celery"] + extra_cmd_args + [task_type_param]
+
+    input_data = ("\n").join(origins_to_send)
+    result = invoke(swh_scheduler, args=tuple(cmd_args), input=input_data)
+    assert result.exit_code == 0
+
+    if dry_run:
+        assert "** DRY-RUN **" in result.output
+
+    if debug:
+        assert "Destination queue" in result.output
+
+    actual_scheduled_tasks = {
+        (call[1]["name"], call[1]["kwargs"]["url"], call[1]["queue"])
+        for call in send_task.call_args_list
+    }
+
+    backend_name = task_types[task_type_param]["backend_name"]
+    queue = f"{queue_name_prefix}:{backend_name}" if queue_name_prefix else backend_name
+    expected_tasks = (
+        {}
+        if dry_run
+        else {
+            (backend_name, origin.url, queue)
+            for origin in origins_to_schedule[
+                : limit if limit else len(origins_to_schedule)
+            ]
+        }
+    )
+
+    assert set(actual_scheduled_tasks) == set(expected_tasks)
