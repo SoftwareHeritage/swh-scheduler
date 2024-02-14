@@ -148,7 +148,7 @@ def schedule_next(ctx, policy: str, type: str, count: int):
     click.echo_via_pager("\n".join(output))
 
 
-@origin.command("send-to-celery")
+@origin.command("send-origins-from-scheduler-to-celery")
 @click.option(
     "--policy", "-p", default="oldest_scheduled_first", help="Scheduling policy"
 )
@@ -208,7 +208,7 @@ def schedule_next(ctx, policy: str, type: str, count: int):
 )
 @click.argument("visit_type_name", type=str)
 @click.pass_context
-def send_to_celery_cli(
+def send_from_scheduler_to_celery_cli(
     ctx,
     policy: str,
     queue: Optional[str],

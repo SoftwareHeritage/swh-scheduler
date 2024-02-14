@@ -131,7 +131,7 @@ def test_send_to_celery_unknown_visit_type(
     "Calling cli without a known visit type should raise"
     result = invoke(
         swh_scheduler,
-        args=("send-to-celery", "unknown-visit-type"),
+        args=("send-origins-from-scheduler-to-celery", "unknown-visit-type"),
         catch_exceptions=True,
     )
     assert "Unknown" in result.output
@@ -155,16 +155,14 @@ def test_send_to_celery_unknown_visit_type(
         ],
     ],
 )
-def test_send_to_celery(
+def test_send_origins_from_scheduler_to_celery(
     mocker,
     swh_scheduler,
+    task_types,
     swh_scheduler_celery_app,
     listed_origins_by_type,
     extra_cmd_args,
 ):
-    for task_type in TASK_TYPES.values():
-        swh_scheduler.create_task_type(task_type)
-
     visit_type = next(iter(listed_origins_by_type))
 
     for origins in listed_origins_by_type.values():
@@ -178,7 +176,7 @@ def test_send_to_celery(
     send_task = mocker.patch.object(swh_scheduler_celery_app, "send_task")
     send_task.return_value = None
 
-    cmd_args = ["send-to-celery", visit_type] + extra_cmd_args
+    cmd_args = ["send-origins-from-scheduler-to-celery", visit_type] + extra_cmd_args
 
     result = invoke(swh_scheduler, args=tuple(cmd_args))
     assert result.exit_code == 0
