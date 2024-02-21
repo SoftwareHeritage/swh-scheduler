@@ -86,11 +86,8 @@ def register_lister_cli(
 
     (args, kw) = parse_options(options)
 
-    if "max_pages" in kw:
-        if kw["max_pages"] <= 3:
-            max_pages = kw["max_pages"]
-    else:
-        max_pages = 1
+    max_pages = kw.get("max_pages", 2)
+    max_origins_per_page = kw.get("max_origins_per_page", 5)
 
     # Recurring policy on production
     if preset == "production":
@@ -100,7 +97,7 @@ def register_lister_cli(
         kw.update(
             {
                 "max_pages": max_pages,
-                "max_origins_per_page": 10,
+                "max_origins_per_page": max_origins_per_page,
                 "enable_origins": False,
             }
         )
