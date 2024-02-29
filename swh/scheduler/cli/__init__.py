@@ -27,7 +27,10 @@ from swh.core.cli import swh as swh_cli_group
         exists=True,
         dir_okay=False,
     ),
-    help="Configuration file.",
+    help=(
+        "Configuration file. This has a higher priority than SWH_CONFIG_FILENAME "
+        "environment variable if set. "
+    ),
 )
 @click.option(
     "--database",
@@ -59,6 +62,8 @@ def cli(ctx, config_file, database, url, no_stdout):
         class OperationalError(Exception):
             pass
 
+    from os import environ
+
     from swh.core import config
     from swh.scheduler import DEFAULT_CONFIG, get_scheduler
 
@@ -66,7 +71,13 @@ def cli(ctx, config_file, database, url, no_stdout):
 
     logger = logging.getLogger(__name__)
     scheduler = None
-    conf = config.read(config_file, DEFAULT_CONFIG)
+    if config_file:
+        conf = config.read(config_file, DEFAULT_CONFIG)
+    elif "SWH_CONFIG_FILENAME" in environ:
+        conf = config.load_from_envvar(DEFAULT_CONFIG)
+    else:
+        conf = config.read(None, DEFAULT_CONFIG)
+
     if "scheduler" not in conf:
         ctx.fail("missing 'scheduler' configuration")
 
@@ -80,6 +91,7 @@ def cli(ctx, config_file, database, url, no_stdout):
     try:
         logger.debug("Instantiating scheduler with %s", sched_conf)
         scheduler = get_scheduler(**sched_conf)
+
     except (ValueError, OperationalError) as e:
         # Propagate scheduler instantiation exception context to subcommands, and let
         # them report properly the issue
