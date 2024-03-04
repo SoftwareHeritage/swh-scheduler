@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2021  The Software Heritage developers
+# Copyright (C) 2018-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -9,15 +9,18 @@ from importlib import import_module
 from typing import TYPE_CHECKING, Any, Dict
 import warnings
 
-DEFAULT_CONFIG = {
-    "scheduler": (
-        "dict",
-        {
-            "cls": "postgresql",
-            "db": "dbname=softwareheritage-scheduler-dev",
-        },
-    )
+DEFAULT_CONFIG_RAW = {
+    "scheduler": {
+        "cls": "postgresql",
+        "db": "dbname=softwareheritage-scheduler-dev",
+    }
 }
+
+
+DEFAULT_CONFIG = {
+    "scheduler": ("dict", DEFAULT_CONFIG_RAW["scheduler"]),
+}
+
 # current configuration. To be set by the config loading mechanism
 CONFIG: Dict[str, Any] = {}
 

@@ -62,21 +62,16 @@ def cli(ctx, config_file, database, url, no_stdout):
         class OperationalError(Exception):
             pass
 
-    from os import environ
-
-    from swh.core import config
-    from swh.scheduler import DEFAULT_CONFIG, get_scheduler
+    from swh.scheduler import get_scheduler
+    from swh.scheduler.cli.config import read_config
 
     ctx.ensure_object(dict)
 
     logger = logging.getLogger(__name__)
     scheduler = None
-    if config_file:
-        conf = config.read(config_file, DEFAULT_CONFIG)
-    elif "SWH_CONFIG_FILENAME" in environ:
-        conf = config.load_from_envvar(DEFAULT_CONFIG)
-    else:
-        conf = config.read(None, DEFAULT_CONFIG)
+
+    # Read configuration out of config_file or SWH_CONFIG_FILENAME environment variable
+    conf = read_config(config_file)
 
     if "scheduler" not in conf:
         ctx.fail("missing 'scheduler' configuration")
