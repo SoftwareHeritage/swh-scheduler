@@ -1,4 +1,4 @@
-pytest
+pytest >= 8.1
 pytest-mock
 pytest-postgresql > 5
 hypothesis >= 3.11.0

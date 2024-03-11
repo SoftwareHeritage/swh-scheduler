@@ -14,7 +14,7 @@ import pytest
 from swh.scheduler.model import ListedOrigin, Lister
 from swh.scheduler.tests.common import LISTERS
 
-DATADIR = Path(__file__).parent.absolute() / "data"
+DATADIR = Path(__file__).parent.absolute() / "tests/data"
 
 
 # make sure we are not fooled by CELERY_ config environment vars
