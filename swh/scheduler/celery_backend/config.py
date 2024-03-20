@@ -6,6 +6,7 @@
 import functools
 import logging
 import os
+import sys
 from time import monotonic as _monotonic
 import traceback
 from typing import Any, Dict, Optional
@@ -176,8 +177,22 @@ def _init_sentry(sentry_dsn: str, main_package: Optional[str] = None):
 @worker_init.connect
 @_print_errors
 def on_worker_init(*args, **kwargs):
-    sentry_dsn = None  # will be set in `init_sentry` function
+    # use a fake sentry DSN to ensure celery integration for sentry is
+    # properly configured as it must happen in the worker_init signal
+    # callback, real sentry DSN is then setup in task_prerun signal
+    # callback (see celery_task_prerun function below)
+    sentry_dsn = "https://public@sentry.example.org/1"
     _init_sentry(sentry_dsn)
+
+    if "pytest" in sys.argv[0] or "PYTEST_XDIST_WORKER" in os.environ:
+        # when pytest collects tests, it breaks the proper configuration
+        # of the celery integration as a side effect, so we ensure that
+        # the celery.worker.consumer.build_tracer function gets overridden
+        # as it should have be
+        from celery.app import trace
+        from celery.worker.consumer import consumer
+
+        consumer.build_tracer = trace.build_tracer
 
 
 @Panel.register

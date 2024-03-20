@@ -33,7 +33,7 @@ def multiping(self, n=10):
 
 
 @shared_task(name=TASK_ERROR)
-def not_implemented():
+def not_implemented(*args, **kwargs):
     raise NotImplementedError("Nope")
 
 
