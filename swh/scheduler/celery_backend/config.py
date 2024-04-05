@@ -274,7 +274,7 @@ def get_available_slots(app, queue_name: str, max_length: Optional[int]):
         max_val = max(0, min(max_length - queue_length, MAX_NUM_TASKS))
     except (ValueError, TypeError):
         # Unknown queue length, just schedule all the tasks
-        max_val = MAX_NUM_TASKS
+        max_val = max_length
 
     return max_val
 

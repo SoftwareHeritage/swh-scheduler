@@ -571,11 +571,9 @@ def send_origins_from_file_to_celery(
             break
 
         # we can send new tasks, compute how many we can send
-        queue_length = get_available_slots(app, queue_name, 1000)
-        nb_tasks_to_send = abs(threshold - queue_length) if queue_length else threshold
+        nb_tasks_to_send = get_available_slots(app, queue_name, threshold)
 
         if debug:
-            click.echo(f"Destination queue length: {queue_length}")
             click.echo(f"Nb tasks to send : {nb_tasks_to_send}")
 
         if nb_tasks_to_send > 0:

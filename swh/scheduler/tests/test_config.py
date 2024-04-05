@@ -37,7 +37,7 @@ def test_get_available_slots_issue_when_reading_queue(mocker):
     mock.side_effect = ValueError
 
     actual_num = get_available_slots(app, "anything", max_length=10)
-    assert actual_num == MAX_NUM_TASKS
+    assert actual_num == 10
     assert mock.called
 
 
@@ -45,7 +45,7 @@ def test_get_available_slots_no_queue_length(mocker):
     mock = mocker.patch("swh.scheduler.celery_backend.config.get_queue_length")
     mock.return_value = None
     actual_num = get_available_slots(app, "anything", max_length=100)
-    assert actual_num == MAX_NUM_TASKS
+    assert actual_num == 100
     assert mock.called
 
 
