@@ -114,7 +114,7 @@ def register_lister_cli(
         next_run = now + timedelta(days=1) if listing_type == "incremental" else now
         task_add(
             scheduler,
-            task_type_name=task_type["type"],
+            task_type_name=task_type.type,
             args=args,
             kw=kw,
             policy=policy,
@@ -170,7 +170,7 @@ def schedule_first_visits_cli(
         if not task_type:
             unknown_task_types.append(visit_type_name)
             continue
-        queue_name = task_type["backend_name"]
+        queue_name = task_type.backend_name
         visit_type_to_queue[visit_type_name] = f"{queue_name_prefix}:{queue_name}"
 
     if unknown_task_types:

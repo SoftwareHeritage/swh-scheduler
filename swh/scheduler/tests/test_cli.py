@@ -898,7 +898,7 @@ def test_cli_task_runner_unknown_task_types(swh_scheduler, storage):
     """When passing at least one unknown task type, the runner should fail."""
 
     task_types = swh_scheduler.get_task_types()
-    task_type_names = [t["type"] for t in task_types]
+    task_type_names = [t.type for t in task_types]
     known_task_type = random.choice(task_type_names)
     unknown_task_type = "unknown-task-type"
     assert unknown_task_type not in task_type_names
@@ -925,7 +925,7 @@ def test_cli_task_runner_with_known_tasks(
     """Trigger runner with known tasks runs smoothly."""
 
     task_types = swh_scheduler.get_task_types()
-    task_type_names = [t["type"] for t in task_types]
+    task_type_names = [t.type for t in task_types]
     task_type_name = random.choice(task_type_names)
     task_type_name2 = random.choice(task_type_names)
 

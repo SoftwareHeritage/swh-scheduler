@@ -1,4 +1,4 @@
-# Copyright (C) 2021-2022 The Software Heritage developers
+# Copyright (C) 2021-2024 The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -28,7 +28,7 @@ from swh.scheduler.utils import create_origin_task_dicts
 
 if TYPE_CHECKING:
     from ..interface import SchedulerInterface
-    from ..model import ListedOrigin
+    from ..model import ListedOrigin, TaskType
 
 logger = logging.getLogger(__name__)
 
@@ -174,7 +174,7 @@ def send_visits_for_visit_type(
     scheduler: SchedulerInterface,
     app,
     visit_type: str,
-    task_type: Dict,
+    task_type: TaskType,
     policy_cfg: List[Dict[str, Any]],
     no_origins_scheduled_backoff: int = DEFAULT_NO_ORIGINS_SCHEDULED_BACKOFF,
 ) -> float:
@@ -206,8 +206,8 @@ def send_visits_for_visit_type(
        of the loop.
 
     """
-    queue_name = task_type["backend_name"]
-    max_queue_length = task_type.get("max_queue_length") or 0
+    queue_name = task_type.backend_name
+    max_queue_length = task_type.max_queue_length or 0
     min_available_slots = max_queue_length * MIN_SLOTS_RATIO
 
     current_iteration_start = time.monotonic()

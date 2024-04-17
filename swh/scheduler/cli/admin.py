@@ -167,11 +167,11 @@ def schedule_recurrent(ctx, visit_types: List[str]):
         # Figure out which visit types exist in the scheduler
         all_task_types = scheduler.get_task_types()
         for task_type in all_task_types:
-            if not task_type["type"].startswith("load-"):
+            if not task_type.type.startswith("load-"):
                 # only consider loading tasks as recurring ones, the rest is dismissed
                 continue
             # get visit type name from task type
-            visit_types.append(task_type["type"][5:])
+            visit_types.append(task_type.type[5:])
     else:
         # Check that the passed visit types exist in the scheduler
         for visit_type in visit_types:

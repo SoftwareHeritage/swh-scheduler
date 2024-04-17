@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2021 The Software Heritage developers
+# Copyright (C) 2015-2024 The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -22,6 +22,7 @@ from swh.core.statsd import statsd
 from swh.scheduler import get_scheduler
 from swh.scheduler.celery_backend.config import get_available_slots
 from swh.scheduler.interface import SchedulerInterface
+from swh.scheduler.model import TaskType
 from swh.scheduler.utils import utcnow
 
 logger = logging.getLogger(__name__)
@@ -33,7 +34,7 @@ MAX_NUM_TASKS = 10000
 def run_ready_tasks(
     backend: SchedulerInterface,
     app,
-    task_types: List[Dict] = [],
+    task_types: List[TaskType] = [],
     with_priority: bool = False,
 ) -> List[Dict]:
     """Schedule tasks ready to be scheduled.
@@ -77,12 +78,12 @@ def run_ready_tasks(
         task_types_d = {}
         pending_tasks = []
         for task_type in task_types:
-            task_type_name = task_type["type"]
+            task_type_name = task_type.type
             task_types_d[task_type_name] = task_type
-            max_queue_length = task_type["max_queue_length"]
+            max_queue_length = task_type.max_queue_length
             if max_queue_length is None:
                 max_queue_length = 0
-            backend_name = task_type["backend_name"]
+            backend_name = task_type.backend_name
 
             if with_priority:
                 # grab max_queue_length (or 10) potential tasks with any priority for
@@ -131,7 +132,7 @@ def run_ready_tasks(
             args = task["arguments"]["args"]
             kwargs = task["arguments"]["kwargs"]
 
-            backend_name = task_types_d[task["type"]]["backend_name"]
+            backend_name = task_types_d[task["type"]].backend_name
             backend_id = uuid()
             celery_tasks.append(
                 (

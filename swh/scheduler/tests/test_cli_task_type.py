@@ -102,12 +102,12 @@ def test_register_task_types_all(
 
         scheduler = get_scheduler(**local_sched_config["scheduler"])
 
-        all_tasks = ["list-foo-full", "load-bar"]
-        for task in all_tasks:
-            task_type_desc = scheduler.get_task_type(task)
-            assert task_type_desc
-            assert task_type_desc["type"] == task
-            assert task_type_desc["backoff_factor"] == 1
+        all_task_type_names = ["list-foo-full", "load-bar"]
+        for task_type_name in all_task_type_names:
+            task_type = scheduler.get_task_type(task_type_name)
+            assert task_type
+            assert task_type.type == task_type_name
+            assert task_type.backoff_factor == 1.0
 
 
 def test_register_task_types_filter(
@@ -131,14 +131,12 @@ def test_register_task_types_filter(
     assert result.exit_code == 0, traceback.print_exception(*result.exc_info)
 
     scheduler = get_scheduler(**local_sched_config["scheduler"])
-    all_tasks = [
-        "list-foo-full",
-    ]
-    for task in all_tasks:
-        task_type_desc = scheduler.get_task_type(task)
-        assert task_type_desc
-        assert task_type_desc["type"] == task
-        assert task_type_desc["backoff_factor"] == 1
+
+    task_type_name = "list-foo-full"
+    task_type = scheduler.get_task_type(task_type_name)
+    assert task_type
+    assert task_type.type == task_type_name
+    assert task_type.backoff_factor == 1.0
 
 
 @pytest.mark.parametrize("cli_command", ["list", "register", "add"])

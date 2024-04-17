@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2022  The Software Heritage developers
+# Copyright (C) 2015-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -12,7 +12,13 @@ from typing_extensions import Protocol, runtime_checkable
 
 from swh.core.api import remote_api_endpoint
 from swh.core.api.classes import PagedResult
-from swh.scheduler.model import ListedOrigin, Lister, OriginVisitStats, SchedulerMetrics
+from swh.scheduler.model import (
+    ListedOrigin,
+    Lister,
+    OriginVisitStats,
+    SchedulerMetrics,
+    TaskType,
+)
 
 ListedOriginPageToken = Tuple[str, str]
 
@@ -36,39 +42,33 @@ class PaginatedListedOriginList(PagedResult[ListedOrigin, ListedOriginPageToken]
 @runtime_checkable
 class SchedulerInterface(Protocol):
     @remote_api_endpoint("task_type/create")
-    def create_task_type(self, task_type):
-        """Create a new task type ready for scheduling.
+    def create_task_type(self, task_type: TaskType) -> None:
+        """Create a new task type in database ready for scheduling.
 
         Args:
-            task_type (dict): a dictionary with the following keys:
-
-                - type (str): an identifier for the task type
-                - description (str): a human-readable description of what the
-                  task does
-                - backend_name (str): the name of the task in the
-                  job-scheduling backend
-                - default_interval (datetime.timedelta): the default interval
-                  between two task runs
-                - min_interval (datetime.timedelta): the minimum interval
-                  between two task runs
-                - max_interval (datetime.timedelta): the maximum interval
-                  between two task runs
-                - backoff_factor (float): the factor by which the interval
-                  changes at each run
-                - max_queue_length (int): the maximum length of the task queue
-                  for this task type
-
+            task_type: a TaskType object
         """
         ...
 
     @remote_api_endpoint("task_type/get")
-    def get_task_type(self, task_type_name):
-        """Retrieve the task type with id task_type_name"""
+    def get_task_type(self, task_type_name: str) -> Optional[TaskType]:
+        """Retrieve the registered task type with a given name
+
+        Args:
+            task_type_name: name of the task type to retrieve
+
+        Returns:
+            a TaskType object or :const:`None` if no such task type exists
+        """
         ...
 
     @remote_api_endpoint("task_type/get_all")
-    def get_task_types(self):
-        """Retrieve all registered task types"""
+    def get_task_types(self) -> List[TaskType]:
+        """Retrieve all registered task types
+
+        Returns:
+            a list of TaskType objects
+        """
         ...
 
     @remote_api_endpoint("task/create")

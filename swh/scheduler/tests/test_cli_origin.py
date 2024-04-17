@@ -186,7 +186,7 @@ def test_send_origins_from_scheduler_to_celery(
     }
 
     expected_tasks = {
-        (TASK_TYPES[origin.visit_type]["backend_name"], origin.url)
+        (TASK_TYPES[origin.visit_type].backend_name, origin.url)
         for origin in listed_origins_by_type[visit_type]
     }
 
@@ -266,7 +266,7 @@ def test_send_origins_from_file_to_celery_cli(
         for call in send_task.call_args_list
     }
 
-    backend_name = task_types[task_type_param]["backend_name"]
+    backend_name = task_types[task_type_param].backend_name
     queue = f"{queue_name_prefix}:{backend_name}" if queue_name_prefix else backend_name
     expected_tasks = (
         {}

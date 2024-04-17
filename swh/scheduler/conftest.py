@@ -96,5 +96,5 @@ def task_types(swh_scheduler):
     all_task_types = {}
     for task_type in TASK_TYPES.values():
         swh_scheduler.create_task_type(task_type)
-        all_task_types[task_type["type"]] = task_type
+        all_task_types[task_type.type] = task_type
     return all_task_types

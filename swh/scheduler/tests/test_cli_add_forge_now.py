@@ -1,15 +1,17 @@
-# Copyright (C) 2022  The Software Heritage developers
+# Copyright (C) 2022-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-from typing import Dict, Tuple
+from datetime import timedelta
+from typing import Tuple
 
 import attr
 import pytest
 
 from swh.scheduler.cli.utils import lister_task_type
 from swh.scheduler.interface import SchedulerInterface
+from swh.scheduler.model import TaskType
 from swh.scheduler.tests.common import TASK_TYPES
 from swh.scheduler.tests.test_cli import invoke as basic_invoke
 
@@ -89,7 +91,7 @@ def test_schedule_first_visits_cli(
     }
 
     expected_tasks = {
-        (TASK_TYPES[origin.visit_type]["backend_name"], origin.url)
+        (TASK_TYPES[origin.visit_type].backend_name, origin.url)
         for origin in listed_origins_by_type[visit_type]
     }
 
@@ -111,22 +113,22 @@ def test_schedule_first_visits_cli(
 
 def _create_task_type(
     swh_scheduler: SchedulerInterface, lister_name: str, listing_type: str = "full"
-) -> Dict:
-    task_type = {
-        "type": lister_task_type(lister_name, listing_type),  # only relevant bit
-        "description": f"{listing_type} listing",
-        "backend_name": "swh.example.backend",
-        "default_interval": "1 day",
-        "min_interval": "1 day",
-        "max_interval": "1 day",
-        "backoff_factor": "1",
-        "max_queue_length": "100",
-        "num_retries": 3,
-    }
-    swh_scheduler.create_task_type(task_type)
-    task_type = swh_scheduler.get_task_type(task_type["type"])
-    assert task_type is not None
-    return task_type
+) -> TaskType:
+    task_type_in = TaskType(
+        type=lister_task_type(lister_name, listing_type),  # only relevant bit
+        description=f"{listing_type} listing",
+        backend_name="swh.example.backend",
+        default_interval=timedelta(days=1),
+        min_interval=timedelta(days=1),
+        max_interval=timedelta(days=1),
+        backoff_factor=1.0,
+        max_queue_length=100,
+        num_retries=3,
+    )
+    swh_scheduler.create_task_type(task_type_in)
+    task_type_out = swh_scheduler.get_task_type(task_type_in.type)
+    assert task_type_out is not None
+    return task_type_out
 
 
 @pytest.mark.parametrize("preset", ["staging", "production"])
@@ -155,13 +157,13 @@ def test_schedule_register_lister(swh_scheduler, stored_lister, preset):
     expected_msgs = []
     if preset == "production":
         # 2 tasks: 1 full + 1 incremental (tomorrow) with recurring policy
-        expected_msgs = ["Policy: recurring", incremental["type"], "Next run: tomorrow"]
+        expected_msgs = ["Policy: recurring", incremental.type, "Next run: tomorrow"]
     else:
         # 1 task full with policy oneshot
         expected_msgs = ["Policy: oneshot"]
 
     # In any case, there is the full listing type too
-    expected_msgs.append(full["type"])
+    expected_msgs.append(full.type)
 
     assert len(expected_msgs) > 0
     for msg in expected_msgs:

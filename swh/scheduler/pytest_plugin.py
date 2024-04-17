@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2022  The Software Heritage developers
+# Copyright (C) 2020-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -15,6 +15,7 @@ from pytest_postgresql import factories
 from swh.core.db.db_utils import initialize_database_for_module
 from swh.scheduler import get_scheduler
 from swh.scheduler.backend import SchedulerBackend
+from swh.scheduler.model import TaskType
 
 # celery tasks for testing purpose; tasks themselves should be
 # in swh/scheduler/tests/tasks.py
@@ -52,14 +53,14 @@ def swh_scheduler(swh_scheduler_class, swh_scheduler_config):
     scheduler = get_scheduler(swh_scheduler_class, **swh_scheduler_config)
     for taskname in TASK_NAMES:
         scheduler.create_task_type(
-            {
-                "type": "swh-test-{}".format(taskname),
-                "description": "The {} testing task".format(taskname),
-                "backend_name": "swh.scheduler.tests.tasks.{}".format(taskname),
-                "default_interval": timedelta(days=1),
-                "min_interval": timedelta(hours=6),
-                "max_interval": timedelta(days=12),
-            }
+            TaskType(
+                type=f"swh-test-{taskname}",
+                description=f"The {taskname} testing task",
+                backend_name=f"swh.scheduler.tests.tasks.{taskname}",
+                default_interval=timedelta(days=1),
+                min_interval=timedelta(hours=6),
+                max_interval=timedelta(days=12),
+            )
         )
 
     return scheduler

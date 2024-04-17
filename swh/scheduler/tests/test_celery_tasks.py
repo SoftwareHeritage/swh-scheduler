@@ -98,7 +98,7 @@ def test_scheduler_fixture(
     task_type = swh_scheduler.get_task_type("swh-test-ping")
 
     assert task_type
-    assert task_type["backend_name"] == TASK_PING
+    assert task_type.backend_name == TASK_PING
 
     swh_scheduler.create_tasks([create_task_dict("swh-test-ping", "oneshot")])
 
@@ -116,7 +116,7 @@ def test_run_ready_task_standard(
     task_type_name, backend_name = "swh-test-add", TASK_ADD
     task_type = swh_scheduler.get_task_type(task_type_name)
     assert task_type
-    assert task_type["backend_name"] == backend_name
+    assert task_type.backend_name == backend_name
 
     task_inputs = [
         ("oneshot", (12, 30)),
@@ -160,7 +160,7 @@ def test_run_ready_task_with_priority(
     task_type_name, backend_name = "swh-test-add", TASK_ADD
     task_type = swh_scheduler.get_task_type(task_type_name)
     assert task_type
-    assert task_type["backend_name"] == backend_name
+    assert task_type.backend_name == backend_name
 
     task_inputs = [
         ("oneshot", (10, 22), "low"),
@@ -207,7 +207,7 @@ def test_task_exception(
 ):
     task_type = swh_scheduler.get_task_type("swh-test-error")
     assert task_type
-    assert task_type["backend_name"] == TASK_ERROR
+    assert task_type.backend_name == TASK_ERROR
 
     swh_scheduler.create_tasks(
         [create_task_dict("swh-test-error", "oneshot", "arg", kwarg="kwarg")]

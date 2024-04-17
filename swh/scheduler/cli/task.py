@@ -387,7 +387,7 @@ def list_tasks(
     scheduler = ctx.obj["scheduler"]
 
     if not task_type:
-        task_type = [x["type"] for x in scheduler.get_task_types()]
+        task_type = [x.type for x in scheduler.get_task_types()]
 
     # if task_id is not given, default value for status is
     #  'next_run_not_scheduled'

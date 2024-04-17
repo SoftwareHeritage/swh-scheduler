@@ -246,7 +246,7 @@ def send_from_scheduler_to_celery_cli(
         ctx.fail(f"Unknown task type {task_type}.")
         assert False  # for mypy
 
-    queue_name = queue or task_type["backend_name"]
+    queue_name = queue or task_type.backend_name
 
     send_to_celery(
         scheduler,
@@ -520,21 +520,21 @@ def send_origins_from_file_to_celery(
 
     from .origin_utils import (
         TASK_ARGS_GENERATOR_CALLABLES,
-        get_scheduler_task_info,
+        get_scheduler_task_type,
         lines_to_task_args,
     )
 
     scheduler = ctx.obj["scheduler"]
 
     try:
-        task_info = get_scheduler_task_info(scheduler, task_type)
+        task_type_info = get_scheduler_task_type(scheduler, task_type)
     except ValueError as e:
         ctx.fail(e)
 
     if debug:
-        click.echo(f"Scheduler task information: {task_info}")
+        click.echo(f"Scheduler task information: {task_type_info}")
 
-    celery_task_name = task_info["backend_name"]
+    celery_task_name = task_type_info.backend_name
     if queue_name_prefix:
         queue_name = f"{queue_name_prefix}:{celery_task_name}"
     else:
@@ -544,7 +544,7 @@ def send_origins_from_file_to_celery(
         click.echo(f"Destination queue: {queue_name}")
 
     if not threshold:
-        threshold = task_info.get("max_queue_length") or 1000
+        threshold = task_type_info.max_queue_length
 
     # Compute the callable function to generate the tasks to schedule. Tasks are read
     # out of the file_input.

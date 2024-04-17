@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from typing import Dict, List, Optional, Tuple
 
     from swh.scheduler.interface import SchedulerInterface
+    from swh.scheduler.model import TaskType
 
 
 TASK_BATCH_SIZE = 1000  # Number of tasks per query to the scheduler
@@ -173,7 +174,7 @@ def parse_options(options: List[str]) -> Tuple[List[str], Dict]:
     return (args, kw)
 
 
-def get_task_type(scheduler: SchedulerInterface, visit_type: str) -> Optional[Dict]:
+def get_task_type(scheduler: SchedulerInterface, visit_type: str) -> Optional[TaskType]:
     "Given a visit type, return its associated task type."
     return scheduler.get_task_type(f"load-{visit_type}")
 
@@ -225,8 +226,8 @@ def send_to_celery(
     for visit_type_name, queue_name in visit_type_to_queue.items():
         task_type = get_task_type(scheduler, visit_type_name)
         assert task_type is not None
-        task_name = task_type["backend_name"]
-        num_tasks = get_available_slots(app, queue_name, task_type["max_queue_length"])
+        task_name = task_type.backend_name
+        num_tasks = get_available_slots(app, queue_name, task_type.max_queue_length)
 
         click.echo(f"{num_tasks} slots available in celery queue")
 

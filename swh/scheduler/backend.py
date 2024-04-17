@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2022  The Software Heritage developers
+# Copyright (C) 2015-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -6,7 +6,17 @@
 import datetime
 import json
 import logging
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    get_type_hints,
+)
 from uuid import UUID
 
 import attr
@@ -19,6 +29,7 @@ from testing.postgresql import Postgresql
 from swh.core.db import BaseDb
 from swh.core.db.common import db_transaction
 from swh.core.db.db_utils import init_admin_extensions, populate_database_for_package
+from swh.scheduler.model import TaskType
 from swh.scheduler.utils import utcnow
 
 from .exc import SchedulerException, StaleData, UnknownPolicy
@@ -43,7 +54,7 @@ psycopg2.extensions.register_adapter(LastVisitStatus, adapt_LastVisitStatus)
 psycopg2.extras.register_uuid()
 
 
-def format_query(query, keys):
+def format_query(query: str, keys: Sequence[str]) -> str:
     """Format a query with the given keys"""
 
     query_keys = ", ".join(keys)
@@ -84,70 +95,44 @@ class SchedulerBackend:
         if db is not self._db:
             db.put_conn()
 
-    task_type_keys = [
-        "type",
-        "description",
-        "backend_name",
-        "default_interval",
-        "min_interval",
-        "max_interval",
-        "backoff_factor",
-        "max_queue_length",
-        "num_retries",
-        "retry_delay",
-    ]
+    task_type_keys = [field.name for field in attr.fields(TaskType)]
 
     @db_transaction()
-    def create_task_type(self, task_type, db=None, cur=None):
+    def create_task_type(self, task_type: TaskType, db=None, cur=None) -> None:
         """Create a new task type ready for scheduling.
 
         Args:
-            task_type (dict): a dictionary with the following keys:
-
-                - type (str): an identifier for the task type
-                - description (str): a human-readable description of what the
-                  task does
-                - backend_name (str): the name of the task in the
-                  job-scheduling backend
-                - default_interval (datetime.timedelta): the default interval
-                  between two task runs
-                - min_interval (datetime.timedelta): the minimum interval
-                  between two task runs
-                - max_interval (datetime.timedelta): the maximum interval
-                  between two task runs
-                - backoff_factor (float): the factor by which the interval
-                  changes at each run
-                - max_queue_length (int): the maximum length of the task queue
-                  for this task type
-
+            task_type: a TaskType dictionary
         """
-        keys = [key for key in self.task_type_keys if key in task_type]
         query = format_query(
             """insert into task_type ({keys}) values ({placeholders})
             on conflict do nothing""",
-            keys,
+            self.task_type_keys,
         )
-        cur.execute(query, [task_type[key] for key in keys])
+        cur.execute(query, attr.astuple(task_type))
 
     @db_transaction()
-    def get_task_type(self, task_type_name, db=None, cur=None):
+    def get_task_type(
+        self, task_type_name: str, db=None, cur=None
+    ) -> Optional[TaskType]:
         """Retrieve the task type with id task_type_name"""
         query = format_query(
             "select {keys} from task_type where type=%s",
             self.task_type_keys,
         )
         cur.execute(query, (task_type_name,))
-        return cur.fetchone()
+        row = cur.fetchone()
+        return TaskType(**row) if row is not None else None
 
     @db_transaction()
-    def get_task_types(self, db=None, cur=None):
+    def get_task_types(self, db=None, cur=None) -> List[TaskType]:
         """Retrieve all registered task types"""
         query = format_query(
             "select {keys} from task_type",
             self.task_type_keys,
         )
         cur.execute(query)
-        return cur.fetchall()
+        return [TaskType(**row) for row in cur.fetchall()]
 
     @db_transaction()
     def get_listers(self, db=None, cur=None) -> List[Lister]:

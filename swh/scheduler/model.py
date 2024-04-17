@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2021  The Software Heritage developers
+# Copyright (C) 2020-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -263,3 +263,45 @@ class SchedulerMetrics(BaseSchedulerModel):
     )
     """Number of enabled origins with known activity (recorded by a lister)
     since our last visit"""
+
+
+@attr.s(frozen=True, slots=True)
+class TaskType(BaseSchedulerModel):
+    """Type of schedulable tasks"""
+
+    type = attr.ib(
+        type=str, validator=[type_validator()], metadata={"primary_key": True}
+    )
+    """Short identifier for the task type"""
+    description = attr.ib(type=str, validator=[type_validator()])
+    """Human-readable task description"""
+    backend_name = attr.ib(type=str, validator=[type_validator()])
+    """Name of the task in the job-running backend"""
+    default_interval = attr.ib(
+        type=Optional[datetime.timedelta], validator=[type_validator()], default=None
+    )
+    """Default interval for newly scheduled tasks"""
+    min_interval = attr.ib(
+        type=Optional[datetime.timedelta], validator=[type_validator()], default=None
+    )
+    """Minimum interval between two runs of a task"""
+    max_interval = attr.ib(
+        type=Optional[datetime.timedelta], validator=[type_validator()], default=None
+    )
+    """Maximum interval between two runs of a task"""
+    backoff_factor = attr.ib(
+        type=Optional[float], validator=[type_validator()], default=None
+    )
+    """Adjustment factor for the backoff between two task runs"""
+    max_queue_length = attr.ib(
+        type=Optional[int], validator=[type_validator()], default=1000
+    )
+    """Maximum length of the queue for this type of tasks, default to 1000 if not provided"""
+    num_retries = attr.ib(
+        type=Optional[int], validator=[type_validator()], default=None
+    )
+    """Default number of retries on transient failures"""
+    retry_delay = attr.ib(
+        type=Optional[datetime.timedelta], validator=[type_validator()], default=None
+    )
+    """Retry delay for the task"""

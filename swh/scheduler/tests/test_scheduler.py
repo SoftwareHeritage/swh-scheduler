@@ -87,17 +87,17 @@ class TestScheduler:
     def test_add_task_type(self, swh_scheduler):
         tt = TASK_TYPES["test-git"]
         swh_scheduler.create_task_type(tt)
-        assert tt == swh_scheduler.get_task_type(tt["type"])
+        assert tt == swh_scheduler.get_task_type(tt.type)
         tt2 = TASK_TYPES["test-hg"]
         swh_scheduler.create_task_type(tt2)
-        assert tt == swh_scheduler.get_task_type(tt["type"])
-        assert tt2 == swh_scheduler.get_task_type(tt2["type"])
+        assert tt == swh_scheduler.get_task_type(tt.type)
+        assert tt2 == swh_scheduler.get_task_type(tt2.type)
 
     def test_create_task_type_idempotence(self, swh_scheduler):
         tt = TASK_TYPES["test-git"]
         swh_scheduler.create_task_type(tt)
         swh_scheduler.create_task_type(tt)
-        assert tt == swh_scheduler.get_task_type(tt["type"])
+        assert tt == swh_scheduler.get_task_type(tt.type)
 
     def test_get_task_types(self, swh_scheduler):
         tt, tt2 = TASK_TYPES["test-git"], TASK_TYPES["test-hg"]
@@ -136,12 +136,12 @@ class TestScheduler:
             task_type = TASK_TYPES[orig_task["type"].split("-", 1)[-1]]
             assert task["id"] not in ids
             assert task["status"] == "next_run_not_scheduled"
-            assert task["current_interval"] == task_type["default_interval"]
+            assert task["current_interval"] == task_type.default_interval
             assert task["policy"] == orig_task.get("policy", "recurring")
             priority = task.get("priority")
             actual_priorities[priority] += 1
 
-            assert task["retries_left"] == (task_type["num_retries"] or 0)
+            assert task["retries_left"] == (task_type.num_retries or 0)
             ids.add(task["id"])
             del task["id"]
             del task["status"]

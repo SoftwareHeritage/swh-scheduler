@@ -1,4 +1,4 @@
-# Copyright (C) 2017-2021  The Software Heritage developers
+# Copyright (C) 2017-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -6,6 +6,8 @@
 import copy
 import datetime
 from typing import Dict, List, Optional
+
+from swh.scheduler.model import TaskType
 
 TEMPLATES = {
     "test-git": {
@@ -29,30 +31,30 @@ TEMPLATES = {
 
 
 TASK_TYPES = {
-    "test-git": {
-        "type": "load-test-git",
-        "description": "Update a git repository",
-        "backend_name": "swh.loader.git.tasks.UpdateGitRepository",
-        "default_interval": datetime.timedelta(days=64),
-        "min_interval": datetime.timedelta(hours=12),
-        "max_interval": datetime.timedelta(days=64),
-        "backoff_factor": 2,
-        "max_queue_length": None,
-        "num_retries": 7,
-        "retry_delay": datetime.timedelta(hours=2),
-    },
-    "test-hg": {
-        "type": "load-test-hg",
-        "description": "Update a mercurial repository",
-        "backend_name": "swh.loader.mercurial.tasks.UpdateHgRepository",
-        "default_interval": datetime.timedelta(days=64),
-        "min_interval": datetime.timedelta(hours=12),
-        "max_interval": datetime.timedelta(days=64),
-        "backoff_factor": 2,
-        "max_queue_length": None,
-        "num_retries": 7,
-        "retry_delay": datetime.timedelta(hours=2),
-    },
+    "test-git": TaskType(
+        type="load-test-git",
+        description="Update a git repository",
+        backend_name="swh.loader.git.tasks.UpdateGitRepository",
+        default_interval=datetime.timedelta(days=64),
+        min_interval=datetime.timedelta(hours=12),
+        max_interval=datetime.timedelta(days=64),
+        backoff_factor=2.0,
+        max_queue_length=None,
+        num_retries=7,
+        retry_delay=datetime.timedelta(hours=2),
+    ),
+    "test-hg": TaskType(
+        type="load-test-hg",
+        description="Update a mercurial repository",
+        backend_name="swh.loader.mercurial.tasks.UpdateHgRepository",
+        default_interval=datetime.timedelta(days=64),
+        min_interval=datetime.timedelta(hours=12),
+        max_interval=datetime.timedelta(days=64),
+        backoff_factor=2.0,
+        max_queue_length=None,
+        num_retries=7,
+        retry_delay=datetime.timedelta(hours=2),
+    ),
 }
 
 

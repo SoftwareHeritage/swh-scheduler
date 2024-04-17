@@ -23,35 +23,38 @@ if TYPE_CHECKING:
     from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional
 
     from swh.scheduler.interface import SchedulerInterface
+    from swh.scheduler.model import TaskType
 
 
-def get_scheduler_task_info(scheduler: SchedulerInterface, task_type: str) -> Dict:
-    """Retrieve information on task_type from the scheduler.
+def get_scheduler_task_type(
+    scheduler: SchedulerInterface, task_type_name: str
+) -> TaskType:
+    """Retrieve a TaskType instance for a task type name from the scheduler.
 
     Args:
         scheduler: Scheduler instance to lookup data from
-        task_type: The task type to lookup
+        task_type_name: The task type name to lookup
 
     Raises:
-        ValueError when task_type and its fallback is not found.
+        ValueError when task_type_name or its fallback are not found.
 
     Returns:
-        Dict of information for the task type
+        Information about the task type
 
     """
-    origin_task_type = task_type
+    origin_task_type_name = task_type_name
     # Lookup standard scheduler task (e.g. load-git, load-hg, ...)
-    scheduler_info = scheduler.get_task_type(task_type)
+    scheduler_info = scheduler.get_task_type(task_type_name)
     while True:
         if scheduler_info:
-            return dict(scheduler_info)
+            return scheduler_info
         # Lookup task type derivative (e.g. load-git-large, load-hg-bitbucket, ...)
-        new_scheduler_task_type = task_type.rsplit("-", 1)[0]
-        if new_scheduler_task_type == task_type:
-            error_msg = f"Could not find scheduler <{origin_task_type}> task type"
+        new_task_type_name = task_type_name.rsplit("-", 1)[0]
+        if new_task_type_name == task_type_name:
+            error_msg = f"Could not find scheduler <{origin_task_type_name}> task type"
             raise ValueError(error_msg)
-        task_type = new_scheduler_task_type
-        scheduler_info = scheduler.get_task_type(task_type)
+        task_type_name = new_task_type_name
+        scheduler_info = scheduler.get_task_type(task_type_name)
 
 
 def lines_to_task_args(

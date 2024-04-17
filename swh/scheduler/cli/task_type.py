@@ -1,35 +1,43 @@
-# Copyright (C) 2016-2019  The Software Heritage developers
+# Copyright (C) 2016-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+from __future__ import annotations
+
+from datetime import timedelta
 from importlib import import_module
 import logging
-from typing import Mapping
+from typing import TYPE_CHECKING, Any, Dict
 
 # WARNING: do not import unnecessary things here to keep cli startup time under
 # control
 import click
 from pkg_resources import iter_entry_points
 
+from swh.scheduler.model import TaskType
+
+if TYPE_CHECKING:
+    from swh.scheduler.task import SWHTask
+
 from . import cli
 
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_TASK_TYPE = {
-    "full": {  # for tasks like 'list_xxx_full()'
-        "default_interval": "90 days",
-        "min_interval": "90 days",
-        "max_interval": "90 days",
-        "backoff_factor": 1,
-    },
-    "*": {  # value if not suffix matches
-        "default_interval": "1 day",
-        "min_interval": "1 day",
-        "max_interval": "1 day",
-        "backoff_factor": 1,
-    },
+DEFAULT_TASK_TYPE_PARAMETERS = {
+    "full": dict(  # for tasks like 'list_xxx_full()'
+        default_interval=timedelta(days=90),
+        min_interval=timedelta(days=90),
+        max_interval=timedelta(days=90),
+        backoff_factor=1.0,
+    ),
+    "*": dict(  # value if not suffix matches
+        default_interval=timedelta(days=1),
+        min_interval=timedelta(days=1),
+        max_interval=timedelta(days=1),
+        backoff_factor=1.0,
+    ),
 }
 
 
@@ -88,14 +96,12 @@ def list_task_types(ctx, verbose, task_type, task_name):
         )
     else:
         tmpl = "{type}:\n  {description}"
-    for tasktype in sorted(
-        ctx.obj["scheduler"].get_task_types(), key=lambda x: x["type"]
-    ):
-        if task_type and tasktype["type"] not in task_type:
+    for tasktype in sorted(ctx.obj["scheduler"].get_task_types(), key=lambda x: x.type):
+        if task_type and tasktype.type not in task_type:
             continue
-        if task_name and tasktype["backend_name"] not in task_name:
+        if task_name and tasktype.backend_name not in task_name:
             continue
-        click.echo(tmpl.format(**tasktype))
+        click.echo(tmpl.format(**tasktype.to_dict()))
 
 
 @task_type.command("register")
@@ -151,7 +157,11 @@ def register_task_types(ctx, plugins):
 
 
 def ensure_task_type(
-    task_module: str, task_type: str, swhtask, task_config: Mapping, scheduler
+    task_module: str,
+    task_type_name: str,
+    swhtask: SWHTask,
+    task_config: Dict[str, Any],
+    scheduler,
 ):
     """Ensure a given task-type (for the task_module) exists in the scheduler.
 
@@ -160,43 +170,45 @@ def ensure_task_type(
             consistency
         task_type: the type of the task to check/insert (correspond to
             the 'type' field in the db)
-        swhtask (SWHTask): the SWHTask instance the task-type correspond to
+        swhtask: the SWHTask instance the task-type correspond to
         task_config: a dict with specific/overloaded values for the
             task-type to be created
         scheduler: the scheduler object used to access the scheduler db
 
     """
-    for suffix, defaults in DEFAULT_TASK_TYPE.items():
-        if task_type.endswith("-" + suffix):
-            task_type_dict = defaults.copy()
+    task_type_params = dict(
+        type=task_type_name,
+        backend_name=swhtask.name,
+        description=swhtask.__doc__,
+    )
+    for suffix, defaults in DEFAULT_TASK_TYPE_PARAMETERS.items():
+        if task_type_name.endswith("-" + suffix):
+            task_type_params.update(defaults)
             break
     else:
-        task_type_dict = DEFAULT_TASK_TYPE["*"].copy()
+        task_type_params.update(DEFAULT_TASK_TYPE_PARAMETERS["*"])
 
-    task_type_dict["type"] = task_type
-    task_type_dict["backend_name"] = swhtask.name
-    if swhtask.__doc__:
-        task_type_dict["description"] = swhtask.__doc__.splitlines()[0]
+    task_type_params.update(task_config)
 
-    task_type_dict.update(task_config)
+    task_type = TaskType(**task_type_params)
 
-    current_task_type = scheduler.get_task_type(task_type)
+    current_task_type = scheduler.get_task_type(task_type_name)
     if current_task_type:
         # Ensure the existing task_type is consistent in the scheduler
-        if current_task_type["backend_name"] != task_type_dict["backend_name"]:
+        if current_task_type.backend_name != task_type.backend_name:
             logger.warning(
                 "Existing task type %s for module %s has a "
                 "different backend name than current "
                 "code version provides (%s vs. %s)",
                 task_type,
                 task_module,
-                current_task_type["backend_name"],
-                task_type_dict["backend_name"],
+                current_task_type.backend_name,
+                task_type.backend_name,
             )
     else:
-        logger.info("Create task type %s in scheduler", task_type)
-        logger.debug("  %s", task_type_dict)
-        scheduler.create_task_type(task_type_dict)
+        logger.info("Create task type %s in scheduler", task_type_name)
+        logger.debug("  %s", task_type)
+        scheduler.create_task_type(task_type)
 
 
 @task_type.command("add")
@@ -233,7 +245,7 @@ def add_task_type(
     backoff_factor,
 ):
     """Create a new task type"""
-    task_type = dict(
+    task_type = TaskType(
         type=type,
         backend_name=task_name,
         description=description,
@@ -241,9 +253,6 @@ def add_task_type(
         min_interval=min_interval,
         max_interval=max_interval,
         backoff_factor=backoff_factor,
-        max_queue_length=None,
-        num_retries=None,
-        retry_delay=None,
     )
     ctx.obj["scheduler"].create_task_type(task_type)
     click.echo("OK")

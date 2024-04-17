@@ -1,4 +1,4 @@
-# Copyright (C) 2021  The Software Heritage developers
+# Copyright (C) 2021-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -20,6 +20,7 @@ from swh.scheduler.celery_backend.recurrent_visits import (
     terminate_visit_scheduler_threads,
     visit_scheduler_thread,
 )
+from swh.scheduler.model import TaskType
 
 from .test_cli import invoke
 
@@ -38,25 +39,22 @@ def swh_scheduler(swh_scheduler):
     for visit_type in ["test-git", "test-hg", "test-svn"]:
         task_type = f"load-{visit_type}"
         swh_scheduler.create_task_type(
-            {
-                "type": task_type,
-                "max_queue_length": TEST_MAX_QUEUE,
-                "description": "The {} testing task".format(task_type),
-                "backend_name": _compute_backend_name(visit_type),
-                "default_interval": timedelta(days=1),
-                "min_interval": timedelta(hours=6),
-                "max_interval": timedelta(days=12),
-            }
+            TaskType(
+                type=task_type,
+                max_queue_length=TEST_MAX_QUEUE,
+                description=f"The {task_type} testing task",
+                backend_name=_compute_backend_name(visit_type),
+                default_interval=timedelta(days=1),
+                min_interval=timedelta(hours=6),
+                max_interval=timedelta(days=12),
+            )
         )
     return swh_scheduler
 
 
 @pytest.fixture
 def all_task_types(swh_scheduler):
-    return {
-        task_type_d["type"]: task_type_d
-        for task_type_d in swh_scheduler.get_task_types()
-    }
+    return {task_type.type: task_type for task_type in swh_scheduler.get_task_types()}
 
 
 def test_cli_schedule_recurrent_unknown_visit_type(swh_scheduler):
@@ -168,12 +166,9 @@ def test_recurrent_visit_scheduling(
         origins.extend(swh_scheduler.record_listed_origins(_origins))
         task_type_name = f"load-{visit_type}"
         assert task_type_name in all_task_types.keys()
-        task_type = all_task_types[task_type_name]
-        task_type["visit_type"] = visit_type
-        # we'll limit the orchestrator to the origins' type we know
-        task_types.append(task_type)
+        task_types.append((visit_type, all_task_types[task_type_name]))
 
-    for visit_type in ["test-git", "test-svn"]:
+    for visit_type in visit_types:
         task_type = f"load-{visit_type}"
         send_visits_for_visit_type(
             swh_scheduler,
@@ -190,9 +185,8 @@ def test_recurrent_visit_scheduling(
     # Mapping over the dict ratio/policies entries can change overall order so let's
     # check the set of records
     expected_records = set()
-    for task_type in task_types:
-        visit_type = task_type["visit_type"]
-        queue_name = task_type["backend_name"]
+    for visit_type, task_type in task_types:
+        queue_name = task_type.backend_name
         msg = (
             f"{nb_origins} available slots for visit type {visit_type} "
             f"in queue {queue_name}"
