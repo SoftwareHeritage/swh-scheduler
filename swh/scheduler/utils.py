@@ -5,10 +5,17 @@
 
 
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from swh.scheduler.interface import SchedulerInterface
-from swh.scheduler.model import ListedOrigin, Lister
+from swh.scheduler.model import (
+    ListedOrigin,
+    Lister,
+    Task,
+    TaskArguments,
+    TaskPolicy,
+    TaskPriority,
+)
 
 
 def utcnow():
@@ -34,9 +41,15 @@ def get_task(task_name):
     return app.tasks[task_name]
 
 
-def create_task_dict(
-    type: str, policy: str, *args, next_run: Optional[datetime] = None, **kwargs
-) -> Dict[str, Any]:
+def create_task(
+    type: str,
+    policy: TaskPolicy,
+    *args,
+    next_run: Optional[datetime] = None,
+    priority: Optional[TaskPriority] = None,
+    retries_left: Optional[int] = None,
+    **kwargs,
+) -> Task:
     """Create a task with type and policy, scheduled for as soon as
        possible.
 
@@ -53,47 +66,43 @@ def create_task_dict(
         (swh.scheduler.backend.create_tasks)
 
     """
-    task_extra = {}
-    for extra_key in ["priority", "retries_left"]:
-        if extra_key in kwargs:
-            extra_val = kwargs.pop(extra_key)
-            task_extra[extra_key] = extra_val
-
-    task = {
-        "policy": policy,
-        "type": type,
-        "next_run": next_run or utcnow(),
-        "arguments": {
-            "args": args if args else [],
-            "kwargs": kwargs if kwargs else {},
-        },
-    }
-    task.update(task_extra)
+    task = Task(
+        policy=policy,
+        type=type,
+        next_run=next_run or utcnow(),
+        arguments=TaskArguments(
+            args=list(args) if args else [],
+            kwargs=kwargs if kwargs else {},
+        ),
+        priority=priority,
+        retries_left=retries_left,
+    )
     return task
 
 
-def create_origin_task_dict(origin: ListedOrigin, lister: Lister) -> Dict[str, Any]:
+def create_origin_task(origin: ListedOrigin, lister: Lister) -> Task:
     if origin.lister_id != lister.id:
         raise ValueError(
             "origin.lister_id and lister.id differ", origin.lister_id, lister.id
         )
-    return {
-        "type": f"load-{origin.visit_type}",
-        "arguments": {
-            "args": [],
-            "kwargs": {
+    return Task(
+        type=f"load-{origin.visit_type}",
+        arguments=TaskArguments(
+            args=[],
+            kwargs={
                 "url": origin.url,
                 "lister_name": lister.name,
                 "lister_instance_name": lister.instance_name or None,
                 **origin.extra_loader_arguments,
             },
-        },
-    }
+        ),
+        next_run=utcnow(),
+    )
 
 
-def create_origin_task_dicts(
+def create_origin_tasks(
     origins: List[ListedOrigin], scheduler: SchedulerInterface
-) -> List[Dict[str, Any]]:
+) -> List[Task]:
     """Returns a task dict for each origin, in the same order."""
 
     lister_ids = {o.lister_id for o in origins}
@@ -105,12 +114,12 @@ def create_origin_task_dicts(
     missing_lister_ids = lister_ids - set(listers)
     assert not missing_lister_ids, f"Missing listers: {missing_lister_ids}"
 
-    return [create_origin_task_dict(o, listers[o.lister_id]) for o in origins]
+    return [create_origin_task(o, listers[o.lister_id]) for o in origins]
 
 
-def create_oneshot_task_dict(
+def create_oneshot_task(
     type: str, *args, next_run: Optional[datetime] = None, **kwargs
-):
+) -> Task:
     """Create a oneshot task scheduled for as soon as possible.
 
     Args:
@@ -124,4 +133,4 @@ def create_oneshot_task_dict(
         (:func:`swh.scheduler.backend.create_tasks`)
 
     """
-    return create_task_dict(type, "oneshot", *args, next_run=next_run, **kwargs)
+    return create_task(type, "oneshot", *args, next_run=next_run, **kwargs)

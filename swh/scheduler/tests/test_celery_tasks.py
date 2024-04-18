@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2021 The Software Heritage developers
+# Copyright (C) 2019-2024 The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -8,6 +8,7 @@
 import copy
 from itertools import count
 from time import sleep
+from typing import List, Tuple
 
 from celery.result import AsyncResult, GroupResult
 from kombu import Exchange, Queue
@@ -15,6 +16,7 @@ import pytest
 
 from swh.scheduler.celery_backend import config
 from swh.scheduler.celery_backend.runner import run_ready_tasks
+from swh.scheduler.model import TaskPolicy, TaskPriority
 from swh.scheduler.tests.tasks import (
     TASK_ADD,
     TASK_ECHO,
@@ -22,7 +24,7 @@ from swh.scheduler.tests.tasks import (
     TASK_MULTIPING,
     TASK_PING,
 )
-from swh.scheduler.utils import create_task_dict
+from swh.scheduler.utils import create_task
 
 # Queues to subscribe. Due to the rerouting of high priority tasks, this module requires
 # to declare all queues/task names
@@ -100,7 +102,7 @@ def test_scheduler_fixture(
     assert task_type
     assert task_type.backend_name == TASK_PING
 
-    swh_scheduler.create_tasks([create_task_dict("swh-test-ping", "oneshot")])
+    swh_scheduler.create_tasks([create_task("swh-test-ping", "oneshot")])
 
     backend_tasks = run_ready_tasks(swh_scheduler, swh_scheduler_celery_app)
     assert backend_tasks
@@ -118,24 +120,23 @@ def test_run_ready_task_standard(
     assert task_type
     assert task_type.backend_name == backend_name
 
-    task_inputs = [
+    task_inputs: List[Tuple[TaskPolicy, Tuple[int, int]]] = [
         ("oneshot", (12, 30)),
         ("oneshot", (20, 10)),
         ("recurring", (30, 10)),
     ]
 
     tasks = swh_scheduler.create_tasks(
-        create_task_dict(task_type_name, policy, *args)
-        for (policy, args) in task_inputs
+        create_task(task_type_name, policy, *args) for (policy, args) in task_inputs
     )
 
     assert len(tasks) == len(task_inputs)
 
     task_ids = set()
     for task in tasks:
-        assert task["status"] == "next_run_not_scheduled"
-        assert task["priority"] is None
-        task_ids.add(task["id"])
+        assert task.status == "next_run_not_scheduled"
+        assert task.priority is None
+        task_ids.add(task.id)
 
     backend_tasks = run_ready_tasks(swh_scheduler, swh_scheduler_celery_app)
     assert len(backend_tasks) == len(tasks)
@@ -143,8 +144,8 @@ def test_run_ready_task_standard(
     scheduled_tasks = swh_scheduler.search_tasks(task_type=task_type_name)
     assert len(scheduled_tasks) == len(tasks)
     for task in scheduled_tasks:
-        assert task["status"] == "next_run_scheduled"
-        assert task["id"] in task_ids
+        assert task.status == "next_run_scheduled"
+        assert task.id in task_ids
 
     # Ensure each task is indeed scheduled to the queue backend
     for i, (_, args) in enumerate(task_inputs):
@@ -162,14 +163,14 @@ def test_run_ready_task_with_priority(
     assert task_type
     assert task_type.backend_name == backend_name
 
-    task_inputs = [
+    task_inputs: List[Tuple[TaskPolicy, Tuple[int, int], TaskPriority]] = [
         ("oneshot", (10, 22), "low"),
         ("oneshot", (20, 10), "normal"),
         ("recurring", (30, 10), "high"),
     ]
 
     tasks = swh_scheduler.create_tasks(
-        create_task_dict(task_type_name, policy, *args, priority=priority)
+        create_task(task_type_name, policy, *args, priority=priority)
         for (policy, args, priority) in task_inputs
     )
 
@@ -177,9 +178,9 @@ def test_run_ready_task_with_priority(
 
     task_ids = set()
     for task in tasks:
-        assert task["status"] == "next_run_not_scheduled"
-        assert task["priority"] is not None
-        task_ids.add(task["id"])
+        assert task.status == "next_run_not_scheduled"
+        assert task.priority is not None
+        task_ids.add(task.id)
 
     backend_tasks = run_ready_tasks(
         swh_scheduler, swh_scheduler_celery_app, task_types=[], with_priority=True
@@ -189,8 +190,8 @@ def test_run_ready_task_with_priority(
     scheduled_tasks = swh_scheduler.search_tasks(task_type=task_type_name)
     assert len(scheduled_tasks) == len(tasks)
     for task in scheduled_tasks:
-        assert task["status"] == "next_run_scheduled"
-        assert task["id"] in task_ids
+        assert task.status == "next_run_scheduled"
+        assert task.id in task_ids
 
     # Ensure each priority task is indeed scheduled to the queue backend
     for i, (_, args, _) in enumerate(task_inputs):
@@ -210,7 +211,7 @@ def test_task_exception(
     assert task_type.backend_name == TASK_ERROR
 
     swh_scheduler.create_tasks(
-        [create_task_dict("swh-test-error", "oneshot", "arg", kwarg="kwarg")]
+        [create_task("swh-test-error", "oneshot", "arg", kwarg="kwarg")]
     )
 
     backend_tasks = run_ready_tasks(swh_scheduler, swh_scheduler_celery_app)

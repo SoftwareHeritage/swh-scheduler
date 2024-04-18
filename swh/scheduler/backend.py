@@ -6,17 +6,7 @@
 import datetime
 import json
 import logging
-from typing import (
-    Any,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
-    get_type_hints,
-)
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 from uuid import UUID
 
 import attr
@@ -29,7 +19,14 @@ from testing.postgresql import Postgresql
 from swh.core.db import BaseDb
 from swh.core.db.common import db_transaction
 from swh.core.db.db_utils import init_admin_extensions, populate_database_for_package
-from swh.scheduler.model import TaskType
+from swh.scheduler.model import (
+    Task,
+    TaskArguments,
+    TaskPolicy,
+    TaskPriority,
+    TaskStatus,
+    TaskType,
+)
 from swh.scheduler.utils import utcnow
 
 from .exc import SchedulerException, StaleData, UnknownPolicy
@@ -61,6 +58,11 @@ def format_query(query: str, keys: Sequence[str]) -> str:
     placeholders = ", ".join(["%s"] * len(keys))
 
     return query.format(keys=query_keys, placeholders=placeholders)
+
+
+def mutate_task_dict(task_dict: Dict[str, Any]) -> Dict[str, Any]:
+    task_dict["arguments"] = TaskArguments(**task_dict["arguments"])
+    return task_dict
 
 
 class SchedulerBackend:
@@ -578,43 +580,37 @@ class SchedulerBackend:
         cur.execute(query, tuple(query_args))
         return [ListedOrigin(**d) for d in cur]
 
+    task_keys = [field.name for field in attr.fields(Task)]
     task_create_keys = [
-        "type",
-        "arguments",
-        "next_run",
-        "policy",
-        "status",
-        "retries_left",
-        "priority",
+        key for key in task_keys if key not in {"id", "current_interval"}
     ]
-    task_keys = task_create_keys + ["id", "current_interval"]
 
     @db_transaction()
-    def create_tasks(self, tasks, policy="recurring", db=None, cur=None):
+    def create_tasks(
+        self, tasks: List[Task], policy: TaskPolicy = "recurring", db=None, cur=None
+    ) -> List[Task]:
         """Create new tasks.
 
         Args:
-            tasks (list): each task is a dictionary with the following keys:
+            tasks: each task is a Task object created with at least the following parameters:
 
-                - type (str): the task type
-                - arguments (dict): the arguments for the task runner, keys:
+                - type
+                - arguments
+                - next_run
 
-                      - args (list of str): arguments
-                      - kwargs (dict str -> str): keyword arguments
-
-                - next_run (datetime.datetime): the next scheduled run for the
-                  task
+            policy: default task policy (either recurring or oneshot) to use if not
+                set in input task objects
 
         Returns:
-            a list of created tasks.
+            a list of created tasks with database ids filled
 
         """
         cur.execute("select swh_scheduler_mktemp_task()")
         db.copy_to(
-            tasks,
+            (attr.asdict(task) for task in tasks),
             "tmp_task",
             self.task_create_keys,
-            default_values={"policy": policy, "status": "next_run_not_scheduled"},
+            default_values={"policy": policy},
             cur=cur,
         )
         query = format_query(
@@ -622,20 +618,24 @@ class SchedulerBackend:
             self.task_keys,
         )
         cur.execute(query)
-        return cur.fetchall()
+        return [Task(**mutate_task_dict(row)) for row in cur.fetchall()]
 
     @db_transaction()
     def set_status_tasks(
         self,
         task_ids: List[int],
-        status: str = "disabled",
+        status: TaskStatus = "disabled",
         next_run: Optional[datetime.datetime] = None,
         db=None,
         cur=None,
-    ):
+    ) -> None:
         """Set the tasks' status whose ids are listed.
 
-        If given, also set the next_run date.
+        Args:
+            task_ids: list of tasks' identifiers
+            status: the status to set for the tasks
+            next_run: if provided, also set the next_run date
+
         """
         if not task_ids:
             return
@@ -650,27 +650,45 @@ class SchedulerBackend:
         cur.execute("".join(query), args)
 
     @db_transaction()
-    def disable_tasks(self, task_ids, db=None, cur=None):
-        """Disable the tasks whose ids are listed."""
-        return self.set_status_tasks(task_ids, db=db, cur=cur)
+    def disable_tasks(self, task_ids: List[int], db=None, cur=None) -> None:
+        """Disable the tasks whose ids are listed.
+
+        Args:
+            task_ids: list of tasks' identifiers
+        """
+        self.set_status_tasks(task_ids, db=db, cur=cur)
 
     @db_transaction()
     def search_tasks(
         self,
-        task_id=None,
-        task_type=None,
-        status=None,
-        priority=None,
-        policy=None,
-        before=None,
-        after=None,
-        limit=None,
+        task_id: Optional[int] = None,
+        task_type: Optional[str] = None,
+        status: Optional[TaskStatus] = None,
+        priority: Optional[TaskPriority] = None,
+        policy: Optional[TaskPolicy] = None,
+        before: Optional[datetime.datetime] = None,
+        after: Optional[datetime.datetime] = None,
+        limit: Optional[int] = None,
         db=None,
         cur=None,
-    ):
-        """Search tasks from selected criterions"""
+    ) -> List[Task]:
+        """Search tasks from selected criterions
+
+        Args:
+            task_id: search a task with given identifier
+            task_type: search tasks with given type
+            status: search tasks with given status
+            priority: search tasks with given priority
+            policy: search tasks with given policy
+            before: search tasks created before given date
+            after: search tasks created after given date
+            limit: maximum number of tasks to return
+
+        Returns:
+            a list of found tasks
+        """
         where = []
-        args = []
+        args: List[Any] = []
 
         if task_id:
             if isinstance(task_id, (str, int)):
@@ -717,14 +735,21 @@ class SchedulerBackend:
             query += " limit %s :: bigint"
             args.append(limit)
         cur.execute(query, args)
-        return cur.fetchall()
+        return [Task(**mutate_task_dict(row)) for row in cur.fetchall()]
 
     @db_transaction()
-    def get_tasks(self, task_ids, db=None, cur=None):
-        """Retrieve the info of tasks whose ids are listed."""
+    def get_tasks(self, task_ids: List[int], db=None, cur=None) -> List[Task]:
+        """Retrieve the info of tasks whose ids are listed.
+
+        Args:
+            task_ids: list of tasks' identifiers
+
+        Returns:
+            a list of Task objects
+        """
         query = format_query("select {keys} from task where id in %s", self.task_keys)
         cur.execute(query, (tuple(task_ids),))
-        return cur.fetchall()
+        return [Task(**mutate_task_dict(row)) for row in cur.fetchall()]
 
     @db_transaction()
     def peek_ready_tasks(
@@ -734,7 +759,19 @@ class SchedulerBackend:
         num_tasks: Optional[int] = None,
         db=None,
         cur=None,
-    ) -> List[Dict]:
+    ) -> List[Task]:
+        """Fetch the list of tasks (with no priority) to be scheduled.
+
+        Args:
+            task_type: filtering task per their type
+            timestamp: peek tasks that need to be executed
+                before that timestamp
+            num_tasks: only peek at num_tasks tasks (with no priority)
+
+        Returns:
+            the list of tasks which would be scheduled
+
+        """
         if timestamp is None:
             timestamp = utcnow()
 
@@ -744,7 +781,7 @@ class SchedulerBackend:
             (task_type, timestamp, num_tasks),
         )
         logger.debug("PEEK %s => %s" % (task_type, cur.rowcount))
-        return cur.fetchall()
+        return [Task(**mutate_task_dict(row)) for row in cur.fetchall()]
 
     @db_transaction()
     def grab_ready_tasks(
@@ -754,7 +791,19 @@ class SchedulerBackend:
         num_tasks: Optional[int] = None,
         db=None,
         cur=None,
-    ) -> List[Dict]:
+    ) -> List[Task]:
+        """Fetch and schedule the list of tasks (with no priority) ready to be scheduled.
+
+        Args:
+            task_type: filtering task per their type
+            timestamp: grab tasks that need to be executed
+                before that timestamp
+            num_tasks: only grab num_tasks tasks (with no priority)
+
+        Returns:
+            the list of scheduled tasks
+
+        """
         if timestamp is None:
             timestamp = utcnow()
         cur.execute(
@@ -763,7 +812,7 @@ class SchedulerBackend:
             (task_type, timestamp, num_tasks),
         )
         logger.debug("GRAB %s => %s" % (task_type, cur.rowcount))
-        return cur.fetchall()
+        return [Task(**mutate_task_dict(row)) for row in cur.fetchall()]
 
     @db_transaction()
     def peek_ready_priority_tasks(
@@ -773,7 +822,18 @@ class SchedulerBackend:
         num_tasks: Optional[int] = None,
         db=None,
         cur=None,
-    ) -> List[Dict]:
+    ) -> List[Task]:
+        """Fetch list of tasks (with any priority) ready to be scheduled.
+
+        Args:
+            task_type: filtering task per their type
+            timestamp: peek tasks that need to be executed before that timestamp
+            num_tasks: only peek at num_tasks tasks (with no priority)
+
+        Returns:
+            the list of tasks which would be scheduled
+
+        """
         if timestamp is None:
             timestamp = utcnow()
 
@@ -783,7 +843,7 @@ class SchedulerBackend:
             (task_type, timestamp, num_tasks),
         )
         logger.debug("PEEK %s => %s", task_type, cur.rowcount)
-        return cur.fetchall()
+        return [Task(**mutate_task_dict(row)) for row in cur.fetchall()]
 
     @db_transaction()
     def grab_ready_priority_tasks(
@@ -793,7 +853,19 @@ class SchedulerBackend:
         num_tasks: Optional[int] = None,
         db=None,
         cur=None,
-    ) -> List[Dict]:
+    ) -> List[Task]:
+        """Fetch and schedule the list of tasks (with any priority) ready to be scheduled.
+
+        Args:
+            task_type: filtering task per their type
+            timestamp: grab tasks that need to be executed
+                before that timestamp
+            num_tasks: only grab num_tasks tasks (with no priority)
+
+        Returns:
+            the list of scheduled tasks
+
+        """
         if timestamp is None:
             timestamp = utcnow()
         cur.execute(
@@ -802,7 +874,7 @@ class SchedulerBackend:
             (task_type, timestamp, num_tasks),
         )
         logger.debug("GRAB %s => %s", task_type, cur.rowcount)
-        return cur.fetchall()
+        return [Task(**mutate_task_dict(row)) for row in cur.fetchall()]
 
     task_run_create_keys = ["task", "backend_id", "scheduled", "metadata"]
 

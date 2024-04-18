@@ -17,7 +17,7 @@ import pytest
 from swh.core.api.classes import stream_results
 from swh.model.model import Origin
 from swh.scheduler.cli import cli
-from swh.scheduler.utils import create_task_dict, utcnow
+from swh.scheduler.utils import create_task, utcnow
 
 CLI_CONFIG = """
 scheduler:
@@ -199,9 +199,18 @@ Found 0 swh-test-ping tasks
 
 
 def test_list_pending_tasks(swh_scheduler):
-    task1 = create_task_dict("swh-test-ping", "oneshot", key="value1")
-    task2 = create_task_dict("swh-test-ping", "oneshot", key="value2")
-    task2["next_run"] += datetime.timedelta(days=1)
+    task1 = create_task(
+        "swh-test-ping",
+        "oneshot",
+        next_run=utcnow(),
+        key="value1",
+    )
+    task2 = create_task(
+        "swh-test-ping",
+        "oneshot",
+        next_run=utcnow() + datetime.timedelta(days=1),
+        key="value2",
+    )
     swh_scheduler.create_tasks([task1, task2])
 
     result = invoke(
@@ -251,7 +260,7 @@ Found 0 swh-test-ping tasks
 
 
 def test_list_pending_tasks_filter(swh_scheduler):
-    task = create_task_dict("swh-test-multiping", "oneshot", key="value")
+    task = create_task("swh-test-multiping", "oneshot", key="value")
     swh_scheduler.create_tasks([task])
 
     result = invoke(
@@ -275,8 +284,8 @@ Found 0 swh-test-ping tasks
 def test_list_pending_tasks_filter_2(swh_scheduler):
     swh_scheduler.create_tasks(
         [
-            create_task_dict("swh-test-multiping", "oneshot", key="value"),
-            create_task_dict("swh-test-ping", "oneshot", key="value2"),
+            create_task("swh-test-multiping", "oneshot", key="value"),
+            create_task("swh-test-ping", "oneshot", key="value2"),
         ]
     )
 
@@ -312,10 +321,7 @@ Task 2
 @pytest.mark.xfail
 def test_list_pending_tasks_limit(swh_scheduler):
     swh_scheduler.create_tasks(
-        [
-            create_task_dict("swh-test-ping", "oneshot", key="value%d" % i)
-            for i in range(10)
-        ]
+        [create_task("swh-test-ping", "oneshot", key="value%d" % i) for i in range(10)]
     )
 
     result = invoke(
@@ -366,10 +372,19 @@ Task 3
 
 
 def test_list_pending_tasks_before(swh_scheduler):
-    task1 = create_task_dict("swh-test-ping", "oneshot", key="value")
-    task2 = create_task_dict("swh-test-ping", "oneshot", key="value2")
-    task1["next_run"] += datetime.timedelta(days=3)
-    task2["next_run"] += datetime.timedelta(days=1)
+    task1 = create_task(
+        "swh-test-ping",
+        "oneshot",
+        next_run=utcnow() + datetime.timedelta(days=3),
+        key="value",
+    )
+    task2 = create_task(
+        "swh-test-ping",
+        "oneshot",
+        next_run=utcnow() + datetime.timedelta(days=1),
+        key="value2",
+    )
+
     swh_scheduler.create_tasks([task1, task2])
 
     result = invoke(
@@ -402,9 +417,18 @@ Task 2
 
 
 def test_list_tasks(swh_scheduler):
-    task1 = create_task_dict("swh-test-ping", "oneshot", key="value1")
-    task2 = create_task_dict("swh-test-ping", "oneshot", key="value2")
-    task1["next_run"] += datetime.timedelta(days=3, hours=2)
+    task1 = create_task(
+        "swh-test-ping",
+        "oneshot",
+        next_run=utcnow() + datetime.timedelta(days=3, hours=2),
+        key="value1",
+    )
+    task2 = create_task(
+        "swh-test-ping",
+        "oneshot",
+        next_run=utcnow(),
+        key="value2",
+    )
     swh_scheduler.create_tasks([task1, task2])
 
     swh_scheduler.grab_ready_tasks("swh-test-ping")
@@ -449,9 +473,9 @@ Task 2
 
 
 def test_list_tasks_id(swh_scheduler):
-    task1 = create_task_dict("swh-test-ping", "oneshot", key="value1")
-    task2 = create_task_dict("swh-test-ping", "oneshot", key="value2")
-    task3 = create_task_dict("swh-test-ping", "oneshot", key="value3")
+    task1 = create_task("swh-test-ping", "oneshot", key="value1")
+    task2 = create_task("swh-test-ping", "oneshot", key="value2")
+    task3 = create_task("swh-test-ping", "oneshot", key="value3")
     swh_scheduler.create_tasks([task1, task2, task3])
 
     result = invoke(
@@ -485,9 +509,9 @@ Task 2
 
 
 def test_list_tasks_id_2(swh_scheduler):
-    task1 = create_task_dict("swh-test-ping", "oneshot", key="value1")
-    task2 = create_task_dict("swh-test-ping", "oneshot", key="value2")
-    task3 = create_task_dict("swh-test-ping", "oneshot", key="value3")
+    task1 = create_task("swh-test-ping", "oneshot", key="value1")
+    task2 = create_task("swh-test-ping", "oneshot", key="value2")
+    task3 = create_task("swh-test-ping", "oneshot", key="value3")
     swh_scheduler.create_tasks([task1, task2, task3])
 
     result = invoke(
@@ -525,9 +549,9 @@ Task 3
 
 
 def test_list_tasks_type(swh_scheduler):
-    task1 = create_task_dict("swh-test-ping", "oneshot", key="value1")
-    task2 = create_task_dict("swh-test-multiping", "oneshot", key="value2")
-    task3 = create_task_dict("swh-test-ping", "oneshot", key="value3")
+    task1 = create_task("swh-test-ping", "oneshot", key="value1")
+    task2 = create_task("swh-test-multiping", "oneshot", key="value2")
+    task3 = create_task("swh-test-ping", "oneshot", key="value3")
     swh_scheduler.create_tasks([task1, task2, task3])
 
     result = invoke(
@@ -565,9 +589,9 @@ Task 3
 
 
 def test_list_tasks_limit(swh_scheduler):
-    task1 = create_task_dict("swh-test-ping", "oneshot", key="value1")
-    task2 = create_task_dict("swh-test-ping", "oneshot", key="value2")
-    task3 = create_task_dict("swh-test-ping", "oneshot", key="value3")
+    task1 = create_task("swh-test-ping", "oneshot", key="value1")
+    task2 = create_task("swh-test-ping", "oneshot", key="value2")
+    task3 = create_task("swh-test-ping", "oneshot", key="value3")
     swh_scheduler.create_tasks([task1, task2, task3])
 
     result = invoke(
@@ -612,9 +636,18 @@ Task 2
 
 
 def test_list_tasks_before(swh_scheduler):
-    task1 = create_task_dict("swh-test-ping", "oneshot", key="value1")
-    task2 = create_task_dict("swh-test-ping", "oneshot", key="value2")
-    task1["next_run"] += datetime.timedelta(days=3, hours=2)
+    task1 = create_task(
+        "swh-test-ping",
+        "oneshot",
+        next_run=utcnow() + datetime.timedelta(days=3, hours=2),
+        key="value1",
+    )
+    task2 = create_task(
+        "swh-test-ping",
+        "oneshot",
+        next_run=utcnow(),
+        key="value2",
+    )
     swh_scheduler.create_tasks([task1, task2])
 
     swh_scheduler.grab_ready_tasks("swh-test-ping")
@@ -650,9 +683,18 @@ Task 2
 
 
 def test_list_tasks_after(swh_scheduler):
-    task1 = create_task_dict("swh-test-ping", "oneshot", key="value1")
-    task2 = create_task_dict("swh-test-ping", "oneshot", key="value2")
-    task1["next_run"] += datetime.timedelta(days=3, hours=2)
+    task1 = create_task(
+        "swh-test-ping",
+        "oneshot",
+        next_run=utcnow() + datetime.timedelta(days=3, hours=2),
+        key="value1",
+    )
+    task2 = create_task(
+        "swh-test-ping",
+        "oneshot",
+        next_run=utcnow(),
+        key="value2",
+    )
     swh_scheduler.create_tasks([task1, task2])
 
     swh_scheduler.grab_ready_tasks("swh-test-ping")
@@ -730,13 +772,11 @@ def _assert_origin_tasks_contraints(tasks, max_tasks, max_task_size, expected_or
     assert len(tasks) <= max_tasks
 
     # check tasks are not too large
-    assert all(len(task["arguments"]["args"][0]) <= max_task_size for task in tasks)
+    assert all(len(task.arguments.args[0]) <= max_task_size for task in tasks)
 
     # check the tasks are exhaustive
-    assert sum([len(task["arguments"]["args"][0]) for task in tasks]) == len(
-        expected_origins
-    )
-    assert set.union(*(set(task["arguments"]["args"][0]) for task in tasks)) == {
+    assert sum([len(task.arguments.args[0]) for task in tasks]) == len(expected_origins)
+    assert set.union(*(set(task.arguments.args[0]) for task in tasks)) == {
         origin.url for origin in expected_origins
     }
 
@@ -771,7 +811,7 @@ Done.
     # Check tasks
     tasks = swh_scheduler.search_tasks()
     _assert_origin_tasks_contraints(tasks, 4, 20, origins)
-    assert all(task["arguments"]["kwargs"] == {} for task in tasks)
+    assert all(task.arguments.kwargs == {} for task in tasks)
 
 
 def test_task_schedule_origins_kwargs(swh_scheduler, storage):
@@ -804,8 +844,7 @@ Done.
     tasks = swh_scheduler.search_tasks()
     _assert_origin_tasks_contraints(tasks, 2, 20, origins)
     assert all(
-        task["arguments"]["kwargs"] == {"key1": "value1", "key2": "value2"}
-        for task in tasks
+        task.arguments.kwargs == {"key1": "value1", "key2": "value2"} for task in tasks
     )
 
 

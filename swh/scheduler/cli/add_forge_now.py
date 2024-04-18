@@ -17,6 +17,8 @@ from . import cli
 if TYPE_CHECKING:
     from typing import Dict, List, Optional
 
+    from swh.scheduler.model import TaskPolicy
+
 
 @cli.group("add-forge-now")
 @click.option(
@@ -89,11 +91,11 @@ def register_lister_cli(
     max_pages = kw.get("max_pages", 2)
     max_origins_per_page = kw.get("max_origins_per_page", 5)
 
+    policy: TaskPolicy = "oneshot"
     # Recurring policy on production
     if preset == "production":
         policy = "recurring"
     else:  # staging, "full" but limited listing as a oneshot
-        policy = "oneshot"
         kw.update(
             {
                 "max_pages": max_pages,

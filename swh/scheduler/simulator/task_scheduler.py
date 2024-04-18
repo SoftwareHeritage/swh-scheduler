@@ -39,14 +39,14 @@ def scheduler_runner_process(
             )
 
             sim_tasks = [
-                Task(visit_type=visit_type, origin=task["arguments"]["kwargs"]["url"])
+                Task(visit_type=visit_type, origin=task.arguments.kwargs["url"])
                 for task in next_tasks
             ]
 
             env.scheduler.mass_schedule_task_runs(
                 [
                     {
-                        "task": task["id"],
+                        "task": task.id,
                         "scheduled": env.time,
                         "backend_id": str(sim_task.backend_id),
                     }

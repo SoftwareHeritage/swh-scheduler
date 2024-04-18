@@ -8,17 +8,19 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 import re
 from typing import TYPE_CHECKING, Iterable
 
 import click
 
+from swh.scheduler.model import Task
+
 if TYPE_CHECKING:
-    from typing import Dict, List, Optional, Tuple
+    from typing import Any, Dict, List, Optional, Tuple
 
     from swh.scheduler.interface import SchedulerInterface
-    from swh.scheduler.model import TaskType
+    from swh.scheduler.model import TaskPolicy, TaskPriority, TaskType
 
 
 TASK_BATCH_SIZE = 1000  # Number of tasks per query to the scheduler
@@ -86,7 +88,7 @@ def parse_time_interval(time_str: str) -> timedelta:
 def schedule_origin_batches(scheduler, task_type, origins, origin_batch_size, kwargs):
     from itertools import islice
 
-    from swh.scheduler.utils import create_task_dict
+    from swh.scheduler.utils import create_task
 
     nb_origins = 0
     nb_tasks = 0
@@ -104,7 +106,7 @@ def schedule_origin_batches(scheduler, task_type, origins, origin_batch_size, kw
 
             # Create a task for these origins
             args = [origin_batch]
-            task_dict = create_task_dict(task_type, "oneshot", *args, **kwargs)
+            task_dict = create_task(task_type, "oneshot", *args, **kwargs)
             task_batch.append(task_dict)
 
         # Schedule a batch of tasks
@@ -221,7 +223,7 @@ def send_to_celery(
 
     from swh.scheduler.celery_backend.config import app, get_available_slots
 
-    from ..utils import create_origin_task_dicts
+    from ..utils import create_origin_tasks
 
     for visit_type_name, queue_name in visit_type_to_queue.items():
         task_type = get_task_type(scheduler, visit_type_name)
@@ -246,22 +248,22 @@ def send_to_celery(
         )
 
         click.echo(f"{len(origins)} visits to send to celery")
-        for task_dict in create_origin_task_dicts(origins, scheduler):
+        for task in create_origin_tasks(origins, scheduler):
             app.send_task(
                 task_name,
                 task_id=uuid(),
-                args=task_dict["arguments"]["args"],
-                kwargs=task_dict["arguments"]["kwargs"],
+                args=task.arguments.args,
+                kwargs=task.arguments.kwargs,
                 queue=queue_name,
             )
 
 
-def pretty_print_list(list, indent=0):
+def pretty_print_list(list: List[Any], indent: int = 0):
     """Pretty-print a list"""
     return "".join("%s%r\n" % (" " * indent, item) for item in list)
 
 
-def pretty_print_dict(dict, indent=0):
+def pretty_print_dict(dict: Dict[str, Any], indent: int = 0):
     """Pretty-print a list"""
     return "".join(
         "%s%s: %r\n" % (" " * indent, click.style(key, bold=True), value)
@@ -291,25 +293,26 @@ def pretty_print_run(run, indent=4):
     return fmt.format(indent=" " * indent, **format_dict(run))
 
 
-def pretty_print_task(task, full=False):
+def pretty_print_task(task: Task, full: bool = False):
     """Pretty-print a task
 
-    If 'full' is True, also print the status and priority fields.
+    If ``full`` is :const:`True`, also print the status and priority fields.
 
     >>> import datetime
-    >>> task = {
-    ...     'id': 1234,
-    ...     'arguments': {
-    ...         'args': ['foo', 'bar', True],
-    ...         'kwargs': {'key': 'value', 'key2': 42},
-    ...     },
-    ...     'current_interval': datetime.timedelta(hours=1),
-    ...     'next_run': datetime.datetime(2019, 2, 21, 13, 52, 35, 407818),
-    ...     'policy': 'oneshot',
-    ...     'priority': None,
-    ...     'status': 'next_run_not_scheduled',
-    ...     'type': 'test_task',
-    ... }
+    >>> from swh.scheduler.model import Task, TaskArguments
+    >>> task = Task(
+    ...     id=1234,
+    ...     arguments=TaskArguments(
+    ...         args=["foo", "bar", True],
+    ...         kwargs={"key": "value", "key2": 42},
+    ...     ),
+    ...     current_interval=datetime.timedelta(hours=1),
+    ...     next_run=datetime.datetime(2019, 2, 21, 13, 52, 35, 407818),
+    ...     policy="oneshot",
+    ...     priority=None,
+    ...     status="next_run_not_scheduled",
+    ...     type="test_task",
+    ... )
     >>> print(click.unstyle(pretty_print_task(task)))
     Task 1234
       Next run: ... (2019-02-21T13:52:35.407818)
@@ -343,36 +346,36 @@ def pretty_print_task(task, full=False):
     """
     import humanize
 
-    next_run = task["next_run"]
+    next_run = task.next_run
     lines = [
-        "%s %s\n" % (click.style("Task", bold=True), task["id"]),
+        "%s %s\n" % (click.style("Task", bold=True), task.id),
         click.style("  Next run: ", bold=True),
         "%s (%s)" % (humanize.naturaldate(next_run), next_run.isoformat()),
         "\n",
         click.style("  Interval: ", bold=True),
-        str(task["current_interval"]),
+        str(task.current_interval),
         "\n",
         click.style("  Type: ", bold=True),
-        task["type"] or "",
+        task.type or "",
         "\n",
         click.style("  Policy: ", bold=True),
-        task["policy"] or "",
+        task.policy or "",
         "\n",
     ]
     if full:
         lines += [
             click.style("  Status: ", bold=True),
-            task["status"] or "",
+            task.status or "",
             "\n",
             click.style("  Priority: ", bold=True),
-            task["priority"] or "",
+            task.priority or "",
             "\n",
         ]
     lines += [
         click.style("  Args:\n", bold=True),
-        pretty_print_list(task["arguments"]["args"], indent=4),
+        pretty_print_list(task.arguments.args, indent=4),
         click.style("  Keyword args:\n", bold=True),
-        pretty_print_dict(task["arguments"]["kwargs"], indent=4),
+        pretty_print_dict(task.arguments.kwargs, indent=4),
     ]
 
     return "".join(lines)
@@ -383,23 +386,24 @@ def task_add(
     task_type_name: str,
     args: List[str],
     kw: Dict,
-    policy: str,
-    priority: Optional[str] = None,
-    next_run: Optional[str] = None,
+    policy: TaskPolicy,
+    priority: Optional[TaskPriority] = None,
+    next_run: Optional[datetime] = None,
 ):
     """Add a task task_type_name in the scheduler."""
+    from swh.scheduler.model import TaskArguments
     from swh.scheduler.utils import utcnow
 
-    task = {
-        "type": task_type_name,
-        "policy": policy,
-        "priority": priority,
-        "arguments": {
-            "args": args,
-            "kwargs": kw,
-        },
-        "next_run": next_run or utcnow(),
-    }
+    task = Task(
+        type=task_type_name,
+        policy=policy,
+        priority=priority,
+        arguments=TaskArguments(
+            args=args,
+            kwargs=kw,
+        ),
+        next_run=next_run or utcnow(),
+    )
     created = scheduler.create_tasks([task])
 
     output = [f"Created {len(created)} tasks\n"]

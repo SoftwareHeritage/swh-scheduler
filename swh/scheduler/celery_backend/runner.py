@@ -129,14 +129,14 @@ def run_ready_tasks(
         backend_tasks = []
         celery_tasks: List[Tuple[bool, str, str, List, Dict]] = []
         for task in pending_tasks:
-            args = task["arguments"]["args"]
-            kwargs = task["arguments"]["kwargs"]
+            args = task.arguments.args
+            kwargs = task.arguments.kwargs
 
-            backend_name = task_types_d[task["type"]].backend_name
+            backend_name = task_types_d[task.type].backend_name
             backend_id = uuid()
             celery_tasks.append(
                 (
-                    task.get("priority") is not None,
+                    task.priority is not None,
                     backend_name,
                     backend_id,
                     args,
@@ -144,7 +144,7 @@ def run_ready_tasks(
                 )
             )
             data = {
-                "task": task["id"],
+                "task": task.id,
                 "backend_id": backend_id,
                 "scheduled": utcnow(),
             }

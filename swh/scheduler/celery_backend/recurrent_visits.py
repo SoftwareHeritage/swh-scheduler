@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Tuple
 from kombu.utils.uuid import uuid
 
 from swh.scheduler.celery_backend.config import get_available_slots
-from swh.scheduler.utils import create_origin_task_dicts
+from swh.scheduler.utils import create_origin_tasks
 
 if TYPE_CHECKING:
     from ..interface import SchedulerInterface
@@ -235,12 +235,12 @@ def send_visits_for_visit_type(
     # scheduling policies have different resource usage patterns
     random.shuffle(origins)
 
-    for task_dict in create_origin_task_dicts(origins, scheduler):
+    for task in create_origin_tasks(origins, scheduler):
         app.send_task(
             queue_name,
             task_id=uuid(),
-            args=task_dict["arguments"]["args"],
-            kwargs=task_dict["arguments"]["kwargs"],
+            args=task.arguments.args,
+            kwargs=task.arguments.kwargs,
             queue=queue_name,
         )
 

@@ -5,7 +5,7 @@
 
 import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Literal, Optional, Tuple, TypeVar, Union
 from uuid import UUID
 
 import attr
@@ -17,6 +17,9 @@ def check_timestamptz(value) -> None:
     """Checks the date has a timezone."""
     if value is not None and value.tzinfo is None:
         raise ValueError("date must be a timezone-aware datetime.")
+
+
+SchedulerModelType = TypeVar("SchedulerModelType", bound="BaseSchedulerModel")
 
 
 @attr.s
@@ -100,6 +103,10 @@ class BaseSchedulerModel:
             cls._insert_cols_and_metavars = cols, metavars
 
         return cls._insert_cols_and_metavars
+
+    def evolve(self: SchedulerModelType, **kwargs) -> SchedulerModelType:
+        """Alias to call :func:`attr.evolve` on this object, returning a new object."""
+        return attr.evolve(self, **kwargs)
 
 
 @attr.s
@@ -305,3 +312,55 @@ class TaskType(BaseSchedulerModel):
         type=Optional[datetime.timedelta], validator=[type_validator()], default=None
     )
     """Retry delay for the task"""
+
+
+@attr.s(frozen=True, slots=True)
+class TaskArguments(BaseSchedulerModel):
+    args = attr.ib(type=List[Any], validator=[type_validator()], default=[])
+    kwargs = attr.ib(type=Dict[str, Any], validator=[type_validator()], default={})
+
+
+TaskStatus = Literal[
+    "next_run_not_scheduled", "next_run_scheduled", "completed", "disabled"
+]
+
+TaskPolicy = Literal["recurring", "oneshot"]
+
+TaskPriority = Literal["high", "normal", "low"]
+
+
+@attr.s(frozen=True, slots=True)
+class Task(BaseSchedulerModel):
+    """Represents a schedulable task"""
+
+    type = attr.ib(type=str, validator=[type_validator()])
+    """Task type"""
+    arguments = attr.ib(type=TaskArguments, validator=[type_validator()])
+    """Task arguments passed to the underlying job scheduler"""
+    next_run = attr.ib(type=datetime.datetime, validator=[type_validator()])
+    """The interval between two runs of this task taking into account the backoff factor"""
+    status = attr.ib(
+        type=TaskStatus, validator=[type_validator()], default="next_run_not_scheduled"
+    )
+    """Status of the task"""
+    policy = attr.ib(type=TaskPolicy, validator=[type_validator()], default="recurring")
+    """Whether the task is one-shot or recurring"""
+    retries_left = attr.ib(
+        type=Optional[int], validator=[type_validator()], default=None
+    )
+    """The number of "short delay" retries of the task in case of transient failure"""
+    id = attr.ib(
+        type=Optional[int],
+        validator=[type_validator()],
+        metadata={"primary_key": True},
+        default=None,
+    )
+    """Task Identifier (populated by database)"""
+    current_interval = attr.ib(
+        type=Optional[datetime.timedelta], validator=[type_validator()], default=None
+    )
+    """The next run of this task should be run on or after that time"""
+    priority = attr.ib(
+        type=Optional[TaskPriority], validator=[type_validator()], default=None
+    )
+    """Priority of the task, either low, normal or high"""

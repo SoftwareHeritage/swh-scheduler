@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2021  The Software Heritage developers
+# Copyright (C) 2016-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -83,6 +83,9 @@ def schedule_tasks(ctx, columns, delimiter, file):
     import csv
     import json
 
+    import iso8601
+
+    from swh.scheduler.model import Task, TaskArguments
     from swh.scheduler.utils import utcnow
 
     from .utils import pretty_print_task
@@ -93,15 +96,19 @@ def schedule_tasks(ctx, columns, delimiter, file):
 
     reader = csv.reader(file, delimiter=delimiter)
     for line in reader:
-        task = dict(zip(columns, line))
-        args = json.loads(task.pop("args", "[]"))
-        kwargs = json.loads(task.pop("kwargs", "{}"))
-        task["arguments"] = {
-            "args": args,
-            "kwargs": kwargs,
-        }
-        task["next_run"] = task.get("next_run", now)
-        tasks.append(task)
+        task_params = dict(zip(columns, line))
+        args = json.loads(task_params.pop("args", "[]"))
+        kwargs = json.loads(task_params.pop("kwargs", "{}"))
+        task_params["arguments"] = TaskArguments(
+            args=args,
+            kwargs=kwargs,
+        )
+        task_params["next_run"] = (
+            iso8601.parse_date(task_params["next_run"])
+            if "next_run" in task_params
+            else now
+        )
+        tasks.append(Task(**task_params))
 
     created = scheduler.create_tasks(tasks)
 
@@ -380,7 +387,7 @@ def list_tasks(
     ctx, task_id, task_type, limit, status, policy, priority, before, after, list_runs
 ):
     """List tasks."""
-    from operator import itemgetter
+    from operator import attrgetter
 
     from .utils import pretty_print_run, pretty_print_task
 
@@ -412,18 +419,18 @@ def list_tasks(
         limit=limit,
     )
     if list_runs:
-        runs = {t["id"]: [] for t in tasks}
-        for r in scheduler.get_task_runs([task["id"] for task in tasks]):
+        runs = {t.id: [] for t in tasks}
+        for r in scheduler.get_task_runs([task.id for task in tasks]):
             runs[r["task"]].append(r)
     else:
         runs = {}
 
     output.append("Found %d tasks\n" % (len(tasks)))
-    for task in sorted(tasks, key=itemgetter("id")):
+    for task in sorted(tasks, key=attrgetter("id")):
         output.append(pretty_print_task(task, full=True))
-        if runs.get(task["id"]):
+        if runs.get(task.id):
             output.append(click.style("  Executions:", bold=True))
-            for run in sorted(runs[task["id"]], key=itemgetter("id")):
+            for run in sorted(runs[task.id], key=attrgetter("id")):
                 output.append(pretty_print_run(run, indent=4))
 
     click.echo("\n".join(output))

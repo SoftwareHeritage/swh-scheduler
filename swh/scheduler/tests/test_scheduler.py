@@ -23,8 +23,9 @@ from swh.scheduler.model import (
     ListedOrigin,
     OriginVisitStats,
     SchedulerMetrics,
+    TaskPriority,
 )
-from swh.scheduler.utils import create_oneshot_task_dict, utcnow
+from swh.scheduler.utils import create_oneshot_task, utcnow
 
 from .common import (
     LISTERS,
@@ -36,7 +37,12 @@ from .common import (
 
 ONEDAY = timedelta(days=1)
 
-NUM_PRIORITY_TASKS = {None: 100, "high": 60, "normal": 30, "low": 20}
+NUM_PRIORITY_TASKS: Dict[Optional[TaskPriority], int] = {
+    None: 100,
+    "high": 60,
+    "normal": 30,
+    "low": 20,
+}
 
 
 def subdict(d, keys=None, excl=()):
@@ -118,40 +124,29 @@ class TestScheduler:
 
         # tasks are returned only once with their ids
         ret1 = swh_scheduler.create_tasks(tasks + tasks)
-        set_ret1 = set([t["id"] for t in ret1])
+        set_ret1 = set([t.id for t in ret1])
 
         # creating the same set result in the same ids
         ret = swh_scheduler.create_tasks(tasks)
-        set_ret = set([t["id"] for t in ret])
+        set_ret = set([t.id for t in ret])
 
         # Idempotence results
         assert set_ret == set_ret1
         assert len(ret) == len(ret1)
 
         ids = set()
-        actual_priorities = defaultdict(int)
+        actual_priorities: Dict[Optional[TaskPriority], int] = defaultdict(int)
 
         for task, orig_task in zip(ret, tasks):
             task = copy.deepcopy(task)
-            task_type = TASK_TYPES[orig_task["type"].split("-", 1)[-1]]
-            assert task["id"] not in ids
-            assert task["status"] == "next_run_not_scheduled"
-            assert task["current_interval"] == task_type.default_interval
-            assert task["policy"] == orig_task.get("policy", "recurring")
-            priority = task.get("priority")
-            actual_priorities[priority] += 1
-
-            assert task["retries_left"] == (task_type.num_retries or 0)
-            ids.add(task["id"])
-            del task["id"]
-            del task["status"]
-            del task["current_interval"]
-            del task["retries_left"]
-            if "policy" not in orig_task:
-                del task["policy"]
-            if "priority" not in orig_task:
-                del task["priority"]
-                assert task == orig_task
+            task_type = TASK_TYPES[orig_task.type.split("-", 1)[-1]]
+            assert task.id not in ids
+            assert task.status == "next_run_not_scheduled"
+            assert task.current_interval == task_type.default_interval
+            assert task.policy == orig_task.policy
+            actual_priorities[task.priority] += 1
+            assert task.retries_left == (task_type.num_retries or 0)
+            ids.add(task.id)
 
         expected_priorities = NUM_PRIORITY_TASKS.copy()
         expected_priorities[None] += num_git
@@ -161,29 +156,29 @@ class TestScheduler:
         self._create_task_types(swh_scheduler)
         first_next_run = utcnow()
         second_next_run = utcnow() + timedelta(hours=6)
-        task_type = TEMPLATES["test-git"]["type"]
+        task_type = TEMPLATES["test-git"].type
 
         tasks = swh_scheduler.create_tasks(
-            [create_oneshot_task_dict(task_type, next_run=first_next_run)]
+            [create_oneshot_task(task_type, next_run=first_next_run)]
         )
         assert tasks
-        assert tasks[0]["next_run"] == first_next_run
+        assert tasks[0].next_run == first_next_run
 
         tasks += swh_scheduler.create_tasks(
-            [create_oneshot_task_dict(task_type, next_run=second_next_run)]
+            [create_oneshot_task(task_type, next_run=second_next_run)]
         )
         assert len(tasks) > 1
-        assert tasks[1]["next_run"] == second_next_run
+        assert tasks[1].next_run == second_next_run
 
         ready_tasks = swh_scheduler.peek_ready_tasks(task_type, timestamp=utcnow())
         assert ready_tasks
-        assert ready_tasks[0]["id"] == tasks[0]["id"]
+        assert ready_tasks[0].id == tasks[0].id
 
         ready_tasks = swh_scheduler.peek_ready_tasks(
             task_type, timestamp=utcnow() + timedelta(hours=6)
         )
         assert len(ready_tasks) > 1
-        assert ready_tasks[1]["id"] == tasks[1]["id"]
+        assert ready_tasks[1].id == tasks[1].id
 
         grabbed_tasks = swh_scheduler.grab_ready_tasks(
             task_type, timestamp=utcnow() + timedelta(hours=6)
@@ -201,7 +196,7 @@ class TestScheduler:
 
         swh_scheduler.mass_schedule_task_runs(backend_tasks)
 
-        task_runs = swh_scheduler.get_task_runs(task_ids=[task["id"] for task in tasks])
+        task_runs = swh_scheduler.get_task_runs(task_ids=[task.id for task in tasks])
         assert len(task_runs) == len(tasks)
         for i, task in enumerate(backend_tasks):
             status = "eventful"
@@ -223,7 +218,7 @@ class TestScheduler:
     def test_peek_ready_tasks_no_priority(self, swh_scheduler):
         self._create_task_types(swh_scheduler)
         t = utcnow()
-        task_type = TEMPLATES["test-git"]["type"]
+        task_type = TEMPLATES["test-git"].type
         tasks = tasks_from_template(TEMPLATES["test-git"], t, 100)
         random.shuffle(tasks)
         swh_scheduler.create_tasks(tasks)
@@ -231,7 +226,7 @@ class TestScheduler:
         ready_tasks = swh_scheduler.peek_ready_tasks(task_type)
         assert len(ready_tasks) == len(tasks)
         for i in range(len(ready_tasks) - 1):
-            assert ready_tasks[i]["next_run"] <= ready_tasks[i + 1]["next_run"]
+            assert ready_tasks[i].next_run <= ready_tasks[i + 1].next_run
 
         # Only get the first few ready tasks
         limit = random.randrange(5, 5 + len(tasks) // 2)
@@ -241,13 +236,13 @@ class TestScheduler:
         assert ready_tasks_limited == ready_tasks[:limit]
 
         # Limit by timestamp
-        max_ts = tasks[limit - 1]["next_run"]
+        max_ts = tasks[limit - 1].next_run
         ready_tasks_timestamped = swh_scheduler.peek_ready_tasks(
             task_type, timestamp=max_ts
         )
 
         for ready_task in ready_tasks_timestamped:
-            assert ready_task["next_run"] <= max_ts
+            assert ready_task.next_run <= max_ts
 
         # Make sure we get proper behavior for the first ready tasks
         assert ready_tasks[: len(ready_tasks_timestamped)] == ready_tasks_timestamped
@@ -258,14 +253,14 @@ class TestScheduler:
         )
         assert len(ready_tasks_both) <= limit // 3
         for ready_task in ready_tasks_both:
-            assert ready_task["next_run"] <= max_ts
+            assert ready_task.next_run <= max_ts
             assert ready_task in ready_tasks[: limit // 3]
 
     def test_peek_ready_tasks_returns_only_no_priority_tasks(self, swh_scheduler):
         """Peek ready tasks only return standard tasks (no priority)"""
         self._create_task_types(swh_scheduler)
         t = utcnow()
-        task_type = TEMPLATES["test-git"]["type"]
+        task_type = TEMPLATES["test-git"].type
         # Create tasks with and without priorities
         tasks = tasks_from_template(
             TEMPLATES["test-git"],
@@ -275,7 +270,7 @@ class TestScheduler:
 
         count_priority = 0
         for task in tasks:
-            count_priority += 0 if task.get("priority") is None else 1
+            count_priority += 0 if task.priority is None else 1
 
         assert count_priority > 0, "Some created tasks should have some priority"
 
@@ -289,12 +284,12 @@ class TestScheduler:
 
         # No read task should have any priority
         for task in ready_tasks:
-            assert task.get("priority") is None
+            assert task.priority is None
 
     def test_grab_ready_tasks(self, swh_scheduler):
         self._create_task_types(swh_scheduler)
         t = utcnow()
-        task_type = TEMPLATES["test-git"]["type"]
+        task_type = TEMPLATES["test-git"].type
         # Create tasks with and without priorities
         tasks = tasks_from_template(
             TEMPLATES["test-git"], t, num_priorities=NUM_PRIORITY_TASKS
@@ -304,24 +299,20 @@ class TestScheduler:
 
         first_ready_tasks = swh_scheduler.peek_ready_tasks(task_type, num_tasks=50)
         grabbed_tasks = swh_scheduler.grab_ready_tasks(task_type, num_tasks=50)
-        first_ready_tasks.sort(key=lambda task: task["arguments"]["args"][0])
-        grabbed_tasks.sort(key=lambda task: task["arguments"]["args"][0])
+        first_ready_tasks.sort(key=lambda task: task.arguments.args[0])
+        grabbed_tasks.sort(key=lambda task: task.arguments.args[0])
 
         for peeked, grabbed in zip(first_ready_tasks, grabbed_tasks):
-            assert peeked["status"] == "next_run_not_scheduled"
-            del peeked["status"]
-            assert grabbed["status"] == "next_run_scheduled"
-            del grabbed["status"]
-            assert peeked == grabbed
-            priority = grabbed["priority"]
-            assert priority == peeked["priority"]
-            assert priority is None
+            assert peeked.status == "next_run_not_scheduled"
+            assert grabbed.status == "next_run_scheduled"
+            assert peeked.priority is None
+            assert peeked == grabbed.evolve(status=peeked.status)
 
     def test_grab_ready_priority_tasks(self, swh_scheduler):
         """check the grab and peek priority tasks endpoint behave as expected"""
         self._create_task_types(swh_scheduler)
         t = utcnow()
-        task_type = TEMPLATES["test-git"]["type"]
+        task_type = TEMPLATES["test-git"].type
         num_tasks = 100
         # Create tasks with and without priorities
         tasks0 = tasks_with_priority_from_template(
@@ -349,44 +340,35 @@ class TestScheduler:
 
         ready_tasks = swh_scheduler.peek_ready_priority_tasks(task_type, num_tasks=50)
         grabbed_tasks = swh_scheduler.grab_ready_priority_tasks(task_type, num_tasks=50)
-        ready_tasks.sort(key=lambda task: task["arguments"]["args"][0])
-        grabbed_tasks.sort(key=lambda task: task["arguments"]["args"][0])
+        ready_tasks.sort(key=lambda task: task.arguments.args[0])
+        grabbed_tasks.sort(key=lambda task: task.arguments.args[0])
 
         for peeked, grabbed in zip(ready_tasks, grabbed_tasks):
-            assert peeked["status"] == "next_run_not_scheduled"
-            del peeked["status"]
-            assert grabbed["status"] == "next_run_scheduled"
-            del grabbed["status"]
-            assert peeked == grabbed
-            assert peeked["priority"] == grabbed["priority"]
-            assert peeked["priority"] is not None
+            assert peeked.status == "next_run_not_scheduled"
+            assert grabbed.status == "next_run_scheduled"
+            assert peeked.priority is not None
+            assert peeked == grabbed.evolve(status=peeked.status)
 
     def test_get_tasks(self, swh_scheduler):
         self._create_task_types(swh_scheduler)
-        t = utcnow()
-        tasks = tasks_from_template(TEMPLATES["test-git"], t, 100)
+        tasks = tasks_from_template(TEMPLATES["test-git"], utcnow(), 100)
         tasks = swh_scheduler.create_tasks(tasks)
         random.shuffle(tasks)
         while len(tasks) > 1:
             length = random.randrange(1, len(tasks))
-            cur_tasks = sorted(tasks[:length], key=lambda x: x["id"])
+            cur_tasks = sorted(tasks[:length], key=lambda x: x.id)
             tasks[:length] = []
 
-            ret = swh_scheduler.get_tasks(task["id"] for task in cur_tasks)
+            ret = swh_scheduler.get_tasks(task.id for task in cur_tasks)
             # result is not guaranteed to be sorted
-            ret.sort(key=lambda x: x["id"])
+            ret.sort(key=lambda x: x.id)
             assert ret == cur_tasks
 
     def test_search_tasks(self, swh_scheduler):
-        def make_real_dicts(lst):
-            """RealDictRow is not a real dict."""
-            return [dict(d.items()) for d in lst]
-
         self._create_task_types(swh_scheduler)
-        t = utcnow()
-        tasks = tasks_from_template(TEMPLATES["test-git"], t, 100)
+        tasks = tasks_from_template(TEMPLATES["test-git"], utcnow(), 100)
         tasks = swh_scheduler.create_tasks(tasks)
-        assert make_real_dicts(swh_scheduler.search_tasks()) == make_real_dicts(tasks)
+        assert swh_scheduler.search_tasks() == tasks
 
     def assert_filtered_task_ok(
         self, task: Dict[str, Any], after: datetime, before: datetime
@@ -449,14 +431,14 @@ class TestScheduler:
         _task_ids = defaultdict(list)
         # randomize 'disabling' recurring task or 'complete' oneshot task
         for task in pending_tasks:
-            policy = task["policy"]
-            _task_ids[policy].append(task["id"])
+            policy = task.policy
+            _task_ids[policy].append(task.id)
             status = random.choice(status_choice[policy])
             if status[0] != 1:
                 continue
             # elected for filtering
             status_per_policy[policy] += status[0]
-            tasks_to_update[policy].append(task["id"])
+            tasks_to_update[policy].append(task.id)
 
         swh_scheduler.disable_tasks(tasks_to_update["recurring"])
         # hack: change the status to something else than completed/disabled
@@ -553,7 +535,7 @@ class TestScheduler:
 
         swh_scheduler.delete_archived_tasks(_tasks)
 
-        all_tasks = [task["id"] for task in swh_scheduler.search_tasks()]
+        all_tasks = [task.id for task in swh_scheduler.search_tasks()]
         tasks_count = len(all_tasks)
         tasks_run_count = len(swh_scheduler.get_task_runs(all_tasks))
 
@@ -1061,7 +1043,7 @@ class TestScheduler:
         swh_scheduler.origin_visit_stats_upsert(visit_stats)
 
         cooldown_td = timedelta(days=cooldown)
-        cooldown_args = {
+        cooldown_args: Dict[str, Optional[timedelta]] = {
             "scheduled_cooldown": None,
             "failed_cooldown": None,
             "not_found_cooldown": None,

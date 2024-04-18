@@ -17,6 +17,10 @@ from swh.scheduler.model import (
     Lister,
     OriginVisitStats,
     SchedulerMetrics,
+    Task,
+    TaskPolicy,
+    TaskPriority,
+    TaskStatus,
     TaskType,
 )
 
@@ -72,23 +76,24 @@ class SchedulerInterface(Protocol):
         ...
 
     @remote_api_endpoint("task/create")
-    def create_tasks(self, tasks, policy="recurring"):
-        """Create new tasks.
+    def create_tasks(
+        self, tasks: List[Task], policy: TaskPolicy = "recurring"
+    ) -> List[Task]:
+        """Register new tasks in database.
 
         Args:
-            tasks (list): each task is a dictionary with the following keys:
+            tasks: each task is a Task object created with at least the following parameters:
 
-                - type (str): the task type
-                - arguments (dict): the arguments for the task runner, keys:
+                - type
+                - arguments
+                - next_run
 
-                      - args (list of str): arguments
-                      - kwargs (dict str -> str): keyword arguments
+            policy: default task policy (either recurring or oneshot) to use if not
+                set in input task objects
 
-                - next_run (datetime.datetime): the next scheduled run for the
-                  task
 
         Returns:
-            a list of created tasks.
+            a list of created tasks with database ids filled.
 
         """
         ...
@@ -97,38 +102,67 @@ class SchedulerInterface(Protocol):
     def set_status_tasks(
         self,
         task_ids: List[int],
-        status: str = "disabled",
+        status: TaskStatus = "disabled",
         next_run: Optional[datetime.datetime] = None,
-    ):
+    ) -> None:
         """Set the tasks' status whose ids are listed.
 
-        If given, also set the next_run date.
+        Args:
+            task_ids: list of tasks' identifiers
+            status: the status to set for the tasks
+            next_run: if provided, also set the next_run date
+
         """
         ...
 
     @remote_api_endpoint("task/disable")
-    def disable_tasks(self, task_ids):
-        """Disable the tasks whose ids are listed."""
+    def disable_tasks(self, task_ids: List[int]) -> None:
+        """Disable the tasks whose ids are listed.
+
+        Args:
+            task_ids: list of tasks' identifiers
+        """
         ...
 
     @remote_api_endpoint("task/search")
     def search_tasks(
         self,
-        task_id=None,
-        task_type=None,
-        status=None,
-        priority=None,
-        policy=None,
-        before=None,
-        after=None,
-        limit=None,
-    ):
-        """Search tasks from selected criterions"""
+        task_id: Optional[int] = None,
+        task_type: Optional[str] = None,
+        status: Optional[TaskStatus] = None,
+        priority: Optional[TaskPriority] = None,
+        policy: Optional[TaskPolicy] = None,
+        before: Optional[datetime.datetime] = None,
+        after: Optional[datetime.datetime] = None,
+        limit: Optional[int] = None,
+    ) -> List[Task]:
+        """Search tasks from selected criterions
+
+        Args:
+            task_id: search a task with given identifier
+            task_type: search tasks with given type
+            status: search tasks with given status
+            priority: search tasks with given priority
+            policy: search tasks with given policy
+            before: search tasks created before given date
+            after: search tasks created after given date
+            limit: maximum number of tasks to return
+
+        Returns:
+            a list of found tasksa
+        """
         ...
 
     @remote_api_endpoint("task/get")
-    def get_tasks(self, task_ids):
-        """Retrieve the info of tasks whose ids are listed."""
+    def get_tasks(self, task_ids: List[int]) -> List[Task]:
+        """Retrieve the info of tasks whose ids are listed.
+
+        Args:
+            task_ids: list of tasks' identifiers
+
+        Returns:
+            a list of tasks
+        """
         ...
 
     @remote_api_endpoint("task/peek_ready")
@@ -137,7 +171,7 @@ class SchedulerInterface(Protocol):
         task_type: str,
         timestamp: Optional[datetime.datetime] = None,
         num_tasks: Optional[int] = None,
-    ) -> List[Dict]:
+    ) -> List[Task]:
         """Fetch the list of tasks (with no priority) to be scheduled.
 
         Args:
@@ -158,7 +192,7 @@ class SchedulerInterface(Protocol):
         task_type: str,
         timestamp: Optional[datetime.datetime] = None,
         num_tasks: Optional[int] = None,
-    ) -> List[Dict]:
+    ) -> List[Task]:
         """Fetch and schedule the list of tasks (with no priority) ready to be scheduled.
 
         Args:
@@ -179,7 +213,7 @@ class SchedulerInterface(Protocol):
         task_type: str,
         timestamp: Optional[datetime.datetime] = None,
         num_tasks: Optional[int] = None,
-    ) -> List[Dict]:
+    ) -> List[Task]:
         """Fetch list of tasks (with any priority) ready to be scheduled.
 
         Args:
@@ -188,7 +222,7 @@ class SchedulerInterface(Protocol):
             num_tasks: only peek at num_tasks tasks (with no priority)
 
         Returns:
-            a list of tasks
+            the list of tasks which would be scheduled
 
         """
         ...
@@ -199,7 +233,7 @@ class SchedulerInterface(Protocol):
         task_type: str,
         timestamp: Optional[datetime.datetime] = None,
         num_tasks: Optional[int] = None,
-    ) -> List[Dict]:
+    ) -> List[Task]:
         """Fetch and schedule the list of tasks (with any priority) ready to be scheduled.
 
         Args:
@@ -209,7 +243,7 @@ class SchedulerInterface(Protocol):
             num_tasks: only grab num_tasks tasks (with no priority)
 
         Returns:
-            a list of tasks
+            the list of scheduled tasks
 
         """
         ...

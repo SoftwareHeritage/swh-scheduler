@@ -10,13 +10,13 @@ from typing import TYPE_CHECKING
 import click
 
 from . import cli
-from ..utils import create_origin_task_dicts
+from ..utils import create_origin_tasks
 
 if TYPE_CHECKING:
     from typing import Dict, Iterable, List, Optional
     from uuid import UUID
 
-    from ..interface import SchedulerInterface
+    from ..interface import SchedulerInterface, TaskPolicy
     from ..model import ListedOrigin
 
 
@@ -93,7 +93,12 @@ def format_origins(
 @click.argument("count", type=int)
 @click.pass_context
 def grab_next(
-    ctx, policy: str, fields: Optional[str], with_header: bool, type: str, count: int
+    ctx,
+    policy: TaskPolicy,
+    fields: Optional[str],
+    with_header: bool,
+    type: str,
+    count: int,
 ):
     """Grab the next COUNT origins to visit using the TYPE loader from the
     listed origins table."""
@@ -119,7 +124,7 @@ def grab_next(
 @click.argument("type", type=str)
 @click.argument("count", type=int)
 @click.pass_context
-def schedule_next(ctx, policy: str, type: str, count: int):
+def schedule_next(ctx, policy: TaskPolicy, type: str, count: int):
     """Send the next COUNT origin visits of the TYPE loader to the scheduler as
     one-shot tasks."""
     from ..utils import utcnow
@@ -131,13 +136,12 @@ def schedule_next(ctx, policy: str, type: str, count: int):
 
     created = scheduler.create_tasks(
         [
-            {
-                **task_dict,
-                "policy": "oneshot",
-                "next_run": utcnow(),
-                "retries_left": 1,
-            }
-            for task_dict in create_origin_task_dicts(origins, scheduler)
+            task.evolve(
+                policy="oneshot",
+                next_run=utcnow(),
+                retries_left=1,
+            )
+            for task in create_origin_tasks(origins, scheduler)
         ]
     )
 

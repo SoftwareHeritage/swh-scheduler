@@ -1,4 +1,4 @@
-# Copyright (C) 2021  The Software Heritage developers
+# Copyright (C) 2021-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -17,7 +17,7 @@ from typing import Dict, Generator, Optional
 from simpy import Event
 
 from swh.scheduler.interface import SchedulerInterface
-from swh.scheduler.utils import create_origin_task_dicts
+from swh.scheduler.utils import create_origin_tasks, utcnow
 
 from . import origin_scheduler, task_scheduler
 from .common import Environment, Queue, SimulationReport, Task
@@ -121,15 +121,12 @@ def fill_test_data(scheduler: SchedulerInterface, num_origins: int = 100000):
 
     scheduler.create_tasks(
         [
-            {
-                **task_dict,
-                "policy": "recurring",
-                "next_run": origin.last_update,
-                "interval": timedelta(days=64),
-            }
-            for (origin, task_dict) in zip(
-                origins, create_origin_task_dicts(origins, scheduler)
+            task.evolve(
+                policy="recurring",
+                next_run=origin.last_update or utcnow(),
+                current_interval=timedelta(days=64),
             )
+            for (origin, task) in zip(origins, create_origin_tasks(origins, scheduler))
         ]
     )
 

@@ -3,30 +3,25 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import copy
-import datetime
-from typing import Dict, List, Optional
 
-from swh.scheduler.model import TaskType
+import datetime
+from typing import Any, Dict, List, Optional
+
+from swh.scheduler.model import Task, TaskArguments, TaskPriority, TaskType
+from swh.scheduler.utils import utcnow
 
 TEMPLATES = {
-    "test-git": {
-        "type": "load-test-git",
-        "arguments": {
-            "args": [],
-            "kwargs": {},
-        },
-        "next_run": None,
-    },
-    "test-hg": {
-        "type": "load-test-hg",
-        "arguments": {
-            "args": [],
-            "kwargs": {},
-        },
-        "next_run": None,
-        "policy": "oneshot",
-    },
+    "test-git": Task(
+        type="load-test-git",
+        arguments=TaskArguments(),
+        next_run=utcnow(),
+    ),
+    "test-hg": Task(
+        type="load-test-hg",
+        arguments=TaskArguments(),
+        next_run=utcnow(),
+        policy="oneshot",
+    ),
 }
 
 
@@ -59,36 +54,35 @@ TASK_TYPES = {
 
 
 def _task_from_template(
-    template: Dict,
+    template: Task,
     next_run: datetime.datetime,
-    priority: Optional[str],
+    priority: Optional[TaskPriority],
     *args,
     **kwargs,
-) -> Dict:
-    ret = copy.deepcopy(template)
-    ret["next_run"] = next_run
+) -> Task:
+    fields_to_update: Dict[str, Any] = {"next_run": next_run}
     if priority:
-        ret["priority"] = priority
-    if args:
-        ret["arguments"]["args"] = list(args)
-    if kwargs:
-        ret["arguments"]["kwargs"] = kwargs
-    return ret
+        fields_to_update["priority"] = priority
+    if args or kwargs:
+        fields_to_update["arguments"] = TaskArguments(
+            args=list(args) or [], kwargs=kwargs or {}
+        )
+    return template.evolve(**fields_to_update)
 
 
 def tasks_from_template(
-    template: Dict,
+    template: Task,
     max_timestamp: datetime.datetime,
     num: Optional[int] = None,
-    priority: Optional[str] = None,
-    num_priorities: Dict[Optional[str], int] = {},
-) -> List[Dict]:
+    priority: Optional[TaskPriority] = None,
+    num_priorities: Dict[Optional[TaskPriority], int] = {},
+) -> List[Task]:
     """Build ``num`` tasks from template"""
     assert bool(num) != bool(num_priorities), "mutually exclusive"
     if not num_priorities:
         assert num is not None  # to please mypy
         num_priorities = {None: num}
-    tasks: List[Dict] = []
+    tasks: List[Task] = []
     for priority, num in num_priorities.items():
         for _ in range(num):
             i = len(tasks)
@@ -105,8 +99,8 @@ def tasks_from_template(
 
 
 def tasks_with_priority_from_template(
-    template: Dict, max_timestamp: datetime.datetime, num: int, priority: str
-) -> List[Dict]:
+    template: Task, max_timestamp: datetime.datetime, num: int, priority: TaskPriority
+) -> List[Task]:
     """Build tasks with priority from template"""
     return [
         _task_from_template(

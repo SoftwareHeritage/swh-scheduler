@@ -114,9 +114,7 @@ def test_schedule_next(swh_scheduler, listed_origins_by_type):
     tasks = swh_scheduler.search_tasks()
     assert len(tasks) == NUM_RESULTS
 
-    scheduled_tasks = {
-        (task["type"], task["arguments"]["kwargs"]["url"]) for task in tasks
-    }
+    scheduled_tasks = {(task.type, task.arguments.kwargs["url"]) for task in tasks}
     all_possible_tasks = {
         (f"load-{origin.visit_type}", origin.url)
         for origin in listed_origins_by_type[visit_type]
