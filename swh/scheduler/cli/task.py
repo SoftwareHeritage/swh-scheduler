@@ -421,7 +421,7 @@ def list_tasks(
     if list_runs:
         runs = {t.id: [] for t in tasks}
         for r in scheduler.get_task_runs([task.id for task in tasks]):
-            runs[r["task"]].append(r)
+            runs[r.task].append(r)
     else:
         runs = {}
 

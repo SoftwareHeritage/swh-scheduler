@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from typing import Any, Dict, List, Optional, Tuple
 
     from swh.scheduler.interface import SchedulerInterface
-    from swh.scheduler.model import TaskPolicy, TaskPriority, TaskType
+    from swh.scheduler.model import TaskPolicy, TaskPriority, TaskRun, TaskType
 
 
 TASK_BATCH_SIZE = 1000  # Number of tasks per query to the scheduler
@@ -285,12 +285,14 @@ def format_dict(d):
     return ret
 
 
-def pretty_print_run(run, indent=4):
+def pretty_print_run(run: TaskRun, indent: int = 4):
+    import attr
+
     fmt = (
         "{indent}{backend_id} [{status}]\n"
         "{indent}  scheduled: {scheduled} [{started}:{ended}]"
     )
-    return fmt.format(indent=" " * indent, **format_dict(run))
+    return fmt.format(indent=" " * indent, **format_dict(attr.asdict(run)))
 
 
 def pretty_print_task(task: Task, full: bool = False):

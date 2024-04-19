@@ -364,3 +364,46 @@ class Task(BaseSchedulerModel):
         type=Optional[TaskPriority], validator=[type_validator()], default=None
     )
     """Priority of the task, either low, normal or high"""
+
+
+TaskRunStatus = Literal[
+    "scheduled", "started", "eventful", "uneventful", "failed", "permfailed", "lost"
+]
+
+
+@attr.s(frozen=True, slots=True)
+class TaskRun(BaseSchedulerModel):
+    """Represents the execution of a task sent to the job-running backend"""
+
+    task = attr.ib(type=Optional[int], validator=[type_validator()])
+    """Task identifier"""
+    id = attr.ib(
+        type=Optional[int],
+        validator=[type_validator()],
+        metadata={"primary_key": True},
+        default=None,
+    )
+    """Task run identifier (populated by database)"""
+    backend_id = attr.ib(type=Optional[str], validator=[type_validator()], default=None)
+    """id of the task run in the job-running backend"""
+    scheduled = attr.ib(
+        type=Optional[datetime.datetime], validator=[type_validator()], default=None
+    )
+    """Scheduled run time for task"""
+    started = attr.ib(
+        type=Optional[datetime.datetime], validator=[type_validator()], default=None
+    )
+    """Task starting time"""
+    ended = attr.ib(
+        type=Optional[datetime.datetime], validator=[type_validator()], default=None
+    )
+    """Task ending time"""
+    metadata = attr.ib(
+        type=Optional[Dict[str, Any]], validator=[type_validator()], default=None
+    )
+    """Useful metadata for the given task run. For instance, the worker
+    that took on the job, or the logs for the run"""
+    status = attr.ib(
+        type=TaskRunStatus, validator=[type_validator()], default="scheduled"
+    )
+    """Status of the task run"""

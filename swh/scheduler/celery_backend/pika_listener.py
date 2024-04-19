@@ -94,9 +94,7 @@ def process_event(event, scheduler_backend):
         if status is None:
             status = "eventful" if result else "uneventful"
 
-        scheduler_backend.end_task_run(
-            uuid, timestamp=utcnow(), status=status, result=result
-        )
+        scheduler_backend.end_task_run(uuid, timestamp=utcnow(), status=status)
     elif event_type == "task-failed":
         scheduler_backend.end_task_run(uuid, timestamp=utcnow(), status="failed")
 

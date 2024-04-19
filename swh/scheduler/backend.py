@@ -24,6 +24,8 @@ from swh.scheduler.model import (
     TaskArguments,
     TaskPolicy,
     TaskPriority,
+    TaskRun,
+    TaskRunStatus,
     TaskStatus,
     TaskType,
 )
@@ -880,18 +882,24 @@ class SchedulerBackend:
 
     @db_transaction()
     def schedule_task_run(
-        self, task_id, backend_id, metadata=None, timestamp=None, db=None, cur=None
-    ):
+        self,
+        task_id: int,
+        backend_id: str,
+        metadata: Optional[Dict[str, Any]] = None,
+        timestamp: Optional[datetime.datetime] = None,
+        db=None,
+        cur=None,
+    ) -> TaskRun:
         """Mark a given task as scheduled, adding a task_run entry in the database.
 
         Args:
-            task_id (int): the identifier for the task being scheduled
-            backend_id (str): the identifier of the job in the backend
-            metadata (dict): metadata to add to the task_run entry
-            timestamp (datetime.datetime): the instant the event occurred
+            task_id: the identifier for the task being scheduled
+            backend_id: the identifier of the job in the backend
+            metadata: metadata to add to the task_run entry
+            timestamp: the instant the event occurred
 
         Returns:
-            a fresh task_run entry
+            a TaskRun object
 
         """
 
@@ -906,41 +914,49 @@ class SchedulerBackend:
             (task_id, backend_id, metadata, timestamp),
         )
 
-        return cur.fetchone()
+        return TaskRun(**cur.fetchone())
 
     @db_transaction()
-    def mass_schedule_task_runs(self, task_runs, db=None, cur=None):
+    def mass_schedule_task_runs(
+        self, task_runs: List[TaskRun], db=None, cur=None
+    ) -> None:
         """Schedule a bunch of task runs.
 
         Args:
-            task_runs (list): a list of dicts with keys:
+            task_runs: a list of TaskRun objects created at least with the following parameters:
 
-                - task (int): the identifier for the task being scheduled
-                - backend_id (str): the identifier of the job in the backend
-                - metadata (dict): metadata to add to the task_run entry
-                - scheduled (datetime.datetime): the instant the event occurred
-
-        Returns:
-            None
+                - task
+                - backend_id
+                - scheduled
         """
         cur.execute("select swh_scheduler_mktemp_task_run()")
-        db.copy_to(task_runs, "tmp_task_run", self.task_run_create_keys, cur=cur)
+        db.copy_to(
+            (attr.asdict(task_run) for task_run in task_runs),
+            "tmp_task_run",
+            self.task_run_create_keys,
+            cur=cur,
+        )
         cur.execute("select swh_scheduler_schedule_task_run_from_temp()")
 
     @db_transaction()
     def start_task_run(
-        self, backend_id, metadata=None, timestamp=None, db=None, cur=None
-    ):
+        self,
+        backend_id: str,
+        metadata: Optional[Dict[str, Any]] = None,
+        timestamp: Optional[datetime.datetime] = None,
+        db=None,
+        cur=None,
+    ) -> TaskRun:
         """Mark a given task as started, updating the corresponding task_run
            entry in the database.
 
         Args:
-            backend_id (str): the identifier of the job in the backend
-            metadata (dict): metadata to add to the task_run entry
-            timestamp (datetime.datetime): the instant the event occurred
+            backend_id: the identifier of the job in the backend
+            metadata: metadata to add to the task_run entry
+            timestamp: the instant the event occurred
 
         Returns:
-            the updated task_run entry
+            a TaskRun object with updated fields
 
         """
 
@@ -955,31 +971,29 @@ class SchedulerBackend:
             (backend_id, metadata, timestamp),
         )
 
-        return cur.fetchone()
+        return TaskRun(**cur.fetchone())
 
     @db_transaction()
     def end_task_run(
         self,
-        backend_id,
-        status,
-        metadata=None,
-        timestamp=None,
-        result=None,
+        backend_id: str,
+        status: TaskRunStatus,
+        metadata: Optional[Dict[str, Any]] = None,
+        timestamp: Optional[datetime.datetime] = None,
         db=None,
         cur=None,
-    ):
+    ) -> TaskRun:
         """Mark a given task as ended, updating the corresponding task_run entry in the
         database.
 
         Args:
-            backend_id (str): the identifier of the job in the backend
-            status (str): how the task ended; one of: 'eventful', 'uneventful',
-                'failed'
-            metadata (dict): metadata to add to the task_run entry
-            timestamp (datetime.datetime): the instant the event occurred
+            backend_id: the identifier of the job in the backend
+            status: how the task ended
+            metadata: metadata to add to the task_run entry
+            timestamp: the instant the event occurred
 
         Returns:
-            the updated task_run entry
+            a TaskRun object with updated fields
 
         """
 
@@ -993,7 +1007,7 @@ class SchedulerBackend:
             "select * from swh_scheduler_end_task_run(%s, %s, %s, %s)",
             (backend_id, status, metadata, timestamp),
         )
-        return cur.fetchone()
+        return TaskRun(**cur.fetchone())
 
     @db_transaction()
     def filter_task_to_archive(
@@ -1078,27 +1092,20 @@ class SchedulerBackend:
     ]
 
     @db_transaction()
-    def get_task_runs(self, task_ids, limit=None, db=None, cur=None):
+    def get_task_runs(
+        self, task_ids: List[int], limit: Optional[int] = None, db=None, cur=None
+    ) -> List[TaskRun]:
         """Search task run for a task id"""
-        where = []
-        args = []
-
         if task_ids:
-            if isinstance(task_ids, (str, int)):
-                where.append("task = %s")
-            else:
-                where.append("task in %s")
-                task_ids = tuple(task_ids)
-            args.append(task_ids)
+            args: List[Any] = [tuple(task_ids)]
+            query = "select * from task_run where task in %s"
+            if limit:
+                query += " limit %s :: bigint"
+                args.append(limit)
+            cur.execute(query, args)
+            return [TaskRun(**row) for row in cur.fetchall()]
         else:
-            return ()
-
-        query = "select * from task_run where " + " and ".join(where)
-        if limit:
-            query += " limit %s :: bigint"
-            args.append(limit)
-        cur.execute(query, args)
-        return cur.fetchall()
+            return []
 
     @db_transaction()
     def origin_visit_stats_upsert(

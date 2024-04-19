@@ -1,4 +1,4 @@
-# Copyright (C) 2017-2023  The Software Heritage developers
+# Copyright (C) 2017-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -24,6 +24,7 @@ from swh.scheduler.model import (
     OriginVisitStats,
     SchedulerMetrics,
     TaskPriority,
+    TaskRun,
 )
 from swh.scheduler.utils import create_oneshot_task, utcnow
 
@@ -186,11 +187,11 @@ class TestScheduler:
         assert len(grabbed_tasks) == len(ready_tasks)
 
         backend_tasks = [
-            {
-                "task": task["id"],
-                "backend_id": str(uuid.uuid4()),
-                "scheduled": utcnow() + timedelta(hours=i * 6),
-            }
+            TaskRun(
+                task=task.id,
+                backend_id=str(uuid.uuid4()),
+                scheduled=utcnow() + timedelta(hours=i * 6),
+            )
             for i, task in enumerate(grabbed_tasks)
         ]
 
@@ -203,17 +204,17 @@ class TestScheduler:
             start = utcnow() + timedelta(hours=i * 6)
             end = start + timedelta(minutes=5)
             task_run = swh_scheduler.start_task_run(
-                task["backend_id"],
+                task.backend_id,
                 timestamp=start,
             )
             task_run = swh_scheduler.end_task_run(
-                task["backend_id"],
+                task.backend_id,
                 status=status,
                 timestamp=end,
             )
-            assert task_run["status"] == status
-            assert task_run["started"] == start
-            assert task_run["ended"] == end
+            assert task_run.status == status
+            assert task_run.started == start
+            assert task_run.ended == end
 
     def test_peek_ready_tasks_no_priority(self, swh_scheduler):
         self._create_task_types(swh_scheduler)
@@ -396,19 +397,19 @@ class TestScheduler:
         # simulate scheduling tasks
         pending_tasks = swh_scheduler.create_tasks(recurring + oneshots)
         backend_tasks = [
-            {
-                "task": task["id"],
-                "backend_id": str(uuid.uuid4()),
-                "scheduled": utcnow(),
-            }
+            TaskRun(
+                task=task.id,
+                backend_id=str(uuid.uuid4()),
+                scheduled=utcnow(),
+            )
             for task in pending_tasks
         ]
         swh_scheduler.mass_schedule_task_runs(backend_tasks)
 
         # we simulate the task are being done
         _tasks = []
-        for task in backend_tasks:
-            t = swh_scheduler.end_task_run(task["backend_id"], status="eventful")
+        for task_run in backend_tasks:
+            t = swh_scheduler.end_task_run(task_run.backend_id, status="eventful")
             _tasks.append(t)
 
         # Randomly update task's status per policy
@@ -516,11 +517,11 @@ class TestScheduler:
         total_tasks = len(recurring) + len(oneshots)
         pending_tasks = swh_scheduler.create_tasks(recurring + oneshots)
         backend_tasks = [
-            {
-                "task": task["id"],
-                "backend_id": str(uuid.uuid4()),
-                "scheduled": utcnow(),
-            }
+            TaskRun(
+                task=task.id,
+                backend_id=str(uuid.uuid4()),
+                scheduled=utcnow(),
+            )
             for task in pending_tasks
         ]
         swh_scheduler.mass_schedule_task_runs(backend_tasks)
@@ -528,10 +529,10 @@ class TestScheduler:
         _tasks = []
         percent = random.randint(0, 100)  # random election removal boundary
         for task in backend_tasks:
-            t = swh_scheduler.end_task_run(task["backend_id"], status="eventful")
+            t = swh_scheduler.end_task_run(task.backend_id, status="eventful")
             c = random.randint(0, 100)
             if c <= percent:
-                _tasks.append({"task_id": t["task"], "task_run_id": t["id"]})
+                _tasks.append({"task_id": t.task, "task_run_id": t.id})
 
         swh_scheduler.delete_archived_tasks(_tasks)
 
@@ -547,9 +548,9 @@ class TestScheduler:
         empty list.
 
         """
-        assert not swh_scheduler.get_task_runs(task_ids=())
-        assert not swh_scheduler.get_task_runs(task_ids=(1, 2, 3))
-        assert not swh_scheduler.get_task_runs(task_ids=(1, 2, 3), limit=10)
+        assert not swh_scheduler.get_task_runs(task_ids=[])
+        assert not swh_scheduler.get_task_runs(task_ids=[1, 2, 3])
+        assert not swh_scheduler.get_task_runs(task_ids=[1, 2, 3], limit=10)
 
     def test_get_task_runs_no_task_executed(self, swh_scheduler):
         """No task has been executed yet, get_task_runs() should always return an empty
@@ -562,9 +563,9 @@ class TestScheduler:
         oneshots = tasks_from_template(TEMPLATES["test-hg"], _time, 12)
         swh_scheduler.create_tasks(recurring + oneshots)
 
-        assert not swh_scheduler.get_task_runs(task_ids=())
-        assert not swh_scheduler.get_task_runs(task_ids=(1, 2, 3))
-        assert not swh_scheduler.get_task_runs(task_ids=(1, 2, 3), limit=10)
+        assert not swh_scheduler.get_task_runs(task_ids=[])
+        assert not swh_scheduler.get_task_runs(task_ids=[1, 2, 3])
+        assert not swh_scheduler.get_task_runs(task_ids=[1, 2, 3], limit=10)
 
     def test_get_task_runs_with_scheduled(self, swh_scheduler):
         """Some tasks have been scheduled but not executed yet, get_task_runs() should
@@ -578,11 +579,11 @@ class TestScheduler:
         total_tasks = len(recurring) + len(oneshots)
         pending_tasks = swh_scheduler.create_tasks(recurring + oneshots)
         backend_tasks = [
-            {
-                "task": task["id"],
-                "backend_id": str(uuid.uuid4()),
-                "scheduled": utcnow(),
-            }
+            TaskRun(
+                task=task.id,
+                backend_id=str(uuid.uuid4()),
+                scheduled=utcnow(),
+            )
             for task in pending_tasks
         ]
         swh_scheduler.mass_schedule_task_runs(backend_tasks)
@@ -590,33 +591,26 @@ class TestScheduler:
         assert not swh_scheduler.get_task_runs(task_ids=[total_tasks + 1])
 
         btask = backend_tasks[0]
-        runs = swh_scheduler.get_task_runs(task_ids=[btask["task"]])
+        runs = swh_scheduler.get_task_runs(task_ids=[btask.task])
         assert len(runs) == 1
         run = runs[0]
 
-        assert subdict(run, excl=("id",)) == {
-            "task": btask["task"],
-            "backend_id": btask["backend_id"],
-            "scheduled": btask["scheduled"],
-            "started": None,
-            "ended": None,
-            "metadata": None,
-            "status": "scheduled",
-        }
+        assert run.evolve(id=None) == TaskRun(
+            task=btask.task,
+            backend_id=btask.backend_id,
+            scheduled=btask.scheduled,
+        )
 
         runs = swh_scheduler.get_task_runs(
-            task_ids=[bt["task"] for bt in backend_tasks], limit=2
+            task_ids=[bt.task for bt in backend_tasks], limit=2
         )
         assert len(runs) == 2
 
-        runs = swh_scheduler.get_task_runs(
-            task_ids=[bt["task"] for bt in backend_tasks]
-        )
+        runs = swh_scheduler.get_task_runs(task_ids=[bt.task for bt in backend_tasks])
         assert len(runs) == total_tasks
 
-        keys = ("task", "backend_id", "scheduled")
         assert (
-            sorted([subdict(x, keys) for x in runs], key=lambda x: x["task"])
+            sorted([x.evolve(id=None) for x in runs], key=lambda x: x.task)
             == backend_tasks
         )
 
@@ -631,11 +625,11 @@ class TestScheduler:
         oneshots = tasks_from_template(TEMPLATES["test-hg"], _time, 12)
         pending_tasks = swh_scheduler.create_tasks(recurring + oneshots)
         backend_tasks = [
-            {
-                "task": task["id"],
-                "backend_id": str(uuid.uuid4()),
-                "scheduled": utcnow(),
-            }
+            TaskRun(
+                task=task.id,
+                backend_id=str(uuid.uuid4()),
+                scheduled=utcnow(),
+            )
             for task in pending_tasks
         ]
         swh_scheduler.mass_schedule_task_runs(backend_tasks)
@@ -643,38 +637,37 @@ class TestScheduler:
         btask = backend_tasks[0]
         ts = utcnow()
         swh_scheduler.start_task_run(
-            btask["backend_id"], metadata={"something": "stupid"}, timestamp=ts
+            btask.backend_id, metadata={"something": "stupid"}, timestamp=ts
         )
-        runs = swh_scheduler.get_task_runs(task_ids=[btask["task"]])
+        runs = swh_scheduler.get_task_runs(task_ids=[btask.task])
         assert len(runs) == 1
-        assert subdict(runs[0], excl=("id")) == {
-            "task": btask["task"],
-            "backend_id": btask["backend_id"],
-            "scheduled": btask["scheduled"],
-            "started": ts,
-            "ended": None,
-            "metadata": {"something": "stupid"},
-            "status": "started",
-        }
+        assert runs[0].evolve(id=None) == TaskRun(
+            task=btask.task,
+            backend_id=btask.backend_id,
+            scheduled=btask.scheduled,
+            started=ts,
+            metadata={"something": "stupid"},
+            status="started",
+        )
 
         ts2 = utcnow()
         swh_scheduler.end_task_run(
-            btask["backend_id"],
+            btask.backend_id,
             metadata={"other": "stuff"},
             timestamp=ts2,
             status="eventful",
         )
-        runs = swh_scheduler.get_task_runs(task_ids=[btask["task"]])
+        runs = swh_scheduler.get_task_runs(task_ids=[btask.task])
         assert len(runs) == 1
-        assert subdict(runs[0], excl=("id")) == {
-            "task": btask["task"],
-            "backend_id": btask["backend_id"],
-            "scheduled": btask["scheduled"],
-            "started": ts,
-            "ended": ts2,
-            "metadata": {"something": "stupid", "other": "stuff"},
-            "status": "eventful",
-        }
+        assert runs[0].evolve(id=None) == TaskRun(
+            task=btask.task,
+            backend_id=btask.backend_id,
+            scheduled=btask.scheduled,
+            started=ts,
+            ended=ts2,
+            metadata={"something": "stupid", "other": "stuff"},
+            status="eventful",
+        )
 
     def test_get_or_create_lister(self, swh_scheduler):
         db_listers = []

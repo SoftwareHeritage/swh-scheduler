@@ -1,4 +1,4 @@
-# Copyright (C) 2021  The Software Heritage developers
+# Copyright (C) 2021-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -9,6 +9,8 @@ import logging
 from typing import Dict, Generator, Iterator
 
 from simpy import Event
+
+from swh.scheduler.model import TaskRun, TaskRunStatus
 
 from .common import Environment, Queue, Task, TaskEvent
 
@@ -45,11 +47,11 @@ def scheduler_runner_process(
 
             env.scheduler.mass_schedule_task_runs(
                 [
-                    {
-                        "task": task.id,
-                        "scheduled": env.time,
-                        "backend_id": str(sim_task.backend_id),
-                    }
+                    TaskRun(
+                        task=task.id,
+                        scheduled=env.time,
+                        backend_id=str(sim_task.backend_id),
+                    )
                     for task, sim_task in zip(next_tasks, sim_tasks)
                 ]
             )
@@ -69,12 +71,11 @@ def scheduler_listener_process(
     while True:
         event = yield status_queue.get()
         if event.status.status == "ongoing":
-            env.scheduler.start_task_run(event.task.backend_id, timestamp=env.time)
+            env.scheduler.start_task_run(str(event.task.backend_id), timestamp=env.time)
         else:
+            status: TaskRunStatus = "failed"
             if event.status.status == "full":
                 status = "eventful" if event.eventful else "uneventful"
-            else:
-                status = "failed"
 
             env.scheduler.end_task_run(
                 str(event.task.backend_id), status=status, timestamp=env.time

@@ -22,7 +22,7 @@ from swh.core.statsd import statsd
 from swh.scheduler import get_scheduler
 from swh.scheduler.celery_backend.config import get_available_slots
 from swh.scheduler.interface import SchedulerInterface
-from swh.scheduler.model import TaskType
+from swh.scheduler.model import TaskRun, TaskType
 from swh.scheduler.utils import utcnow
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ def run_ready_tasks(
     app,
     task_types: List[TaskType] = [],
     with_priority: bool = False,
-) -> List[Dict]:
+) -> List[TaskRun]:
     """Schedule tasks ready to be scheduled.
 
     This lookups any tasks per task type and mass schedules those accordingly (send
@@ -71,7 +71,7 @@ def run_ready_tasks(
               AsyncResult(id=task['backend_id']).get()
 
     """
-    all_backend_tasks: List[Dict] = []
+    all_backend_tasks: List[TaskRun] = []
     while True:
         if not task_types:
             task_types = backend.get_task_types()
@@ -143,11 +143,11 @@ def run_ready_tasks(
                     kwargs,
                 )
             )
-            data = {
-                "task": task.id,
-                "backend_id": backend_id,
-                "scheduled": utcnow(),
-            }
+            data = TaskRun(
+                task=task.id,
+                backend_id=backend_id,
+                scheduled=utcnow(),
+            )
 
             backend_tasks.append(data)
         logger.debug("Sent %s celery tasks", len(backend_tasks))

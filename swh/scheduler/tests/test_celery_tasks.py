@@ -108,7 +108,7 @@ def test_scheduler_fixture(
     assert backend_tasks
     for task in backend_tasks:
         # Make sure the task completed
-        AsyncResult(id=task["backend_id"]).get()
+        AsyncResult(id=task.backend_id).get()
 
 
 def test_run_ready_task_standard(
@@ -150,7 +150,7 @@ def test_run_ready_task_standard(
     # Ensure each task is indeed scheduled to the queue backend
     for i, (_, args) in enumerate(task_inputs):
         task = backend_tasks[i]
-        value = AsyncResult(id=task["backend_id"]).get()
+        value = AsyncResult(id=task.backend_id).get()
         assert value == sum(args)
 
 
@@ -196,7 +196,7 @@ def test_run_ready_task_with_priority(
     # Ensure each priority task is indeed scheduled to the queue backend
     for i, (_, args, _) in enumerate(task_inputs):
         task = backend_tasks[i]
-        value = AsyncResult(id=task["backend_id"]).get()
+        value = AsyncResult(id=task.backend_id).get()
         assert value == sum(args)
 
 
@@ -218,7 +218,7 @@ def test_task_exception(
     assert len(backend_tasks) == 1
 
     task = backend_tasks[0]
-    result = AsyncResult(id=task["backend_id"])
+    result = AsyncResult(id=task.backend_id)
     with pytest.raises(NotImplementedError):
         result.get()
 

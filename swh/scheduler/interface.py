@@ -20,6 +20,8 @@ from swh.scheduler.model import (
     Task,
     TaskPolicy,
     TaskPriority,
+    TaskRun,
+    TaskRunStatus,
     TaskStatus,
     TaskType,
 )
@@ -249,50 +251,58 @@ class SchedulerInterface(Protocol):
         ...
 
     @remote_api_endpoint("task_run/schedule_one")
-    def schedule_task_run(self, task_id, backend_id, metadata=None, timestamp=None):
+    def schedule_task_run(
+        self,
+        task_id: int,
+        backend_id: str,
+        metadata: Optional[Dict[str, Any]] = None,
+        timestamp: Optional[datetime.datetime] = None,
+    ) -> TaskRun:
         """Mark a given task as scheduled, adding a task_run entry in the database.
 
         Args:
-            task_id (int): the identifier for the task being scheduled
-            backend_id (str): the identifier of the job in the backend
-            metadata (dict): metadata to add to the task_run entry
-            timestamp (datetime.datetime): the instant the event occurred
+            task_id: the identifier for the task being scheduled
+            backend_id: the identifier of the job in the backend
+            metadata: metadata to add to the task_run entry
+            timestamp: the instant the event occurred
 
         Returns:
-            a fresh task_run entry
+            a TaskRun object
 
         """
         ...
 
     @remote_api_endpoint("task_run/schedule")
-    def mass_schedule_task_runs(self, task_runs):
+    def mass_schedule_task_runs(self, task_runs: List[TaskRun]) -> None:
         """Schedule a bunch of task runs.
 
         Args:
-            task_runs (list): a list of dicts with keys:
+            task_runs: a list of TaskRun objects created at least with the following parameters:
 
-                - task (int): the identifier for the task being scheduled
-                - backend_id (str): the identifier of the job in the backend
-                - metadata (dict): metadata to add to the task_run entry
-                - scheduled (datetime.datetime): the instant the event occurred
+                - task
+                - backend_id
+                - scheduled
 
-        Returns:
-            None
         """
         ...
 
     @remote_api_endpoint("task_run/start")
-    def start_task_run(self, backend_id, metadata=None, timestamp=None):
+    def start_task_run(
+        self,
+        backend_id: str,
+        metadata: Optional[Dict[str, Any]] = None,
+        timestamp: Optional[datetime.datetime] = None,
+    ) -> TaskRun:
         """Mark a given task as started, updating the corresponding task_run
            entry in the database.
 
         Args:
-            backend_id (str): the identifier of the job in the backend
-            metadata (dict): metadata to add to the task_run entry
-            timestamp (datetime.datetime): the instant the event occurred
+            backend_id: the identifier of the job in the backend
+            metadata: metadata to add to the task_run entry
+            timestamp: the instant the event occurred
 
         Returns:
-            the updated task_run entry
+            a TaskRun object with updated fields
 
         """
         ...
@@ -300,24 +310,22 @@ class SchedulerInterface(Protocol):
     @remote_api_endpoint("task_run/end")
     def end_task_run(
         self,
-        backend_id,
-        status,
-        metadata=None,
-        timestamp=None,
-        result=None,
-    ):
+        backend_id: str,
+        status: TaskRunStatus,
+        metadata: Optional[Dict[str, Any]] = None,
+        timestamp: Optional[datetime.datetime] = None,
+    ) -> TaskRun:
         """Mark a given task as ended, updating the corresponding task_run entry in the
         database.
 
         Args:
-            backend_id (str): the identifier of the job in the backend
-            status (str): how the task ended; one of: 'eventful', 'uneventful',
-                'failed'
-            metadata (dict): metadata to add to the task_run entry
-            timestamp (datetime.datetime): the instant the event occurred
+            backend_id: the identifier of the job in the backend
+            status: how the task ended
+            metadata: metadata to add to the task_run entry
+            timestamp: the instant the event occurred
 
         Returns:
-            the updated task_run entry
+            a TaskRun object with updated fields
 
         """
         ...
@@ -358,7 +366,9 @@ class SchedulerInterface(Protocol):
         ...
 
     @remote_api_endpoint("task_run/get")
-    def get_task_runs(self, task_ids, limit=None):
+    def get_task_runs(
+        self, task_ids: List[int], limit: Optional[int] = None
+    ) -> List[TaskRun]:
         """Search task run for a task id"""
         ...
 
