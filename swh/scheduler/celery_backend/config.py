@@ -164,25 +164,29 @@ def setup_queues_and_tasks(sender, instance, **kwargs):
     instance.app.conf["worker_name"] = sender
 
 
-def _init_sentry(sentry_dsn: str, main_package: Optional[str] = None):
+def _init_sentry(sentry_dsn: Optional[str] = None, main_package: Optional[str] = None):
     try:
         from sentry_sdk.integrations.celery import CeleryIntegration
     except ImportError:
         integrations = []
     else:
         integrations = [CeleryIntegration()]
-    init_sentry(sentry_dsn, integrations=integrations, main_package=main_package)
+    init_sentry(
+        sentry_dsn,
+        integrations=integrations,
+        main_package=main_package,
+        deferred_init=sentry_dsn is None,
+    )
 
 
 @worker_init.connect
 @_print_errors
 def on_worker_init(*args, **kwargs):
-    # use a fake sentry DSN to ensure celery integration for sentry is
-    # properly configured as it must happen in the worker_init signal
-    # callback, real sentry DSN is then setup in task_prerun signal
-    # callback (see celery_task_prerun function below)
-    sentry_dsn = "https://public@sentry.example.org/1"
-    _init_sentry(sentry_dsn)
+    # init sentry with no DSN first to ensure celery integration for sentry is
+    # properly configured as it must happen in the worker_init signal callback,
+    # real sentry DSN is then setup in task_prerun signal callback
+    # (see celery_task_prerun function below)
+    _init_sentry()
 
     if "pytest" in sys.argv[0] or "PYTEST_XDIST_WORKER" in os.environ:
         # when pytest collects tests, it breaks the proper configuration
