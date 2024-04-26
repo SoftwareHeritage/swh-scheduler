@@ -203,15 +203,8 @@ def test_task_exception(
     swh_scheduler_celery_app,
     swh_scheduler_celery_worker,
     swh_scheduler,
-    mocker,
+    sentry_events,
 ):
-    from sentry_sdk.integrations import celery
-
-    # using the sentry_events fixture does not work for celery tasks so
-    # we spy the capture_event method from the client of the sentry Hub
-    # used in celery integration instead
-    capture_event = mocker.spy(celery.Hub.current.client, "capture_event")
-
     task_type = swh_scheduler.get_task_type("swh-test-error")
     assert task_type
     assert task_type["backend_name"] == TASK_ERROR
@@ -229,8 +222,7 @@ def test_task_exception(
         result.get()
 
     # check celery integration for sentry is enabled
-    assert capture_event.mock_calls
-    sentry_event_extra = capture_event.mock_calls[0].kwargs["event"]["extra"]
+    sentry_event_extra = sentry_events[0]["extra"]
     assert "celery-job" in sentry_event_extra
     assert sentry_event_extra["celery-job"] == {
         "task_name": TASK_ERROR,
