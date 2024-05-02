@@ -81,6 +81,8 @@ def task_type(ctx):
 )
 @click.pass_context
 def list_task_types(ctx, verbose, task_type, task_name):
+    from operator import attrgetter
+
     click.echo("Known task types:")
     if verbose:
         tmpl = (
@@ -96,7 +98,9 @@ def list_task_types(ctx, verbose, task_type, task_name):
         )
     else:
         tmpl = "{type}:\n  {description}"
-    for tasktype in sorted(ctx.obj["scheduler"].get_task_types(), key=lambda x: x.type):
+    for tasktype in sorted(
+        ctx.obj["scheduler"].get_task_types(), key=attrgetter("type")
+    ):
         if task_type and tasktype.type not in task_type:
             continue
         if task_name and tasktype.backend_name not in task_name:

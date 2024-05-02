@@ -7,8 +7,9 @@ from collections import defaultdict
 import copy
 from datetime import datetime, timedelta, timezone
 import inspect
+from operator import attrgetter
 import random
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 import uuid
 
 import attr
@@ -22,7 +23,6 @@ from swh.scheduler.model import (
     LastVisitStatus,
     ListedOrigin,
     OriginVisitStats,
-    SchedulerMetrics,
     TaskPriority,
     TaskRun,
 )
@@ -52,11 +52,8 @@ def subdict(d, keys=None, excl=()):
     return {k: d[k] for k in keys if k not in excl}
 
 
-def metrics_sort_key(m: SchedulerMetrics) -> Tuple[uuid.UUID, str]:
-    return (m.lister_id, m.visit_type)
-
-
 def assert_metrics_equal(left, right):
+    metrics_sort_key = attrgetter("lister_id", "visit_type")
     assert sorted(left, key=metrics_sort_key) == sorted(right, key=metrics_sort_key)
 
 
@@ -357,12 +354,12 @@ class TestScheduler:
         random.shuffle(tasks)
         while len(tasks) > 1:
             length = random.randrange(1, len(tasks))
-            cur_tasks = sorted(tasks[:length], key=lambda x: x.id)
+            cur_tasks = sorted(tasks[:length], key=attrgetter("id"))
             tasks[:length] = []
 
             ret = swh_scheduler.get_tasks(task.id for task in cur_tasks)
             # result is not guaranteed to be sorted
-            ret.sort(key=lambda x: x.id)
+            ret.sort(key=attrgetter("id"))
             assert ret == cur_tasks
 
     def test_search_tasks(self, swh_scheduler):
@@ -610,7 +607,7 @@ class TestScheduler:
         assert len(runs) == total_tasks
 
         assert (
-            sorted([x.evolve(id=None) for x in runs], key=lambda x: x.task)
+            sorted([x.evolve(id=None) for x in runs], key=attrgetter("task"))
             == backend_tasks
         )
 
@@ -799,7 +796,7 @@ class TestScheduler:
         self, swh_scheduler, listed_origins, num_origins, limit
     ) -> None:
         added_origins = sorted(
-            listed_origins[:num_origins], key=lambda o: (o.lister_id, o.url)
+            listed_origins[:num_origins], key=attrgetter("lister_id", "url")
         )
         swh_scheduler.record_listed_origins(added_origins)
 
@@ -1103,7 +1100,7 @@ class TestScheduler:
 
         # We expect to retrieve origins with the oldest update date, that is
         # origins at the end of our updated_origins list.
-        expected_origins = sorted(updated_origins, key=lambda o: o.last_update)
+        expected_origins = sorted(updated_origins, key=attrgetter("last_update"))
 
         self._check_grab_next_visit(
             swh_scheduler,
@@ -1331,7 +1328,7 @@ class TestScheduler:
         origins = [origin1, origin2]
         recorded_origins = swh_scheduler.record_listed_origins(origins)
 
-        expected_origins = sorted(recorded_origins, key=lambda o: o.last_update)
+        expected_origins = sorted(recorded_origins, key=attrgetter("last_update"))
 
         self._check_grab_next_visit(
             swh_scheduler,

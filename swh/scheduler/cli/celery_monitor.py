@@ -91,6 +91,7 @@ def list_running(ctx: click.Context, format: str):
     """List running tasks on the lister workers"""
     from ast import literal_eval
     import csv
+    from operator import itemgetter
 
     response_times = {}
 
@@ -154,7 +155,7 @@ def list_running(ctx: click.Context, format: str):
             logger.info("%s: no active tasks", worker)
             continue
 
-        for task in sorted(active, key=lambda t: t["time_start"]):
+        for task in sorted(active, key=itemgetter("time_start")):
             output(get_task_data(worker, task))
 
     ctx.exit(0)
