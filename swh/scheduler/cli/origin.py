@@ -283,8 +283,6 @@ def update_metrics(ctx, lister: Optional[str], instance: Optional[str]):
     """
     import json
 
-    import attr
-
     scheduler: SchedulerInterface = ctx.obj["scheduler"]
 
     lister_id: Optional[UUID] = None
@@ -298,7 +296,7 @@ def update_metrics(ctx, lister: Optional[str], instance: Optional[str]):
         lister_id = lister_instance.id
 
     def dictify_metrics(d):
-        return {k: str(v) for (k, v) in attr.asdict(d).items()}
+        return {k: str(v) for (k, v) in d.to_dict().items()}
 
     ret = scheduler.update_metrics(lister_id=lister_id)
     click.echo(json.dumps(list(map(dictify_metrics, ret)), indent=4, sort_keys=True))

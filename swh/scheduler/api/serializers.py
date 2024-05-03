@@ -7,13 +7,11 @@
 
 from typing import Callable, Dict, List, Tuple
 
-import attr
-
 import swh.scheduler.model as model
 
 
 def _encode_model_object(obj):
-    d = attr.asdict(obj, recurse=False)
+    d = obj.to_dict(recurse=False)
     d["__type__"] = type(obj).__name__
     return d
 

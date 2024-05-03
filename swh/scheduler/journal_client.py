@@ -195,7 +195,7 @@ def process_journal_objects(
         return
 
     origin_visit_stats: Dict[Tuple[str, str], Dict] = {
-        (visit_stats.url, visit_stats.visit_type): attr.asdict(visit_stats)
+        (visit_stats.url, visit_stats.visit_type): visit_stats.to_dict()
         for visit_stats in scheduler.origin_visit_stats_get(
             list(set((vs["origin"], vs["type"]) for vs in interesting_messages))
         )

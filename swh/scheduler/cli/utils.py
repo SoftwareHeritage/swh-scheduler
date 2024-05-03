@@ -286,13 +286,11 @@ def format_dict(d):
 
 
 def pretty_print_run(run: TaskRun, indent: int = 4):
-    import attr
-
     fmt = (
         "{indent}{backend_id} [{status}]\n"
         "{indent}  scheduled: {scheduled} [{started}:{ended}]"
     )
-    return fmt.format(indent=" " * indent, **format_dict(attr.asdict(run)))
+    return fmt.format(indent=" " * indent, **format_dict(run.to_dict()))
 
 
 def pretty_print_task(task: Task, full: bool = False):

@@ -113,7 +113,7 @@ class SchedulerBackend:
             on conflict do nothing""",
             self.task_type_keys,
         )
-        cur.execute(query, attr.astuple(task_type))
+        cur.execute(query, task_type.to_tuple())
 
     @db_transaction()
     def get_task_type(
@@ -224,7 +224,7 @@ class SchedulerBackend:
               where (name, instance_name) = (%(name)s, %(instance_name)s);
         """
 
-        cur.execute(query, attr.asdict(Lister(name=name, instance_name=instance_name)))
+        cur.execute(query, Lister(name=name, instance_name=instance_name).to_dict())
 
         return Lister(**cur.fetchone())
 
@@ -251,7 +251,7 @@ class SchedulerBackend:
                       where id=%(id)s and updated=%(updated)s
                       returning {select_cols}"""
 
-        cur.execute(query, attr.asdict(lister))
+        cur.execute(query, lister.to_dict())
         updated = cur.fetchone()
 
         if not updated:
@@ -292,7 +292,7 @@ class SchedulerBackend:
         ret = psycopg2.extras.execute_values(
             cur=cur,
             sql=query,
-            argslist=(attr.asdict(origin) for origin in deduplicated_origins.values()),
+            argslist=(origin.to_dict() for origin in deduplicated_origins.values()),
             template=f"({', '.join(insert_meta)})",
             page_size=1000,
             fetch=True,
@@ -609,7 +609,7 @@ class SchedulerBackend:
         """
         cur.execute("select swh_scheduler_mktemp_task()")
         db.copy_to(
-            (attr.asdict(task) for task in tasks),
+            (task.to_dict() for task in tasks),
             "tmp_task",
             self.task_create_keys,
             default_values={"policy": policy},
@@ -931,7 +931,7 @@ class SchedulerBackend:
         """
         cur.execute("select swh_scheduler_mktemp_task_run()")
         db.copy_to(
-            (attr.asdict(task_run) for task_run in task_runs),
+            (task_run.to_dict() for task_run in task_runs),
             "tmp_task_run",
             self.task_run_create_keys,
             cur=cur,
@@ -1130,9 +1130,7 @@ class SchedulerBackend:
             psycopg2.extras.execute_values(
                 cur=cur,
                 sql=query,
-                argslist=(
-                    attr.asdict(visit_stats) for visit_stats in origin_visit_stats
-                ),
+                argslist=(visit_stats.to_dict() for visit_stats in origin_visit_stats),
                 template=f"({', '.join(insert_meta)})",
                 page_size=1000,
                 fetch=False,

@@ -108,6 +108,14 @@ class BaseSchedulerModel:
         """Alias to call :func:`attr.evolve` on this object, returning a new object."""
         return attr.evolve(self, **kwargs)
 
+    def to_dict(self: SchedulerModelType, **kwargs) -> Dict[str, Any]:
+        """Alias to call :func:`attr.asdict` on this object."""
+        return attr.asdict(self, **kwargs)
+
+    def to_tuple(self: SchedulerModelType, **kwargs) -> Tuple[Any]:
+        """Alias to call :func:`attr.astuple` on this object."""
+        return attr.astuple(self, **kwargs)
+
 
 @attr.s
 class Lister(BaseSchedulerModel):
