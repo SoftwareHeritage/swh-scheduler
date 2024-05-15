@@ -75,16 +75,6 @@ $$;
 comment on function swh_scheduler_peek_no_priority_tasks (text, timestamptz, bigint)
 is 'Retrieve tasks without priority';
 
-create or replace function swh_scheduler_nb_priority_tasks(num_tasks_priority bigint, task_priority task_priority)
-  returns numeric
-  language sql stable
-as $$
-  select ceil(num_tasks_priority * (select ratio from priority_ratio where id = task_priority)) :: numeric
-$$;
-
-comment on function swh_scheduler_nb_priority_tasks (bigint, task_priority)
-is 'Given a priority task and a total number, compute the number of tasks to read';
-
 create or replace function swh_scheduler_peek_tasks_with_priority (task_type text, ts timestamptz default now(),
                                                                    num_tasks_priority bigint default NULL,
                                                                    task_priority task_priority default 'normal')

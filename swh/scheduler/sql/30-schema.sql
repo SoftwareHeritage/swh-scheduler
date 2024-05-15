@@ -32,19 +32,6 @@ comment on type task_policy is 'Recurrence policy of the given task';
 create type task_priority as enum('high', 'normal', 'low');
 comment on type task_priority is 'Priority of the given task';
 
-create table priority_ratio(
-  id task_priority primary key,
-  ratio float not null
-);
-
-comment on table priority_ratio is 'Oneshot task''s reading ratio per priority';
-comment on column priority_ratio.id is 'Task priority id';
-comment on column priority_ratio.ratio is 'Percentage of tasks to read per priority';
-
-insert into priority_ratio (id, ratio) values ('high', 0.5);
-insert into priority_ratio (id, ratio) values ('normal', 0.3);
-insert into priority_ratio (id, ratio) values ('low', 0.2);
-
 create table task (
   id bigserial primary key,
   type text not null references task_type(type),
@@ -54,7 +41,7 @@ create table task (
   status task_status not null,
   policy task_policy not null default 'recurring',
   retries_left bigint not null default 0,
-  priority task_priority references priority_ratio(id),
+  priority task_priority,
   check (policy <> 'recurring' or current_interval is not null)
 );
 
