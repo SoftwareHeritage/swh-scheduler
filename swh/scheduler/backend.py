@@ -914,7 +914,8 @@ class SchedulerBackend:
             (task_id, backend_id, metadata, timestamp),
         )
 
-        return TaskRun(**cur.fetchone())
+        row = cur.fetchone()
+        return TaskRun(**row)
 
     @db_transaction()
     def mass_schedule_task_runs(
@@ -946,7 +947,7 @@ class SchedulerBackend:
         timestamp: Optional[datetime.datetime] = None,
         db=None,
         cur=None,
-    ) -> TaskRun:
+    ) -> Optional[TaskRun]:
         """Mark a given task as started, updating the corresponding task_run
            entry in the database.
 
@@ -956,7 +957,8 @@ class SchedulerBackend:
             timestamp: the instant the event occurred
 
         Returns:
-            a TaskRun object with updated fields
+            a TaskRun object with updated fields, or None if there was no
+            TaskRun recorded with a matching backend_id.
 
         """
 
@@ -971,7 +973,15 @@ class SchedulerBackend:
             (backend_id, metadata, timestamp),
         )
 
-        return TaskRun(**cur.fetchone())
+        for row in cur:
+            if row["status"] is not None:
+                return TaskRun(**row)
+
+        logger.debug(
+            "Failed to mark task run %s as started",
+            backend_id,
+        )
+        return None
 
     @db_transaction()
     def end_task_run(
@@ -982,7 +992,7 @@ class SchedulerBackend:
         timestamp: Optional[datetime.datetime] = None,
         db=None,
         cur=None,
-    ) -> TaskRun:
+    ) -> Optional[TaskRun]:
         """Mark a given task as ended, updating the corresponding task_run entry in the
         database.
 
@@ -993,7 +1003,8 @@ class SchedulerBackend:
             timestamp: the instant the event occurred
 
         Returns:
-            a TaskRun object with updated fields
+            a TaskRun object with updated fields, or None if there was no
+            TaskRun recorded with a matching backend_id.
 
         """
 
@@ -1007,7 +1018,16 @@ class SchedulerBackend:
             "select * from swh_scheduler_end_task_run(%s, %s, %s, %s)",
             (backend_id, status, metadata, timestamp),
         )
-        return TaskRun(**cur.fetchone())
+
+        for row in cur:
+            if row["status"] is not None:
+                return TaskRun(**row)
+
+        logger.debug(
+            "Failed to mark task run %s as ended",
+            backend_id,
+        )
+        return None
 
     @db_transaction()
     def filter_task_to_archive(

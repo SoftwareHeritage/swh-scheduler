@@ -666,6 +666,23 @@ class TestScheduler:
             status="eventful",
         )
 
+    def test_start_end_task_run_not_scheduled(self, swh_scheduler):
+        assert (
+            swh_scheduler.start_task_run(
+                backend_id=str(uuid.uuid4()), metadata={}, timestamp=utcnow()
+            )
+            is None
+        )
+        assert (
+            swh_scheduler.end_task_run(
+                backend_id=str(uuid.uuid4()),
+                metadata={},
+                timestamp=utcnow(),
+                status="eventful",
+            )
+            is None
+        )
+
     def test_get_or_create_lister(self, swh_scheduler):
         db_listers = []
         for lister_args in LISTERS:

@@ -292,7 +292,7 @@ class SchedulerInterface(Protocol):
         backend_id: str,
         metadata: Optional[Dict[str, Any]] = None,
         timestamp: Optional[datetime.datetime] = None,
-    ) -> TaskRun:
+    ) -> Optional[TaskRun]:
         """Mark a given task as started, updating the corresponding task_run
            entry in the database.
 
@@ -314,7 +314,7 @@ class SchedulerInterface(Protocol):
         status: TaskRunStatus,
         metadata: Optional[Dict[str, Any]] = None,
         timestamp: Optional[datetime.datetime] = None,
-    ) -> TaskRun:
+    ) -> Optional[TaskRun]:
         """Mark a given task as ended, updating the corresponding task_run entry in the
         database.
 
