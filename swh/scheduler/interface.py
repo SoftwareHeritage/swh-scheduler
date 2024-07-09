@@ -509,10 +509,18 @@ class SchedulerInterface(Protocol):
     def origin_visit_stats_get(
         self, ids: Iterable[Tuple[str, str]]
     ) -> List[OriginVisitStats]:
-        """Retrieve the stats for an origin with a given visit type
+        """Retrieve the visit statistics for an origin with a given visit type.
 
-        If some visit_stats are not found, they are filtered out of the result. So the
-        output list may be of length inferior to the length of the input list.
+        .. warning::
+
+            If some visit statistics are not found, they are filtered out of the result.
+            So the output list may be shorter than the input list.
+
+        Args:
+            ids: an iterable of (origin_url, visit_type) tuples
+
+        Returns:
+            a list of origin visit statistics
 
         """
         ...
