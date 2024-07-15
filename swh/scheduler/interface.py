@@ -429,6 +429,7 @@ class SchedulerInterface(Protocol):
         self,
         lister_id: Optional[UUID] = None,
         url: Optional[str] = None,
+        urls: Optional[List[str]] = None,
         enabled: Optional[bool] = True,
         limit: int = 1000,
         page_token: Optional[ListedOriginPageToken] = None,
@@ -437,7 +438,9 @@ class SchedulerInterface(Protocol):
 
         Args:
             lister_id: if provided, return origins discovered with that lister
-            url: if provided, return origins matching that URL
+            url: (deprecated, use ``urls`` parameter instead)
+                if provided, return origins matching that URL
+            urls: if provided, return origins matching these URLs
             enabled: If :const:`True` return only enabled origins, if :const:`False`
                 return only disabled origins, if :const:`None` return all origins.
             limit: maximum number of origins per page

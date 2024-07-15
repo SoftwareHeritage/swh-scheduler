@@ -808,6 +808,27 @@ class TestScheduler:
             assert ret.results[0].lister_id == origin.lister_id
             assert ret.results[0].url == origin.url
 
+    def test_get_listed_origins_with_urls(self, swh_scheduler, listed_origins):
+        swh_scheduler.record_listed_origins(listed_origins)
+
+        sample_origin_urls = [
+            listed_origin.url for listed_origin in random.sample(listed_origins, k=100)
+        ]
+
+        lister_id = listed_origins[0].lister_id
+
+        ret = swh_scheduler.get_listed_origins(
+            lister_id=lister_id, urls=sample_origin_urls
+        )
+
+        assert ret.next_page_token is None
+        assert all(
+            listed_origin.lister_id == lister_id for listed_origin in ret.results
+        )
+        assert {listed_origin.url for listed_origin in ret.results} == set(
+            sample_origin_urls
+        )
+
     @pytest.mark.parametrize("num_origins,limit", [(20, 6), (5, 42), (20, 20)])
     def test_get_listed_origins_limit(
         self, swh_scheduler, listed_origins, num_origins, limit

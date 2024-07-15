@@ -305,6 +305,7 @@ class SchedulerBackend:
         self,
         lister_id: Optional[UUID] = None,
         url: Optional[str] = None,
+        urls: Optional[List[str]] = None,
         enabled: Optional[bool] = True,
         limit: int = 1000,
         page_token: Optional[ListedOriginPageToken] = None,
@@ -316,15 +317,23 @@ class SchedulerBackend:
         """
 
         query_filters: List[str] = []
-        query_params: List[Union[int, str, UUID, Tuple[UUID, str]]] = []
+        query_params: List[
+            Union[int, str, UUID, Tuple[UUID, str], Tuple[str, ...]]
+        ] = []
 
         if lister_id:
             query_filters.append("lister_id = %s")
             query_params.append(lister_id)
 
+        urls_ = []
         if url is not None:
-            query_filters.append("url = %s")
-            query_params.append(url)
+            urls_.append(url)
+        elif urls:
+            urls_ = urls
+
+        if urls_:
+            query_filters.append("url IN %s")
+            query_params.append(tuple(urls_))
 
         if enabled is not None:
             query_filters.append("enabled = %s")
@@ -333,7 +342,7 @@ class SchedulerBackend:
         if page_token is not None:
             query_filters.append("(lister_id, url) > %s")
             # the typeshed annotation for tuple() is too strict.
-            query_params.append(tuple(page_token))  # type: ignore
+            query_params.append(tuple(page_token))
 
         query_params.append(limit)
 
