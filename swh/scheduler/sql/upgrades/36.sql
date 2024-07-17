@@ -7,7 +7,7 @@
 insert into dbversion (version, release, description)
        values (36, now(), 'Work In Progress');
 
-alter table task drop constraint task_priority_fkey;
+alter table task drop constraint task_priority_fk;
 
 drop table priority_ratio;
 
