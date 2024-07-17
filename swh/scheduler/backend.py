@@ -70,7 +70,7 @@ def mutate_task_dict(task_dict: Dict[str, Any]) -> Dict[str, Any]:
 class SchedulerBackend:
     """Backend for the Software Heritage scheduling database."""
 
-    current_version = 36
+    current_version = 37
 
     def __init__(self, db, min_pool_conns=1, max_pool_conns=10):
         """

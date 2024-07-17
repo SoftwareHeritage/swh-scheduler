@@ -170,6 +170,11 @@ class ListedOrigin(BaseSchedulerModel):
         default=None,
     )
 
+    is_fork = attr.ib(type=Optional[bool], validator=[type_validator()], default=None)
+    forked_from_url = attr.ib(
+        type=Optional[str], validator=[type_validator()], default=None
+    )
+
     enabled = attr.ib(type=bool, validator=[type_validator()], default=True)
 
     first_seen = attr.ib(

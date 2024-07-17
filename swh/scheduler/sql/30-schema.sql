@@ -116,6 +116,8 @@ create table if not exists listed_origins (
 
   -- potentially provided by the lister
   last_update timestamptz,
+  is_fork boolean,
+  forked_from_url text,
 
   primary key (lister_id, url, visit_type)
 );
@@ -131,6 +133,8 @@ comment on column listed_origins.first_seen is 'Time at which the origin was fir
 comment on column listed_origins.last_seen is 'Time at which the origin was last seen by the lister';
 
 comment on column listed_origins.last_update is 'Time of the last update to the origin recorded by the remote';
+comment on column listed_origins.is_fork is 'Whether the origin is identified as a fork, if available';
+comment on column listed_origins.forked_from_url is 'URL of the origin this origin is forked from, if available';
 
 create type last_visit_status as enum ('successful', 'failed', 'not_found');
 comment on type last_visit_status is 'Record of the status of the last visit of an origin';

@@ -6,7 +6,7 @@
 from datetime import datetime, timezone
 import os
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 from unittest.mock import patch
 
 import pytest
@@ -43,6 +43,15 @@ def listed_origins_by_type(
     stored_lister: Lister, visit_types: List[str]
 ) -> Dict[str, List[ListedOrigin]]:
     """A fixed list of `ListedOrigin`s, for each `visit_type`."""
+
+    def is_fork_field(i: int) -> Optional[bool]:
+        return [True, False, None][i % 3]
+
+    def forked_from_url_field(visit_type: str, i: int) -> Optional[str]:
+        if is_fork_field(i) and i % 4 == 0:
+            return f"https://{visit_type}.example.com/src_{i:04d}"
+        return None
+
     count_per_type = 1000
     assert stored_lister.id
     return {
@@ -54,6 +63,8 @@ def listed_origins_by_type(
                 last_update=datetime(
                     2020, 6, 15, 16, 0, 0, j * count_per_type + i, tzinfo=timezone.utc
                 ),
+                is_fork=is_fork_field(i),
+                forked_from_url=forked_from_url_field(visit_type, i),
             )
             for i in range(count_per_type)
         ]
