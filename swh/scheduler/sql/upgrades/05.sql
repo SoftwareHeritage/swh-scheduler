@@ -1,7 +1,7 @@
 -- SWH Scheduler Schema upgrade
 -- from_version: 04
 -- to_version: 05
--- description: Add reccurrence logic for temporary failures and one-shot tasks
+-- description: Add recurrence logic for temporary failures and one-shot tasks
 
 alter type task_status add value if not exists 'completed' before 'disabled';
 alter type task_run_status add value if not exists 'permfailed' after 'failed';
