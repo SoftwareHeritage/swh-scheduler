@@ -83,18 +83,26 @@ def process_event(event, scheduler_backend):
         )
     elif event_type == "task-result":
         result = event["result"]
-
         status = None
-
-        if isinstance(result, dict) and "status" in result:
-            status = result["status"]
+        # XXX we probably should expect result to always be a dict at this point...
+        if isinstance(result, dict):
+            status = result.get("status")
             if status == "success":
                 status = "eventful" if result.get("eventful") else "uneventful"
 
         if status is None:
+            # XXX when is this supposed to be used?
             status = "eventful" if result else "uneventful"
 
-        scheduler_backend.end_task_run(uuid, timestamp=utcnow(), status=status)
+        metadata = {}
+        if status == "failed" and isinstance(result, dict):
+            if "error" in result:
+                metadata["error"] = result["error"]
+
+        scheduler_backend.end_task_run(
+            uuid, timestamp=utcnow(), status=status, metadata=metadata
+        )
+
     elif event_type == "task-failed":
         scheduler_backend.end_task_run(uuid, timestamp=utcnow(), status="failed")
 
