@@ -317,9 +317,9 @@ class SchedulerBackend:
         """
 
         query_filters: List[str] = []
-        query_params: List[
-            Union[int, str, UUID, Tuple[UUID, str], Tuple[str, ...]]
-        ] = []
+        query_params: List[Union[int, str, UUID, Tuple[UUID, str], Tuple[str, ...]]] = (
+            []
+        )
 
         if lister_id:
             query_filters.append("lister_id = %s")
