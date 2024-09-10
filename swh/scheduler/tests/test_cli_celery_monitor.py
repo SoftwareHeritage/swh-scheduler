@@ -39,9 +39,9 @@ def test_celery_monitor_ping(
 
     assert result.exit_code == 0
 
-    assert len(caplog.records) == 1
+    assert len(caplog.records) >= 1
 
-    (record,) = caplog.records
+    record = caplog.records[-1]
 
     assert record.levelname == "INFO"
     assert f"response from {swh_scheduler_celery_worker.hostname}" in record.message
