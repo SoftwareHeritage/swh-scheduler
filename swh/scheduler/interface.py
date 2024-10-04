@@ -392,7 +392,10 @@ class SchedulerInterface(Protocol):
 
     @remote_api_endpoint("lister/get_or_create")
     def get_or_create_lister(
-        self, name: str, instance_name: Optional[str] = None
+        self,
+        name: str,
+        instance_name: Optional[str] = None,
+        first_visits_queue_prefix: Optional[str] = None,
     ) -> Lister:
         """Retrieve information about the given instance of the lister from the
         database, or create the entry if it did not exist.

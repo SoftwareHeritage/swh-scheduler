@@ -145,6 +145,19 @@ class Lister(BaseSchedulerModel):
         default=None,
         metadata={"auto_now": True},
     )
+    last_listing_finished_at = attr.ib(
+        type=Optional[datetime.datetime],
+        validator=[type_validator()],
+        default=None,
+    )
+    first_visits_queue_prefix = attr.ib(
+        type=Optional[str], validator=[type_validator()], default=None
+    )
+    first_visits_scheduled_at = attr.ib(
+        type=Optional[datetime.datetime],
+        validator=[type_validator()],
+        default=None,
+    )
 
 
 @attr.s

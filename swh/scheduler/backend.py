@@ -70,7 +70,7 @@ def mutate_task_dict(task_dict: Dict[str, Any]) -> Dict[str, Any]:
 class SchedulerBackend:
     """Backend for the Software Heritage scheduling database."""
 
-    current_version = 37
+    current_version = 38
 
     def __init__(self, db, min_pool_conns=1, max_pool_conns=10):
         """
@@ -198,7 +198,12 @@ class SchedulerBackend:
 
     @db_transaction()
     def get_or_create_lister(
-        self, name: str, instance_name: Optional[str] = None, db=None, cur=None
+        self,
+        name: str,
+        instance_name: Optional[str] = None,
+        first_visits_queue_prefix: Optional[str] = None,
+        db=None,
+        cur=None,
     ) -> Lister:
         """Retrieve information about the given instance of the lister from the
         database, or create the entry if it did not exist.
@@ -224,7 +229,14 @@ class SchedulerBackend:
               where (name, instance_name) = (%(name)s, %(instance_name)s);
         """
 
-        cur.execute(query, Lister(name=name, instance_name=instance_name).to_dict())
+        cur.execute(
+            query,
+            Lister(
+                name=name,
+                instance_name=instance_name,
+                first_visits_queue_prefix=first_visits_queue_prefix,
+            ).to_dict(),
+        )
 
         return Lister(**cur.fetchone())
 

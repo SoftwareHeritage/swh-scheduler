@@ -744,12 +744,27 @@ class TestScheduler:
         ]
 
     def test_update_lister(self, swh_scheduler, stored_lister):
-        lister = attr.evolve(stored_lister, current_state={"updated": "now"})
+        last_listing_finished_at = utcnow()
+        first_visits_queue_prefix = "high_priority"
+        first_visits_scheduled_at = last_listing_finished_at + timedelta(hours=1)
+        lister = attr.evolve(
+            stored_lister,
+            current_state={"updated": "now"},
+            last_listing_finished_at=last_listing_finished_at,
+            first_visits_queue_prefix=first_visits_queue_prefix,
+            first_visits_scheduled_at=first_visits_scheduled_at,
+        )
 
         updated_lister = swh_scheduler.update_lister(lister)
 
         assert updated_lister.updated > lister.updated
-        assert updated_lister == attr.evolve(lister, updated=updated_lister.updated)
+        assert stored_lister.last_listing_finished_at is None
+        assert stored_lister.first_visits_queue_prefix is None
+        assert stored_lister.first_visits_scheduled_at is None
+        assert updated_lister == attr.evolve(
+            lister,
+            updated=updated_lister.updated,
+        )
 
     def test_update_lister_stale(self, swh_scheduler, stored_lister):
         swh_scheduler.update_lister(stored_lister)

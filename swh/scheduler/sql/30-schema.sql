@@ -89,7 +89,10 @@ create table if not exists listers (
   instance_name text not null,
   created timestamptz not null default now(),  -- auto_now_add in the model
   current_state jsonb not null,
-  updated timestamptz not null
+  updated timestamptz not null,
+  last_listing_finished_at timestamptz,
+  first_visits_queue_prefix text,
+  first_visits_scheduled_at timestamptz
 );
 
 comment on table listers is 'Lister instances known to the origin visit scheduler';
@@ -98,6 +101,9 @@ comment on column listers.instance_name is 'Name of the current instance of this
 comment on column listers.created is 'Timestamp at which the lister was originally created';
 comment on column listers.current_state is 'Known current state of this lister';
 comment on column listers.updated is 'Timestamp at which the lister state was last updated';
+comment on column listers.last_listing_finished_at is 'Timestamp at which the last execution of the lister finished';
+comment on column listers.first_visits_queue_prefix is 'Optional prefix of message queue names to schedule first visits with high priority';
+comment on column listers.first_visits_scheduled_at is 'Timestamp at which all first visits of listed origins have been scheduled with high priority';
 
 
 create table if not exists listed_origins (
