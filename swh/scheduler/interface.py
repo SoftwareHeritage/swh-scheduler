@@ -373,8 +373,15 @@ class SchedulerInterface(Protocol):
         ...
 
     @remote_api_endpoint("listers/get")
-    def get_listers(self) -> List[Lister]:
-        """Retrieve information about all listers from the database."""
+    def get_listers(self, with_first_visits_to_schedule: bool = False) -> List[Lister]:
+        """Retrieve information about all listers from the database.
+
+        Args:
+            with_first_visits_to_schedule: if :const:`True` only retrieve listers whose
+                first visits with high priority of listed origins were not scheduled yet
+                (those type of listers have the first_visits_queue_prefix attribute set).
+
+        """
         ...
 
     @remote_api_endpoint("listers/get_by_id")

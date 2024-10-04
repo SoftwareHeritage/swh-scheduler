@@ -722,6 +722,60 @@ class TestScheduler:
 
         assert swh_scheduler.get_listers() == db_listers
 
+    def test_get_listers_with_first_visits_to_schedule(self, swh_scheduler):
+        assert swh_scheduler.get_listers() == []
+
+        # create listers without high priority first visits
+        for lister_args in LISTERS:
+            swh_scheduler.get_or_create_lister(**lister_args)
+
+        # create two listers with high priority first visits
+        listers_with_high_priority_first_visits = [
+            swh_scheduler.get_or_create_lister(
+                name=name,
+                instance_name=instance_name,
+                first_visits_queue_prefix="high_priority",
+            )
+            for name, instance_name in [
+                ("gitlab", "gitlab.example.org"),
+                ("gitea", "gitea.example.org"),
+            ]
+        ]
+
+        # simulates first listing done for listers with high priority first visits
+        listers_with_high_priority_first_visits = [
+            lister.evolve(last_listing_finished_at=utcnow())
+            for lister in listers_with_high_priority_first_visits
+        ]
+        for lister in listers_with_high_priority_first_visits:
+            swh_scheduler.update_lister(lister)
+
+        all_listers = swh_scheduler.get_listers()
+
+        listers_with_first_visits_to_schedule = swh_scheduler.get_listers(
+            with_first_visits_to_schedule=True
+        )
+
+        # check expected listers are returned
+        assert len(listers_with_first_visits_to_schedule) < len(all_listers)
+        assert listers_with_first_visits_to_schedule == [
+            lister.evolve(updated=listers_with_first_visits_to_schedule[i].updated)
+            for i, lister in enumerate(listers_with_high_priority_first_visits)
+        ]
+
+        # mark all first visits as scheduled for the listers
+        listers_with_high_priority_first_visits = [
+            lister.evolve(first_visits_scheduled_at=utcnow() + timedelta(hours=1))
+            for lister in listers_with_first_visits_to_schedule
+        ]
+        listers_with_high_priority_first_visits = [
+            swh_scheduler.update_lister(lister)
+            for lister in listers_with_high_priority_first_visits
+        ]
+
+        # should not return any listers
+        assert swh_scheduler.get_listers(with_first_visits_to_schedule=True) == []
+
     def test_get_listers_by_id(self, swh_scheduler):
         assert swh_scheduler.get_listers_by_id([str(uuid.uuid4())]) == []
 

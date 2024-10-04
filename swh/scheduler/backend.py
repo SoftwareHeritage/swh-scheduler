@@ -139,7 +139,9 @@ class SchedulerBackend:
         return [TaskType(**row) for row in cur.fetchall()]
 
     @db_transaction()
-    def get_listers(self, db=None, cur=None) -> List[Lister]:
+    def get_listers(
+        self, with_first_visits_to_schedule: bool = False, db=None, cur=None
+    ) -> List[Lister]:
         """Retrieve information about all listers from the database."""
 
         select_cols = ", ".join(Lister.select_columns())
@@ -147,6 +149,10 @@ class SchedulerBackend:
         query = f"""
             select {select_cols} from listers
         """
+        if with_first_visits_to_schedule:
+            query += """where last_listing_finished_at is not null
+                        and first_visits_queue_prefix is not null
+                        and first_visits_scheduled_at is null"""
 
         cur.execute(query)
 
