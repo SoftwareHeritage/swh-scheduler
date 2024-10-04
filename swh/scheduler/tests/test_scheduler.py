@@ -968,6 +968,15 @@ class TestScheduler:
         assert ret.next_page_token is None
         assert len(ret.results) == len(listed_origins_with_non_enabled)
 
+    def test_get_visit_types_for_listed_origins(
+        self, swh_scheduler, stored_lister, listed_origins, visit_types
+    ):
+        swh_scheduler.record_listed_origins(listed_origins)
+        assert (
+            swh_scheduler.get_visit_types_for_listed_origins(stored_lister)
+            == visit_types
+        )
+
     def _grab_next_visits_setup(self, swh_scheduler, listed_origins_by_type, limit=100):
         """Basic origins setup for scheduling policy tests"""
         visit_type = next(iter(listed_origins_by_type))

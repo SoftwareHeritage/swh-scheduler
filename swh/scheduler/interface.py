@@ -462,6 +462,11 @@ class SchedulerInterface(Protocol):
         """
         ...
 
+    @remote_api_endpoint("lister/visit_types")
+    def get_visit_types_for_listed_origins(self, lister: Lister) -> List[str]:
+        """Return list of distinct visit types for the origins listed by a given lister."""
+        ...
+
     @remote_api_endpoint("origins/grab_next")
     def grab_next_visits(
         self,

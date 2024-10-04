@@ -387,6 +387,15 @@ class SchedulerBackend:
         return PaginatedListedOriginList(origins, page_token)
 
     @db_transaction()
+    def get_visit_types_for_listed_origins(
+        self, lister: Lister, db=None, cur=None
+    ) -> List[str]:
+        query = """select distinct(visit_type) from listed_origins
+                    where lister_id = %s"""
+        cur.execute(query, (lister.id,))
+        return [row["visit_type"] for row in cur]
+
+    @db_transaction()
     def grab_next_visits(
         self,
         visit_type: str,
