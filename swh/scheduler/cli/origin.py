@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import functools
 from typing import TYPE_CHECKING
 
 import click
@@ -626,3 +627,72 @@ def send_origins_from_file_to_celery(
 
         if throttled:
             sleep(waiting_period)
+
+
+@origin.command("schedule-high-priority-first-visits")
+@click.pass_context
+def schedule_high_priority_first_visits(ctx: click.Context):
+    """ "Schedule first visits with high priority for origins registered by listers
+    having the first_visits_priority_queue attribute set.
+    """
+    from swh.core.api.classes import stream_results
+    from swh.core.utils import grouper
+
+    from ..utils import utcnow
+    from .utils import get_task_type, send_to_celery
+
+    scheduler: SchedulerInterface = ctx.obj["scheduler"]
+    for lister in scheduler.get_listers(with_first_visits_to_schedule=True):
+        visit_types = scheduler.get_visit_types_for_listed_origins(lister)
+        visit_type_to_queue = {}
+
+        for visit_type in visit_types:
+            task_type = get_task_type(scheduler, visit_type)
+            if not task_type:
+                ctx.fail(f"Unknown task type for visit type {visit_type}.")
+            visit_type_to_queue[visit_type] = (
+                f"{lister.first_visits_queue_prefix}:{task_type.backend_name}"
+            )
+
+        send_to_celery(
+            scheduler,
+            visit_type_to_queue=visit_type_to_queue,
+            policy="first_visits_after_listing",
+            lister_name=lister.name,
+            lister_instance_name=lister.instance_name,
+        )
+
+        def all_first_visits_scheduled():
+            nb_listed_origins = 0
+            nb_scheduled_origins = 0
+            for listed_origins in grouper(
+                stream_results(
+                    functools.partial(scheduler.get_listed_origins, lister_id=lister.id)
+                ),
+                n=1000,
+            ):
+                listed_origins_list = list(listed_origins)
+                nb_listed_origins += len(listed_origins_list)
+                for origin_visit_stats in scheduler.origin_visit_stats_get(
+                    ids=(
+                        (origin.url, origin.visit_type)
+                        for origin in listed_origins_list
+                    )
+                ):
+                    nb_scheduled_origins += 1
+                    if (
+                        origin_visit_stats.last_scheduled
+                        < lister.last_listing_finished_at
+                    ):
+                        return False
+            return nb_scheduled_origins == nb_listed_origins
+
+        if all_first_visits_scheduled():
+            # mark that all first visits were scheduled to no longer consider that lister
+            # in future execution of that command
+            click.echo(
+                f"All first visits of origins registered by lister with name '{lister.name}' "
+                f"and instance '{lister.instance_name}' were scheduled.'"
+            )
+            lister.first_visits_scheduled_at = utcnow()
+            scheduler.update_lister(lister)

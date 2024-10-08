@@ -231,7 +231,7 @@ def send_to_celery(
         task_name = task_type.backend_name
         num_tasks = get_available_slots(app, queue_name, task_type.max_queue_length)
 
-        click.echo(f"{num_tasks} slots available in celery queue")
+        click.echo(f"{num_tasks} slots available in celery queue {queue_name}")
 
         origins = scheduler.grab_next_visits(
             visit_type_name,
@@ -247,7 +247,7 @@ def send_to_celery(
             not_found_cooldown=not_found_cooldown,
         )
 
-        click.echo(f"{len(origins)} visits to send to celery")
+        click.echo(f"{len(origins)} visits of type {visit_type_name} to send to celery")
         for task in create_origin_tasks(origins, scheduler):
             app.send_task(
                 task_name,

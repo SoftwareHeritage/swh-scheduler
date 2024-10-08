@@ -531,6 +531,24 @@ class SchedulerBackend:
                   )
             """))
             # fmt: on
+        elif policy == "first_visits_after_listing":
+            assert lister_uuid is not None or (
+                lister_name is not None and lister_instance_name is not None
+            ), "first_visits_after_listing policy requires lister info "
+            if lister_uuid is not None:
+                listers = self.get_listers_by_id([lister_uuid])
+                lister = listers[0] if listers else None
+            else:
+                lister = self.get_lister(lister_name, lister_instance_name)
+            assert (
+                lister is not None
+            ), f"Lister with name {lister_name} and instance {lister_instance_name} not found !"
+            where_clause = "origin_visit_stats.last_scheduled IS NULL"
+            if lister.last_listing_finished_at:
+                where_clause += " OR origin_visit_stats.last_scheduled < %s"
+                query_args.append(lister.last_listing_finished_at)
+            where_clauses.append(where_clause)
+            order_by = "origin_visit_stats.last_scheduled NULLS FIRST"
         else:
             raise UnknownPolicy(f"Unknown scheduling policy {policy}")
 

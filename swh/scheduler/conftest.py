@@ -12,7 +12,7 @@ from unittest.mock import patch
 import pytest
 
 from swh.scheduler.model import ListedOrigin, Lister
-from swh.scheduler.tests.common import LISTERS
+from swh.scheduler.tests.common import LISTERS, TASK_TYPES
 
 DATADIR = Path(__file__).parent.absolute() / "tests/data"
 
@@ -35,7 +35,7 @@ def stored_lister(swh_scheduler) -> Lister:
 @pytest.fixture
 def visit_types() -> List[str]:
     """Possible visit types in `ListedOrigin`s"""
-    return ["test-git", "test-svn"]
+    return list(TASK_TYPES)
 
 
 @pytest.fixture
@@ -102,8 +102,6 @@ def datadir():
 
 @pytest.fixture
 def task_types(swh_scheduler):
-    from swh.scheduler.tests.common import TASK_TYPES
-
     all_task_types = {}
     for task_type in TASK_TYPES.values():
         swh_scheduler.create_task_type(task_type)
