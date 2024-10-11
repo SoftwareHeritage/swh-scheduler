@@ -35,6 +35,11 @@ testing = {file = [
 "swh.scheduler" = "swh.scheduler.cli"
 "swh.scheduler.journal" = "swh.scheduler.cli.journal"
 
+[project.entry-points."swh.scheduler.classes"]
+"postgresql" = "swh.scheduler.backend:SchedulerBackend"
+"remote" = "swh.scheduler.api.client:RemoteScheduler"
+"temporary" = "swh.scheduler.backend:TemporarySchedulerBackend"
+
 [project.urls]
 "Homepage" = "https://gitlab.softwareheritage.org/swh/devel/swh-scheduler"
 "Bug Reports" = "https://gitlab.softwareheritage.org/swh/devel/swh-scheduler/-/issues"

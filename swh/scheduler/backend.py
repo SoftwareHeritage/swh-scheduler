@@ -75,7 +75,7 @@ class SchedulerBackend:
     def __init__(self, db, min_pool_conns=1, max_pool_conns=10):
         """
         Args:
-            db_conn: either a libpq connection string, or a psycopg2 connection
+            db: either a libpq connection string, or a psycopg2 connection
 
         """
         if isinstance(db, psycopg2.extensions.connection):

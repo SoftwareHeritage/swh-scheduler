@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-from importlib import import_module
 from typing import TYPE_CHECKING, Any, Dict
 import warnings
 
@@ -29,16 +28,7 @@ if TYPE_CHECKING:
     from swh.scheduler.interface import SchedulerInterface
 
 
-BACKEND_TYPES: Dict[str, str] = {
-    "postgresql": ".backend.SchedulerBackend",
-    "remote": ".api.client.RemoteScheduler",
-    "temporary": ".backend.TemporarySchedulerBackend",
-    # deprecated
-    "local": ".backend.SchedulerBackend",
-}
-
-
-def get_scheduler(cls: str, **kwargs) -> SchedulerInterface:
+def get_scheduler(cls: str, **kwargs) -> "SchedulerInterface":
     """
     Get a scheduler object of class `cls` with arguments `**kwargs`.
 
@@ -56,6 +46,7 @@ def get_scheduler(cls: str, **kwargs) -> SchedulerInterface:
         ValueError if passed an unknown storage class.
 
     """
+    from swh.core.config import get_swh_backend_module
 
     if "args" in kwargs:
         warnings.warn(
@@ -64,17 +55,13 @@ def get_scheduler(cls: str, **kwargs) -> SchedulerInterface:
         )
         kwargs = kwargs["args"]
 
-    class_path = BACKEND_TYPES.get(cls)
-    if class_path is None:
-        raise ValueError(
-            f"Unknown Scheduler class `{cls}`. "
-            f"Supported: {', '.join(BACKEND_TYPES)}"
+    if cls == "local":
+        warnings.warn(
+            'The "local" storage class is deprecated, use "postgresql" instead.',
+            DeprecationWarning,
         )
+        cls = "postgresql"
 
-    (module_path, class_name) = class_path.rsplit(".", 1)
-    module = import_module(module_path, package=__package__)
-    BackendClass = getattr(module, class_name)
+    _, BackendClass = get_swh_backend_module("scheduler", cls)
+    assert BackendClass is not None
     return BackendClass(**kwargs)
-
-
-get_datastore = get_scheduler
