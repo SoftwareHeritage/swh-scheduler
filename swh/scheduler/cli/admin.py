@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2021  The Software Heritage developers
+# Copyright (C) 2016-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -9,12 +9,15 @@ from __future__ import annotations
 # control
 import logging
 import time
-from typing import List, Tuple
+from typing import TYPE_CHECKING, List, Tuple
 
 import click
 import sentry_sdk
 
 from . import cli
+
+if TYPE_CHECKING:
+    from ..interface import SchedulerInterface
 
 
 @cli.command("start-runner")
@@ -215,6 +218,48 @@ def schedule_recurrent(ctx, visit_types: List[str]):
         remaining_threads = terminate_visit_scheduler_threads(threads)
         if remaining_threads:
             ctx.exit(1)
+        ctx.exit(0)
+
+
+@cli.command("start-runner-first-visits")
+@click.option(
+    "--period",
+    "-p",
+    default=0,
+    help=(
+        "Period (in s) at witch pending tasks are checked and "
+        "executed. Set to 0 (default) for a one shot."
+    ),
+)
+@click.pass_context
+def runner_first_visits(ctx, period):
+    """Starts a swh-scheduler runner service for first visits.
+
+    This process is responsible for scheduling the first visits for origins registered
+    by listers having their first_visits_priority_queue attribute set. It's looping
+    forever with a given period.
+
+    Expected configuration:
+
+    """
+
+    from swh.scheduler.cli.utils import schedule_first_visits
+
+    logger = logging.getLogger(__name__ + ".runner_first_visits")
+    scheduler: SchedulerInterface = ctx.config["scheduler"]
+
+    try:
+        while True:
+            logger.debug("Run ready tasks")
+            try:
+                schedule_first_visits(scheduler)
+            except Exception:
+                logger.exception("Unexpected error in run_high_priority_first_visits()")
+                sentry_sdk.capture_exception()
+            if not period:
+                break
+            time.sleep(period)
+    except KeyboardInterrupt:
         ctx.exit(0)
 
 
