@@ -28,6 +28,7 @@ def schedule_first_visits(backend: SchedulerInterface):
 
     from .utils import get_loader_task_type, send_to_celery
 
+    nb_first_visits = 0
     for lister in backend.get_listers(with_first_visits_to_schedule=True):
         visit_types = backend.get_visit_types_for_listed_origins(lister)
         visit_type_to_queue = {}
@@ -40,7 +41,7 @@ def schedule_first_visits(backend: SchedulerInterface):
                 f"{lister.first_visits_queue_prefix}:{task_type.backend_name}"
             )
 
-        send_to_celery(
+        nb_first_visits += send_to_celery(
             backend,
             visit_type_to_queue=visit_type_to_queue,
             policy="first_visits_after_listing",
@@ -84,3 +85,5 @@ def schedule_first_visits(backend: SchedulerInterface):
             )
             lister.first_visits_scheduled_at = utcnow()
             backend.update_lister(lister)
+
+    return nb_first_visits
