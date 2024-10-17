@@ -239,18 +239,16 @@ def runner_first_visits(ctx, period):
     by listers having their first_visits_priority_queue attribute set. It's looping
     forever with a given period.
 
-    Expected configuration:
-
     """
 
-    from swh.scheduler.cli.utils import schedule_first_visits
+    from swh.scheduler.celery_backend.first_visits import schedule_first_visits
 
     logger = logging.getLogger(__name__ + ".runner_first_visits")
     scheduler: SchedulerInterface = ctx.config["scheduler"]
 
     try:
         while True:
-            logger.debug("Run ready tasks")
+            logger.debug("Schedule first visits")
             try:
                 schedule_first_visits(scheduler)
             except Exception:

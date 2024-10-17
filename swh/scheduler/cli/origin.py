@@ -228,7 +228,8 @@ def send_from_scheduler_to_celery_cli(
 ):
     """Send next origin visits of VISIT_TYPE_NAME to celery, filling the queue."""
 
-    from .celery_backend.utils import get_loader_task_type, send_to_celery
+    from swh.scheduler.celery_backend.utils import get_loader_task_type, send_to_celery
+
     from .utils import parse_time_interval
 
     absolute_cooldown = (
@@ -635,7 +636,7 @@ def schedule_high_priority_first_visits(ctx: click.Context):
     """Schedule first visits with high priority for origins registered by listers
     having the first_visits_priority_queue attribute set.
     """
-    from swh.scheduler.cli.utils import schedule_first_visits
+    from swh.scheduler.celery_backend.first_visits import schedule_first_visits
 
     scheduler: SchedulerInterface = ctx.obj["scheduler"]
     try:

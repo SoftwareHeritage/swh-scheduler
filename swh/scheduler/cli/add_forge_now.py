@@ -160,7 +160,7 @@ def schedule_first_visits_cli(
     associated "prefixed" add_forge_now queue(s).
 
     """
-    from .celery_backend.utils import get_loader_task_type, send_to_celery
+    from swh.scheduler.celery_backend.utils import get_loader_task_type, send_to_celery
 
     scheduler = ctx.obj["scheduler"]
     preset = ctx.obj["preset"]
