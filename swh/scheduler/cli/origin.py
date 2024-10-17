@@ -228,7 +228,8 @@ def send_from_scheduler_to_celery_cli(
 ):
     """Send next origin visits of VISIT_TYPE_NAME to celery, filling the queue."""
 
-    from .utils import get_task_type, parse_time_interval, send_to_celery
+    from .celery_backend.utils import get_loader_task_type, send_to_celery
+    from .utils import parse_time_interval
 
     absolute_cooldown = (
         parse_time_interval(absolute_cooldown_str) if absolute_cooldown_str else None
@@ -245,7 +246,7 @@ def send_from_scheduler_to_celery_cli(
 
     scheduler = ctx.obj["scheduler"]
 
-    task_type = get_task_type(scheduler, visit_type_name)
+    task_type = get_loader_task_type(scheduler, visit_type_name)
     if not task_type:
         ctx.fail(f"Unknown task type {task_type}.")
         assert False  # for mypy

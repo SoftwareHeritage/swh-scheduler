@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from typing import Any, Dict, List, Optional, Tuple
 
     from swh.scheduler.interface import SchedulerInterface
-    from swh.scheduler.model import TaskPolicy, TaskPriority, TaskRun, TaskType
+    from swh.scheduler.model import TaskPolicy, TaskPriority, TaskRun
 
 
 TASK_BATCH_SIZE = 1000  # Number of tasks per query to the scheduler
@@ -174,88 +174,6 @@ def parse_options(options: List[str]) -> Tuple[List[str], Dict]:
     args = [parse_argument(x) for x in options if "=" not in x]
     kw = {k: parse_argument(v) for (k, v) in kw_pairs}
     return (args, kw)
-
-
-def get_task_type(scheduler: SchedulerInterface, visit_type: str) -> Optional[TaskType]:
-    "Given a visit type, return its associated task type."
-    return scheduler.get_task_type(f"load-{visit_type}")
-
-
-def send_to_celery(
-    scheduler: SchedulerInterface,
-    visit_type_to_queue: Dict[str, str],
-    enabled: bool = True,
-    lister_name: Optional[str] = None,
-    lister_instance_name: Optional[str] = None,
-    policy: str = "oldest_scheduled_first",
-    tablesample: Optional[float] = None,
-    absolute_cooldown: Optional[timedelta] = None,
-    scheduled_cooldown: Optional[timedelta] = None,
-    failed_cooldown: Optional[timedelta] = None,
-    not_found_cooldown: Optional[timedelta] = None,
-):
-    """Utility function to read tasks from the scheduler and send those directly to
-    celery.
-
-    Args:
-        visit_type_to_queue: Optional mapping of visit/loader type (e.g git, svn, ...)
-          to queue to send task to.
-        enabled: Determine whether we want to list enabled or disabled origins. As
-          default, we want reasonably enabled origins. For some edge case, we might
-          want the others.
-        lister_name: Determine the list of origins listed from the lister with name
-        lister_instance_name: Determine the list of origins listed from the lister
-          with instance name
-        policy: the scheduling policy used to select which visits to schedule
-        tablesample: the percentage of the table on which we run the query
-          (None: no sampling)
-        absolute_cooldown: the minimal interval between two visits of the same origin
-        scheduled_cooldown: the minimal interval before which we can schedule
-          the same origin again if it's not been visited
-        failed_cooldown: the minimal interval before which we can reschedule a
-          failed origin
-        not_found_cooldown: the minimal interval before which we can reschedule a
-          not_found origin
-
-    """
-
-    from kombu.utils.uuid import uuid
-
-    from swh.scheduler.celery_backend.config import app, get_available_slots
-
-    from ..utils import create_origin_tasks
-
-    for visit_type_name, queue_name in visit_type_to_queue.items():
-        task_type = get_task_type(scheduler, visit_type_name)
-        assert task_type is not None
-        task_name = task_type.backend_name
-        num_tasks = get_available_slots(app, queue_name, task_type.max_queue_length)
-
-        click.echo(f"{num_tasks} slots available in celery queue {queue_name}")
-
-        origins = scheduler.grab_next_visits(
-            visit_type_name,
-            num_tasks,
-            policy=policy,
-            tablesample=tablesample,
-            enabled=enabled,
-            lister_name=lister_name,
-            lister_instance_name=lister_instance_name,
-            absolute_cooldown=absolute_cooldown,
-            scheduled_cooldown=scheduled_cooldown,
-            failed_cooldown=failed_cooldown,
-            not_found_cooldown=not_found_cooldown,
-        )
-
-        click.echo(f"{len(origins)} visits of type {visit_type_name} to send to celery")
-        for task in create_origin_tasks(origins, scheduler):
-            app.send_task(
-                task_name,
-                task_id=uuid(),
-                args=task.arguments.args,
-                kwargs=task.arguments.kwargs,
-                queue=queue_name,
-            )
 
 
 def pretty_print_list(list: List[Any], indent: int = 0):
@@ -496,70 +414,3 @@ scheduled ingest in the scheduler database."
         status_counters[str(counter_key)] += 1
 
     return status_counters, ingested_origins_table if with_listing else []
-
-
-def schedule_first_visits(backend: SchedulerInterface):
-    """Schedule first visits with high priority for origins registered by listers
-    having the first_visits_priority_queue attribute set.
-
-    """
-    from functools import partial
-
-    from swh.core.api.classes import stream_results
-    from swh.core.utils import grouper
-    from swh.scheduler.utils import utcnow
-
-    for lister in backend.get_listers(with_first_visits_to_schedule=True):
-        visit_types = backend.get_visit_types_for_listed_origins(lister)
-        visit_type_to_queue = {}
-
-        for visit_type in visit_types:
-            task_type = get_task_type(backend, visit_type)
-            if not task_type:
-                raise ValueError(f"Unknown task type for visit type {visit_type}.")
-            visit_type_to_queue[visit_type] = (
-                f"{lister.first_visits_queue_prefix}:{task_type.backend_name}"
-            )
-
-        send_to_celery(
-            backend,
-            visit_type_to_queue=visit_type_to_queue,
-            policy="first_visits_after_listing",
-            lister_name=lister.name,
-            lister_instance_name=lister.instance_name,
-        )
-
-        def all_first_visits_scheduled():
-            nb_listed_origins = 0
-            nb_scheduled_origins = 0
-            for listed_origins in grouper(
-                stream_results(
-                    partial(backend.get_listed_origins, lister_id=lister.id)
-                ),
-                n=1000,
-            ):
-                listed_origins_list = list(listed_origins)
-                nb_listed_origins += len(listed_origins_list)
-                for origin_visit_stats in backend.origin_visit_stats_get(
-                    ids=(
-                        (origin.url, origin.visit_type)
-                        for origin in listed_origins_list
-                    )
-                ):
-                    nb_scheduled_origins += 1
-                    if (
-                        origin_visit_stats.last_scheduled
-                        < lister.last_listing_finished_at
-                    ):
-                        return False
-            return nb_scheduled_origins == nb_listed_origins
-
-        if all_first_visits_scheduled():
-            # mark that all first visits were scheduled to no longer consider that lister
-            # in future execution of that command
-            click.echo(
-                f"All first visits of origins registered by lister with name '{lister.name}' "
-                f"and instance '{lister.instance_name}' were scheduled.'"
-            )
-            lister.first_visits_scheduled_at = utcnow()
-            backend.update_lister(lister)

@@ -160,7 +160,7 @@ def schedule_first_visits_cli(
     associated "prefixed" add_forge_now queue(s).
 
     """
-    from .utils import get_task_type, send_to_celery
+    from .celery_backend.utils import get_loader_task_type, send_to_celery
 
     scheduler = ctx.obj["scheduler"]
     preset = ctx.obj["preset"]
@@ -168,7 +168,7 @@ def schedule_first_visits_cli(
     visit_type_to_queue: Dict[str, str] = {}
     unknown_task_types = []
     for visit_type_name in visit_type_names:
-        task_type = get_task_type(scheduler, visit_type_name)
+        task_type = get_loader_task_type(scheduler, visit_type_name)
         if not task_type:
             unknown_task_types.append(visit_type_name)
             continue
