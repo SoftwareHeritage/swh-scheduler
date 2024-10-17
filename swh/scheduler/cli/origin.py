@@ -628,18 +628,3 @@ def send_origins_from_file_to_celery(
 
         if throttled:
             sleep(waiting_period)
-
-
-@origin.command("schedule-high-priority-first-visits")
-@click.pass_context
-def schedule_high_priority_first_visits(ctx: click.Context):
-    """Schedule first visits with high priority for origins registered by listers
-    having the first_visits_priority_queue attribute set.
-    """
-    from swh.scheduler.celery_backend.first_visits import schedule_first_visits
-
-    scheduler: SchedulerInterface = ctx.obj["scheduler"]
-    try:
-        schedule_first_visits(scheduler)
-    except ValueError as e:
-        ctx.fail(str(e))

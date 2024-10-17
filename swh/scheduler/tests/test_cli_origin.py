@@ -3,17 +3,14 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-from datetime import timedelta
 from typing import Tuple
 from unittest.mock import MagicMock
 
 import pytest
 
 from swh.scheduler.cli.origin import format_origins
-from swh.scheduler.model import ListedOrigin, OriginVisitStats
 from swh.scheduler.tests.common import TASK_TYPES
 from swh.scheduler.tests.test_cli import invoke as basic_invoke
-from swh.scheduler.utils import utcnow
 
 
 def invoke(
@@ -281,93 +278,3 @@ def test_send_origins_from_file_to_celery_cli(
     )
 
     assert set(actual_scheduled_tasks) == set(expected_tasks)
-
-
-def test_schedule_high_priority_first_visits(
-    swh_scheduler, swh_scheduler_celery_app, visit_types, task_types, mocker
-):
-    nb_origins_per_visit_type = 10
-    # number of celery queue slots per visit type is lower than the
-    # number of listed origins for that visit type
-    nb_available_queue_slots = nb_origins_per_visit_type // 2
-
-    mocker.patch.object(swh_scheduler_celery_app, "send_task")
-    # mock number of available slots in queues to a fixed value
-    mocker.patch(
-        "swh.scheduler.celery_backend.config.get_available_slots"
-    ).return_value = nb_available_queue_slots
-
-    # create a lister with high priority first visits
-    lister_name = "save-bulk"
-    lister_instance_name = "foo"
-    lister = swh_scheduler.get_or_create_lister(
-        name=lister_name,
-        instance_name=lister_instance_name,
-        first_visits_queue_prefix="save_bulk",
-    )
-    # register origins for the lister
-    for visit_type in visit_types:
-        listed_origins = [
-            ListedOrigin(
-                lister_id=lister.id,
-                url=f"https://{visit_type}.example.org/project{i}",
-                visit_type=visit_type,
-            )
-            for i in range(nb_origins_per_visit_type)
-        ]
-        swh_scheduler.record_listed_origins(listed_origins)
-        # mark some origins visits already scheduled in the past to
-        # check they are scheduled again by the tested command
-        swh_scheduler.origin_visit_stats_upsert(
-            [
-                OriginVisitStats(
-                    url=listed_origin.url,
-                    visit_type=listed_origin.visit_type,
-                    last_scheduled=utcnow() - timedelta(days=180),
-                )
-                for i, listed_origin in enumerate(listed_origins)
-                if i % 2 == 1
-            ]
-        )
-
-    # mark listing as finished
-    lister = lister.evolve(last_listing_finished_at=utcnow())
-    lister = swh_scheduler.update_lister(lister)
-
-    # start scheduling first visits
-    result = invoke(swh_scheduler, args=("schedule-high-priority-first-visits",))
-    assert result.exit_code == 0
-    # check expected number of visits were scheduled
-    for visit_type in visit_types:
-        assert (
-            f"{nb_available_queue_slots} visits of type {visit_type} to send to celery"
-            in result.stdout
-        )
-    # check there is still origin first visits to schedule
-    assert (
-        f"All first visits of origins registered by lister with name '{lister_name}' "
-        f"and instance '{lister_instance_name}' were scheduled.'"
-    ) not in result.stdout
-    lister = swh_scheduler.get_lister(
-        name=lister_name, instance_name=lister_instance_name
-    )
-    assert lister.first_visits_scheduled_at is None
-
-    # continue scheduling first visits
-    result = invoke(swh_scheduler, args=("schedule-high-priority-first-visits",))
-    assert result.exit_code == 0
-    # check expected number of visits were scheduled
-    for visit_type in visit_types:
-        assert (
-            f"{nb_available_queue_slots} visits of type {visit_type} to send to celery"
-            in result.stdout
-        )
-    # check all listed origins first visits were scheduled
-    assert (
-        f"All first visits of origins registered by lister with name '{lister_name}' "
-        f"and instance '{lister_instance_name}' were scheduled.'"
-    ) in result.stdout
-    lister = swh_scheduler.get_lister(
-        name=lister_name, instance_name=lister_instance_name
-    )
-    assert lister.first_visits_scheduled_at is not None
