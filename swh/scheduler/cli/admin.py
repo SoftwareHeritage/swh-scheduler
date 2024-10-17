@@ -244,7 +244,7 @@ def runner_first_visits(ctx, period):
     from swh.scheduler.celery_backend.first_visits import schedule_first_visits
 
     logger = logging.getLogger(__name__ + ".runner_first_visits")
-    scheduler: SchedulerInterface = ctx.config["scheduler"]
+    scheduler: SchedulerInterface = ctx.obj["scheduler"]
 
     try:
         while True:
