@@ -249,9 +249,14 @@ def runner_first_visits(ctx, period):
     try:
         while True:
             logger.debug("Schedule first visits...")
+            start = time.monotonic()
             try:
                 nb_first_visits = schedule_first_visits(scheduler)
-                logger.info("Scheduled %s first visits", nb_first_visits)
+                logger.info(
+                    "Scheduled %s first visits in %s seconds",
+                    nb_first_visits,
+                    time.monotonic() - start,
+                )
             except Exception:
                 logger.exception("Unexpected error in run_high_priority_first_visits()")
                 sentry_sdk.capture_exception()
