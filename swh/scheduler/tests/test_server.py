@@ -61,7 +61,7 @@ def test_load_and_check_config_remote_config_local_type_raise(tmpdir):
 
 
 def test_load_and_check_config_local_incomplete_configuration(tmpdir):
-    """Incomplete 'local' configuration should raise"""
+    """Incomplete 'postgresql' configuration should raise"""
     config = {
         "scheduler": {
             "cls": "postgresql",
@@ -75,12 +75,11 @@ def test_load_and_check_config_local_incomplete_configuration(tmpdir):
         load_and_check_config(config_path)
 
 
-@pytest.mark.parametrize("clazz", ["local", "postgresql"])
-def test_load_and_check_config_local_config_fine(tmpdir, clazz):
+def test_load_and_check_config_postgresql_config_fine(tmpdir):
     """Local configuration is fine"""
     config = {
         "scheduler": {
-            "cls": clazz,
+            "cls": "postgresql",
             "db": "db",
         }
     }

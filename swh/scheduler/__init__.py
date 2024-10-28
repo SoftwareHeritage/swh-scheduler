@@ -33,14 +33,11 @@ def get_scheduler(cls: str, **kwargs) -> "SchedulerInterface":
     Get a scheduler object of class `cls` with arguments `**kwargs`.
 
     Args:
-        cls: scheduler's class, either 'local' or 'remote'
+        cls: scheduler's class
         kwargs: arguments to pass to the class' constructor
 
     Returns:
-        an instance of swh.scheduler, either local or remote:
-
-        local: swh.scheduler.backend.SchedulerBackend
-        remote: swh.scheduler.api.client.RemoteScheduler
+        an instance of swh.scheduler.
 
     Raises:
         ValueError if passed an unknown storage class.

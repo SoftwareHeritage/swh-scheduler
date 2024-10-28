@@ -40,7 +40,7 @@ def mock_plugin_worker_descriptions(mocker):
 @pytest.fixture
 def local_sched_config(swh_scheduler_config):
     """Expose the local scheduler configuration"""
-    return {"scheduler": {"cls": "local", **swh_scheduler_config}}
+    return {"scheduler": {"cls": "postgresql", **swh_scheduler_config}}
 
 
 @pytest.fixture

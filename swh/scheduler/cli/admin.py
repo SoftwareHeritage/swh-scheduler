@@ -112,7 +112,7 @@ def listener(ctx):
     """
     scheduler_backend = ctx.obj["scheduler"]
     if not scheduler_backend:
-        ctx.fail("Scheduler class (local/remote) must be instantiated")
+        ctx.fail("Scheduler class must be instantiated")
 
     broker = (
         ctx.obj["config"]
@@ -290,7 +290,8 @@ def rpc_server(ctx, host, port, debug):
     """
     if ctx.obj["config"]["scheduler"]["cls"] == "remote":
         click.echo(
-            "The API server can only be started with a 'local' " "configuration",
+            "The API server cannot be started with a 'remote' "
+            "backend cls configuration",
             err=True,
         )
         ctx.exit(1)
