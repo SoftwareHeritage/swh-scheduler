@@ -6,15 +6,14 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Dict
-import warnings
 
+# TODO: get rid of these default config
 DEFAULT_CONFIG_RAW = {
     "scheduler": {
         "cls": "postgresql",
         "db": "dbname=softwareheritage-scheduler-dev",
     }
 }
-
 
 DEFAULT_CONFIG = {
     "scheduler": ("dict", DEFAULT_CONFIG_RAW["scheduler"]),
@@ -44,20 +43,6 @@ def get_scheduler(cls: str, **kwargs) -> "SchedulerInterface":
 
     """
     from swh.core.config import get_swh_backend_module
-
-    if "args" in kwargs:
-        warnings.warn(
-            'Explicit "args" key is deprecated, use keys directly instead.',
-            DeprecationWarning,
-        )
-        kwargs = kwargs["args"]
-
-    if cls == "local":
-        warnings.warn(
-            'The "local" storage class is deprecated, use "postgresql" instead.',
-            DeprecationWarning,
-        )
-        cls = "postgresql"
 
     _, BackendClass = get_swh_backend_module("scheduler", cls)
     assert BackendClass is not None
