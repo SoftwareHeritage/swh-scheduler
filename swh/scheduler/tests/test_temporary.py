@@ -6,7 +6,7 @@
 import pytest
 from testing.postgresql import find_program
 
-from .test_scheduler import TestScheduler
+from .test_scheduler import TestScheduler as TestTemporaryScheduler  # noqa: F401
 
 
 def _has_initdb():
@@ -31,7 +31,3 @@ def swh_scheduler_config():
 pytestmark = pytest.mark.skipif(
     not _has_initdb(), reason="initdb executable is missing"
 )
-
-
-class TestTemporaryScheduler(TestScheduler):
-    pass
