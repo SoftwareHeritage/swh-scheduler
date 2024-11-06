@@ -20,3 +20,5 @@ class RemoteScheduler(RPCClient):
 
     extra_type_decoders = DECODERS
     extra_type_encoders = ENCODERS
+
+    enable_requests_retry = True
