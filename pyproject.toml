@@ -39,6 +39,7 @@ testing = {file = [
 "postgresql" = "swh.scheduler.backend:SchedulerBackend"
 "remote" = "swh.scheduler.api.client:RemoteScheduler"
 "temporary" = "swh.scheduler.backend:TemporarySchedulerBackend"
+"memory" = "swh.scheduler.in_memory:InMemoryScheduler"
 
 [project.urls]
 "Homepage" = "https://gitlab.softwareheritage.org/swh/devel/swh-scheduler"

@@ -972,10 +972,9 @@ class TestScheduler:
         self, swh_scheduler, stored_lister, listed_origins, visit_types
     ):
         swh_scheduler.record_listed_origins(listed_origins)
-        assert (
+        assert set(
             swh_scheduler.get_visit_types_for_listed_origins(stored_lister)
-            == visit_types
-        )
+        ) == set(visit_types)
 
     def _grab_next_visits_setup(self, swh_scheduler, listed_origins_by_type, limit=100):
         """Basic origins setup for scheduling policy tests"""
