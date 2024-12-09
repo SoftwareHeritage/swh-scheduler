@@ -14,11 +14,9 @@ from psycopg2.errors import CardinalityViolation
 from psycopg2.extensions import AsIs
 import psycopg2.extras
 import psycopg2.pool
-from testing.postgresql import Postgresql
 
 from swh.core.db import BaseDb
 from swh.core.db.common import db_transaction
-from swh.core.db.db_utils import init_admin_extensions, populate_database_for_package
 from swh.scheduler.model import (
     Task,
     TaskArguments,
@@ -1311,20 +1309,3 @@ class SchedulerBackend:
 
         cur.execute(query, tuple(where_args))
         return [SchedulerMetrics(**row) for row in cur.fetchall()]
-
-
-class TemporarySchedulerBackend(SchedulerBackend):
-    """Temporary postgresql backend for the Software Heritage scheduling database.
-
-    A temporary scheduler database is spawned then removed when the backend
-    gets destroyed.
-
-    It can be used for testing SWH components that require a scheduler instance
-    (listers for instance).
-    """
-
-    def __init__(self):
-        self.postgresql = Postgresql()
-        init_admin_extensions("swh.scheduler", self.postgresql.url())
-        populate_database_for_package("swh.scheduler", self.postgresql.url())
-        super().__init__(self.postgresql.url())
