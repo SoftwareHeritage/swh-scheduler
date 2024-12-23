@@ -20,7 +20,7 @@ from swh.scheduler.model import (
 )
 from swh.scheduler.utils import utcnow
 
-from .exc import SchedulerException, StaleData, UnknownPolicy
+from .exc import StaleData, UnknownPolicy
 from .interface import ListedOriginPageToken, PaginatedListedOriginList
 from .model import ListedOrigin, Lister, OriginVisitStats, SchedulerMetrics
 
@@ -791,11 +791,8 @@ class InMemoryScheduler:
             if o not in ovs:
                 ovs.append(o)
 
-        stats = {(o.url, o.visit_type): o for o in ovs}
-        if len(stats) < len(ovs):
-            raise SchedulerException("CardinalityViolation")
-
-        for key, o in stats.items():
+        for o in ovs:
+            key = o.url, o.visit_type
             if key not in self._origin_visit_stats:
                 self._origin_visit_stats[key] = o
             else:

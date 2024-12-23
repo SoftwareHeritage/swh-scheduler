@@ -13,11 +13,10 @@ from typing import Any, Dict, List, Optional
 import uuid
 
 import attr
-from psycopg2.extras import execute_values
 import pytest
 
 from swh.model.hashutil import hash_to_bytes
-from swh.scheduler.exc import SchedulerException, StaleData, UnknownPolicy
+from swh.scheduler.exc import StaleData, UnknownPolicy
 from swh.scheduler.interface import ListedOriginPageToken, SchedulerInterface
 from swh.scheduler.model import (
     LastVisitStatus,
@@ -1482,8 +1481,13 @@ class TestScheduler:
     def test_origin_visit_stats_get_empty(self, swh_scheduler) -> None:
         assert swh_scheduler.origin_visit_stats_get([]) == []
 
-    def test_origin_visit_stats_get_pagination(self, swh_scheduler) -> None:
-        page_size = inspect.signature(execute_values).parameters["page_size"].default
+    def test_origin_visit_stats_get(self, swh_scheduler) -> None:
+        # arbitrary number, to keep testing batch call with origin_visit_stats_get
+
+        # on psycopg2, this needed to be larger than the "page size" however
+        # psycopg3 no longer use that paging and that part of the test is now
+        # irrelevant.
+        batch_size = 250
 
         visit_stats = [
             OriginVisitStats(
@@ -1492,9 +1496,7 @@ class TestScheduler:
                 last_successful=utcnow(),
                 last_visit=utcnow(),
             )
-            for i in range(
-                page_size + 1
-            )  # Ensure overflow of the psycopg2.extras.execute_values page_size
+            for i in range(batch_size)
         ]
 
         swh_scheduler.origin_visit_stats_upsert(visit_stats)
@@ -1580,25 +1582,28 @@ class TestScheduler:
         ):
             assert visit_stat is not None
 
-    def test_origin_visit_stats_upsert_cardinality_failing(self, swh_scheduler) -> None:
-        """Batch upsert does not support altering multiple times the same origin-visit-status"""
-        with pytest.raises(SchedulerException, match="CardinalityViolation"):
-            swh_scheduler.origin_visit_stats_upsert(
-                [
-                    OriginVisitStats(
-                        url="foo",
-                        visit_type="git",
-                        last_successful=None,
-                        last_visit=utcnow(),
-                    ),
-                    OriginVisitStats(
-                        url="foo",
-                        visit_type="git",
-                        last_successful=utcnow(),
-                        last_visit=None,
-                    ),
-                ]
-            )
+    def test_origin_visit_stats_upsert_same_url(self, swh_scheduler) -> None:
+        """Batch upsert used to crash when the same url were updated
+
+        This is no longer the case with psycopg3. Are such update a good idea ?
+        Probably not, but at least they don't crash at the storage level.
+        """
+        swh_scheduler.origin_visit_stats_upsert(
+            [
+                OriginVisitStats(
+                    url="foo",
+                    visit_type="git",
+                    last_successful=None,
+                    last_visit=utcnow(),
+                ),
+                OriginVisitStats(
+                    url="foo",
+                    visit_type="git",
+                    last_successful=utcnow(),
+                    last_visit=None,
+                ),
+            ]
+        )
 
     def test_visit_scheduler_queue_position(
         self, swh_scheduler, listed_origins

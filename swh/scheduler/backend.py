@@ -6,14 +6,15 @@
 import datetime
 import json
 import logging
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Iterable, Iterator, List, Optional, Sequence, Tuple, Union
 from uuid import UUID
 
 import attr
-from psycopg2.errors import CardinalityViolation
-from psycopg2.extensions import AsIs
-import psycopg2.extras
-import psycopg2.pool
+import psycopg
+from psycopg.rows import dict_row
+from psycopg.types.enum import EnumInfo, register_enum
+from psycopg.types.json import Jsonb
+import psycopg_pool
 
 from swh.core.db import BaseDb
 from swh.core.db.common import db_transaction
@@ -29,7 +30,7 @@ from swh.scheduler.model import (
 )
 from swh.scheduler.utils import utcnow
 
-from .exc import SchedulerException, StaleData, UnknownPolicy
+from .exc import StaleData, UnknownPolicy
 from .interface import ListedOriginPageToken, PaginatedListedOriginList
 from .model import (
     LastVisitStatus,
@@ -42,13 +43,29 @@ from .model import (
 logger = logging.getLogger(__name__)
 
 
-def adapt_LastVisitStatus(v: LastVisitStatus):
-    return AsIs(f"'{v.value}'::last_visit_status")
+def ensure_register_last_visit_status(conn: psycopg.Connection[Any]):
+    """make sure the python and SQL enum are connected"""
+    info = EnumInfo.fetch(conn, "last_visit_status")
+    if info is not None and info.enum is None:
+        register_enum(info, conn, LastVisitStatus)
 
 
-psycopg2.extensions.register_adapter(dict, psycopg2.extras.Json)
-psycopg2.extensions.register_adapter(LastVisitStatus, adapt_LastVisitStatus)
-psycopg2.extras.register_uuid()
+def execute_values_generator(
+    cur: psycopg.Cursor, query: str, values: Iterable[Any]
+) -> Iterator[Any]:
+    cur.executemany(query, values, returning=True)
+    if cur.pgresult is None:
+        return
+    yield from cur.fetchall()
+    while cur.nextset():
+        yield from cur.fetchall()
+
+
+def jsonize(d):
+    for k in list(d.keys()):
+        if isinstance(d[k], dict):
+            d[k] = Jsonb(d[k])
+    return d
 
 
 def format_query(query: str, keys: Sequence[str]) -> str:
@@ -73,25 +90,31 @@ class SchedulerBackend:
     def __init__(self, db, min_pool_conns=1, max_pool_conns=10):
         """
         Args:
-            db: either a libpq connection string, or a psycopg2 connection
+            db: either a libpq connection string, or a psycopg connection
 
         """
-        if isinstance(db, psycopg2.extensions.connection):
+        if isinstance(db, psycopg.Connection):
             self._pool = None
             self._db = BaseDb(db)
+            ensure_register_last_visit_status(self._db.conn)
         else:
-            self._pool = psycopg2.pool.ThreadedConnectionPool(
-                min_pool_conns,
-                max_pool_conns,
-                db,
-                cursor_factory=psycopg2.extras.RealDictCursor,
+            self._pool = psycopg_pool.ConnectionPool(
+                conninfo=db,
+                min_size=min_pool_conns,
+                max_size=max_pool_conns,
+                kwargs={"row_factory": dict_row},
             )
+            # Wait for the first connection to be ready, and raise the
+            # appropriate exception if connection fails
+            self._pool.open(wait=True, timeout=1)
             self._db = None
 
     def get_db(self):
         if self._db:
             return self._db
-        return BaseDb.from_pool(self._pool)
+        db = BaseDb.from_pool(self._pool)
+        ensure_register_last_visit_status(db.conn)
+        return db
 
     def put_db(self, db):
         if db is not self._db:
@@ -165,13 +188,15 @@ class SchedulerBackend:
 
         query = f"""
             select {select_cols} from listers
-              where id in %s
+              where id = ANY(%s)
         """
 
         if not lister_ids:
             return []
 
-        cur.execute(query, (tuple(lister_ids),))
+        # We cannot directly use the list and in practice it may contains mix
+        # of "UUID" and "str". So we normalize things to string.
+        cur.execute(query, ([str(i) for i in lister_ids],))
 
         return [Lister(**row) for row in cur]
 
@@ -233,14 +258,14 @@ class SchedulerBackend:
               where (name, instance_name) = (%(name)s, %(instance_name)s);
         """
 
-        cur.execute(
-            query,
-            Lister(
-                name=name,
-                instance_name=instance_name,
-                first_visits_queue_prefix=first_visits_queue_prefix,
-            ).to_dict(),
-        )
+        d = Lister(
+            name=name,
+            instance_name=instance_name,
+            first_visits_queue_prefix=first_visits_queue_prefix,
+        ).to_dict()
+        if "current_state" in d:
+            d["current_state"] = Jsonb(d["current_state"])
+        cur.execute(query, d)
 
         return Lister(**cur.fetchone())
 
@@ -267,7 +292,10 @@ class SchedulerBackend:
                       where id=%(id)s and updated=%(updated)s
                       returning {select_cols}"""
 
-        cur.execute(query, lister.to_dict())
+        d = lister.to_dict()
+        if "current_state" in d:
+            d["current_state"] = Jsonb(d["current_state"])
+        cur.execute(query, d)
         updated = cur.fetchone()
 
         if not updated:
@@ -299,19 +327,22 @@ class SchedulerBackend:
         upsert_set = ", ".join(f"{col} = EXCLUDED.{col}" for col in upsert_cols)
 
         query = f"""INSERT into listed_origins ({", ".join(insert_cols)})
-                       VALUES %s
+                       VALUES ({', '.join(insert_meta)})
                     ON CONFLICT ({", ".join(pk_cols)}) DO UPDATE
                        SET {upsert_set}
                     RETURNING {", ".join(select_cols)}
         """
+        values = []
+        for v in deduplicated_origins.values():
+            d = v.to_dict()
+            d["extra_loader_arguments"] = Jsonb(d["extra_loader_arguments"])
+            d["lister_id"] = str(d["lister_id"])
+            values.append(d)
 
-        ret = psycopg2.extras.execute_values(
+        ret = execute_values_generator(
             cur=cur,
-            sql=query,
-            argslist=(origin.to_dict() for origin in deduplicated_origins.values()),
-            template=f"({', '.join(insert_meta)})",
-            page_size=1000,
-            fetch=True,
+            query=query,
+            values=values,
         )
 
         return [ListedOrigin(**d) for d in ret]
@@ -333,13 +364,11 @@ class SchedulerBackend:
         """
 
         query_filters: List[str] = []
-        query_params: List[Union[int, str, UUID, Tuple[UUID, str], Tuple[str, ...]]] = (
-            []
-        )
+        query_params: List[Union[int, str, UUID, Tuple[UUID, str], List[str]]] = []
 
         if lister_id:
             query_filters.append("lister_id = %s")
-            query_params.append(lister_id)
+            query_params.append(str(lister_id))
 
         urls_ = []
         if url is not None:
@@ -348,19 +377,18 @@ class SchedulerBackend:
             urls_ = urls
 
         if urls_:
-            query_filters.append("url IN %s")
-            query_params.append(tuple(urls_))
+            query_filters.append("url = ANY(%s)")
+            query_params.append(urls_)
 
         if enabled is not None:
             query_filters.append("enabled = %s")
             query_params.append(enabled)
 
         if page_token is not None:
-            query_filters.append("(lister_id, url) > %s")
+            query_filters.append("(lister_id, url) > (%s, %s)")
             # the typeshed annotation for tuple() is too strict.
-            query_params.append(tuple(page_token))
-
-        query_params.append(limit)
+            query_params.append(str(page_token[0]))
+            query_params.append(page_token[1])
 
         select_cols = ", ".join(ListedOrigin.select_columns())
         if query_filters:
@@ -372,7 +400,7 @@ class SchedulerBackend:
                     from listed_origins
                     {where_clause}
                     ORDER BY lister_id, url
-                    LIMIT %s"""
+                    LIMIT {limit}"""
 
         cur.execute(query, tuple(query_params))
         origins = [ListedOrigin(**d) for d in cur]
@@ -698,8 +726,8 @@ class SchedulerBackend:
         if next_run:
             query.append(", next_run = %s")
             args.append(next_run)
-        query.append(" WHERE id IN %s")
-        args.append(tuple(task_ids))
+        query.append(" WHERE id = ANY(%s)")
+        args.append(task_ids)
 
         cur.execute("".join(query), args)
 
@@ -748,30 +776,30 @@ class SchedulerBackend:
             if isinstance(task_id, (str, int)):
                 where.append("id = %s")
             else:
-                where.append("id in %s")
-                task_id = tuple(task_id)
+                where.append("id = ANY(%s)")
+                task_id = list(task_id)
             args.append(task_id)
         if task_type:
             if isinstance(task_type, str):
                 where.append("type = %s")
             else:
-                where.append("type in %s")
-                task_type = tuple(task_type)
+                where.append("type = ANY(%s)")
+                task_type = list(task_type)
             args.append(task_type)
         if status:
             if isinstance(status, str):
                 where.append("status = %s")
             else:
-                where.append("status in %s")
-                status = tuple(status)
+                where.append("status = ANY(%s)")
+                status = list(status)
             args.append(status)
         if priority:
             if isinstance(priority, str):
                 where.append("priority = %s")
             else:
                 priority = tuple(priority)
-                where.append("priority in %s")
-            args.append(priority)
+                where.append("priority = ANY(%s)")
+            args.append(list(priority))
         if policy:
             where.append("policy = %s")
             args.append(policy)
@@ -801,8 +829,10 @@ class SchedulerBackend:
         Returns:
             a list of Task objects
         """
-        query = format_query("select {keys} from task where id in %s", self.task_keys)
-        cur.execute(query, (tuple(task_ids),))
+        query = format_query(
+            "select {keys} from task where id = ANY(%s)", self.task_keys
+        )
+        cur.execute(query, (list(task_ids),))
         return [Task(**mutate_task_dict(row)) for row in cur.fetchall()]
 
     @db_transaction()
@@ -989,8 +1019,8 @@ class SchedulerBackend:
         """
         # Mark the associated task as next_run_scheduled in the same transaction
         query = """update task set status='next_run_scheduled'
-                   where id in %s"""
-        cur.execute(query, (tuple(tr.task for tr in task_runs),))
+                   where id = ANY(%s)"""
+        cur.execute(query, ([tr.task for tr in task_runs],))
 
         cur.execute("select swh_scheduler_mktemp_task_run()")
         db.copy_to(
@@ -1031,8 +1061,8 @@ class SchedulerBackend:
             timestamp = utcnow()
 
         cur.execute(
-            "select * from swh_scheduler_start_task_run(%s, %s, %s)",
-            (backend_id, metadata, timestamp),
+            "select * from swh_scheduler_start_task_run(%s::text, %s, %s)",
+            (backend_id, Jsonb(metadata), timestamp),
         )
 
         for row in cur:
@@ -1078,7 +1108,7 @@ class SchedulerBackend:
 
         cur.execute(
             "select * from swh_scheduler_end_task_run(%s, %s, %s, %s)",
-            (backend_id, status, metadata, timestamp),
+            (backend_id, status, Jsonb(metadata), timestamp),
         )
 
         for row in cur:
@@ -1179,8 +1209,8 @@ class SchedulerBackend:
     ) -> List[TaskRun]:
         """Search task run for a task id"""
         if task_ids:
-            args: List[Any] = [tuple(task_ids)]
-            query = "select * from task_run where task in %s"
+            args: List[Any] = [list(task_ids)]
+            query = "select * from task_run where task = ANY(%s)"
             if limit:
                 query += " limit %s :: bigint"
                 args.append(limit)
@@ -1203,22 +1233,16 @@ class SchedulerBackend:
 
         query = f"""
             INSERT into origin_visit_stats AS ovi ({", ".join(insert_cols)})
-            VALUES %s
+            VALUES ({', '.join(insert_meta)})
             ON CONFLICT ({", ".join(pk_cols)}) DO UPDATE
             SET {upsert_set}
         """
 
-        try:
-            psycopg2.extras.execute_values(
-                cur=cur,
-                sql=query,
-                argslist=(visit_stats.to_dict() for visit_stats in origin_visit_stats),
-                template=f"({', '.join(insert_meta)})",
-                page_size=1000,
-                fetch=False,
-            )
-        except CardinalityViolation as e:
-            raise SchedulerException(repr(e))
+        values = []
+        for v in origin_visit_stats:
+            d = v.to_dict()
+            values.append(d)
+        cur.executemany(query, values)
 
     @db_transaction()
     def origin_visit_stats_get(
@@ -1226,18 +1250,15 @@ class SchedulerBackend:
     ) -> List[OriginVisitStats]:
         if not ids:
             return []
-        primary_keys = tuple((origin, visit_type) for (origin, visit_type) in ids)
         query = format_query(
             """
             SELECT {keys}
-            FROM (VALUES %s) as stats(url, visit_type)
+            FROM (VALUES (%s, %s)) as stats(url, visit_type)
             INNER JOIN origin_visit_stats USING (url, visit_type)
         """,
             OriginVisitStats.select_columns(),
         )
-        rows = psycopg2.extras.execute_values(
-            cur=cur, sql=query, argslist=primary_keys, fetch=True
-        )
+        rows = execute_values_generator(cur, query, list(ids))
         return [OriginVisitStats(**row) for row in rows]
 
     @db_transaction()

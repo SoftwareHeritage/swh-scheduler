@@ -56,7 +56,7 @@ def cli(ctx, config_file, database, url, no_stdout):
     * :ref:`cli-config-scheduler`
     """
     try:
-        from psycopg2 import OperationalError
+        from psycopg import OperationalError
     except ImportError:
 
         class OperationalError(Exception):
