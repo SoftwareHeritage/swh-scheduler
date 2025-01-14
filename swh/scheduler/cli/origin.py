@@ -522,16 +522,18 @@ def send_origins_from_file_to_celery(
     from swh.scheduler.celery_backend.config import app, get_available_slots
     from swh.scheduler.cli.utils import parse_options
 
-    from .origin_utils import (
-        TASK_ARGS_GENERATOR_CALLABLES,
-        get_scheduler_task_type,
-        lines_to_task_args,
-    )
-
-    scheduler = ctx.obj["scheduler"]
+    from .origin_utils import TASK_ARGS_GENERATOR_CALLABLES, lines_to_task_args
 
     try:
-        task_type_info = get_scheduler_task_type(scheduler, task_type)
+        # task_type_info = get_scheduler_task_type(scheduler, task_type)
+        from ..model import TaskType
+
+        task_type_info = TaskType(
+            type="load-git",
+            max_queue_length=5000,
+            backend_name="swh.loader.git.tasks.UpdateGitRepository",
+            description="fake task",
+        )
     except ValueError as e:
         ctx.fail(e)
 
