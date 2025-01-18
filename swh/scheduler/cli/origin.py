@@ -519,7 +519,7 @@ def send_origins_from_file_to_celery(
     from functools import partial
     from time import sleep
 
-    from swh.scheduler.celery_backend.config import app, get_available_slots
+    from swh.scheduler.celery_backend.config import app
     from swh.scheduler.cli.utils import parse_options
 
     from .origin_utils import TASK_ARGS_GENERATOR_CALLABLES, lines_to_task_args
@@ -577,7 +577,8 @@ def send_origins_from_file_to_celery(
             break
 
         # we can send new tasks, compute how many we can send
-        nb_tasks_to_send = get_available_slots(app, queue_name, threshold)
+        # nb_tasks_to_send = get_available_slots(app, queue_name, threshold)
+        nb_tasks_to_send = 10000
 
         if debug:
             click.echo(f"Nb tasks to send : {nb_tasks_to_send}")
