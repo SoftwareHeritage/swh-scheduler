@@ -17,6 +17,7 @@ import pytest
 from swh.core.api.classes import stream_results
 from swh.model.model import Origin
 from swh.scheduler.cli import cli
+from swh.scheduler.tests.common import TASK_TYPES
 from swh.scheduler.utils import create_task, utcnow
 
 CLI_CONFIG = """
@@ -24,6 +25,13 @@ scheduler:
     cls: foo
     args: {}
 """
+
+
+@pytest.fixture
+def swh_scheduler(swh_scheduler):
+    for tt in TASK_TYPES.values():
+        swh_scheduler.create_task_type(tt)
+    return swh_scheduler
 
 
 def invoke(scheduler, catch_exceptions, args, config=CLI_CONFIG, **kwargs):
@@ -77,6 +85,49 @@ Task 2
   Next run: today \(.*\)
   Interval: 1 day, 0:00:00
   Type: swh-test-ping
+  Policy: recurring
+  Args:
+    \['arg3', 'arg4'\]
+  Keyword args:
+    key: 'value'
+
+""".lstrip()
+    assert result.exit_code == 0, result.output
+    assert re.fullmatch(expected, result.output, re.MULTILINE), result.output
+
+
+def test_schedule_tasks_using_celery_backend_name(swh_scheduler):
+    csv_data = (
+        b'swh.loader.git.tasks.UpdateGitRepository;[["arg1", "arg2"]];{"key": "value"};'
+        + utcnow().isoformat().encode()
+        + b"\n"
+        + b'swh.loader.mercurial.tasks.UpdateHgRepository;[["arg3", "arg4"]];{"key": "value"};'
+        + utcnow().isoformat().encode()
+        + b"\n"
+    )
+    with tempfile.NamedTemporaryFile(suffix=".csv") as csv_fd:
+        csv_fd.write(csv_data)
+        csv_fd.seek(0)
+        result = invoke(
+            swh_scheduler, False, ["task", "schedule", "-d", ";", csv_fd.name]
+        )
+    expected = r"""
+Created 2 tasks
+
+Task 1
+  Next run: today \(.*\)
+  Interval: 64 days, 0:00:00
+  Type: load-test-git
+  Policy: recurring
+  Args:
+    \['arg1', 'arg2'\]
+  Keyword args:
+    key: 'value'
+
+Task 2
+  Next run: today \(.*\)
+  Interval: 64 days, 0:00:00
+  Type: load-test-hg
   Policy: recurring
   Args:
     \['arg3', 'arg4'\]

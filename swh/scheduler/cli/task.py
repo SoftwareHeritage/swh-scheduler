@@ -59,7 +59,7 @@ def schedule_tasks(ctx, columns, delimiter, file):
     The following columns are expected, and can be set through the -c option:
 
     \b
-    - type: the type of the task to be scheduled (mandatory)
+    - type: the type of the task to be scheduled or its celery backend name (mandatory)
     - args: the arguments passed to the task (JSON list, defaults to an empty
       list)
     - kwargs: the keyword arguments passed to the task (JSON object, defaults
@@ -94,6 +94,10 @@ def schedule_tasks(ctx, columns, delimiter, file):
     now = utcnow()
     scheduler = ctx.obj["scheduler"]
 
+    celery_backend_to_type = {
+        tt.backend_name: tt.type for tt in scheduler.get_task_types()
+    }
+
     reader = csv.reader(file, delimiter=delimiter)
     for line in reader:
         task_params = dict(zip(columns, line))
@@ -107,6 +111,9 @@ def schedule_tasks(ctx, columns, delimiter, file):
             iso8601.parse_date(task_params["next_run"])
             if "next_run" in task_params
             else now
+        )
+        task_params["type"] = celery_backend_to_type.get(
+            task_params["type"], task_params["type"]
         )
         tasks.append(Task(**task_params))
 
