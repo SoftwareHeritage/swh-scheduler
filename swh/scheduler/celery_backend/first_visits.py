@@ -68,7 +68,8 @@ def schedule_first_visits(backend: SchedulerInterface):
                 ):
                     nb_scheduled_origins += 1
                     if (
-                        origin_visit_stats.last_scheduled
+                        origin_visit_stats.last_scheduled is not None
+                        and origin_visit_stats.last_scheduled
                         < lister.last_listing_finished_at
                     ):
                         return False

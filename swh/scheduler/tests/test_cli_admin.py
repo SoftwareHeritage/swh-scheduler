@@ -64,28 +64,26 @@ def test_runner_high_priority_first_visits(
         first_visits_queue_prefix="save_bulk",
     )
     # register origins for the lister
-    for visit_type in visit_types:
+    for i, visit_type in enumerate(visit_types):
         listed_origins = [
             ListedOrigin(
                 lister_id=lister.id,
-                url=f"https://{visit_type}.example.org/project{i}",
+                url=f"https://{visit_type}.example.org/project{j}",
                 visit_type=visit_type,
             )
-            for i in range(nb_origins_per_visit_type)
+            for j in range(nb_origins_per_visit_type)
         ]
         swh_scheduler.record_listed_origins(listed_origins)
         # mark some origins visits already scheduled in the past to
         # check they are scheduled again by the tested command
+
         swh_scheduler.origin_visit_stats_upsert(
-            [
-                OriginVisitStats(
-                    url=listed_origin.url,
-                    visit_type=listed_origin.visit_type,
-                    last_scheduled=utcnow() - timedelta(days=180),
-                )
-                for i, listed_origin in enumerate(listed_origins)
-                if i % 2 == 1
-            ]
+            OriginVisitStats(
+                url=listed_origin.url,
+                visit_type=listed_origin.visit_type,
+                last_scheduled=(utcnow() - timedelta(days=180)) if i % 2 == 1 else None,
+            )
+            for listed_origin in listed_origins
         )
 
     # mark listing as finished
@@ -97,6 +95,8 @@ def test_runner_high_priority_first_visits(
     assert result.exit_code == 0
 
     records = [record.message for record in caplog.records]
+
+    assert "Unexpected error in run_high_priority_first_visits()" not in records
 
     # check expected number of visits were scheduled
     for visit_type in visit_types:
@@ -124,6 +124,8 @@ def test_runner_high_priority_first_visits(
 
     assert result.exit_code == 0
     records = [record.message for record in caplog.records]
+
+    assert "Unexpected error in run_high_priority_first_visits()" not in records
 
     # check expected number of visits were scheduled
     for visit_type in visit_types:
