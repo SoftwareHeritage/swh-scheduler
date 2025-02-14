@@ -211,7 +211,7 @@ class LastVisitStatus(Enum):
 
 
 def convert_last_visit_status(
-    s: Union[None, str, LastVisitStatus]
+    s: Union[None, str, LastVisitStatus],
 ) -> Optional[LastVisitStatus]:
     if not isinstance(s, str):
         return s
