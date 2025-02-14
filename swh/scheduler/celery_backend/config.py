@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2021  The Software Heritage developers
+# Copyright (C) 2015-2025  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -14,7 +14,7 @@ import urllib.parse
 
 from celery import Celery
 from celery.signals import celeryd_after_setup, setup_logging, task_prerun, worker_init
-from celery.utils.log import ColorFormatter
+from celery.utils.log import ColorFormatter  # type: ignore[attr-defined]
 from celery.worker.control import Panel
 from kombu import Exchange, Queue
 import pkg_resources
@@ -414,4 +414,4 @@ def celery_task_prerun(task_id, task, *args, **kwargs):
 
 
 # XXX for BW compat
-Celery.get_queue_length = get_queue_length
+Celery.get_queue_length = get_queue_length  # type: ignore[attr-defined]

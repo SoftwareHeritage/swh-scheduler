@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2024  The Software Heritage developers
+# Copyright (C) 2016-2025  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -180,7 +180,7 @@ def ensure_task_type(
         scheduler: the scheduler object used to access the scheduler db
 
     """
-    task_type_params = dict(
+    task_type_params: Dict[str, Any] = dict(
         type=task_type_name,
         backend_name=swhtask.name,
         description=swhtask.__doc__,

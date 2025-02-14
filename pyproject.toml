@@ -79,7 +79,8 @@ plugins = []
 # 3rd party libraries without stubs (yet)
 [[tool.mypy.overrides]]
 module = [
-    "celery.*",
+    "celery.worker.*",
+    "celery.contrib.*",
     "simpy.*",
     "plotille.*",
 ]
