@@ -5,6 +5,8 @@ hypothesis >= 3.11.0
 swh.core[testing] >= 3.6.3
 swh.storage[testing] >= 2.0.0
 
+types-confluent-kafka
+types-pika
 types-pyyaml
 types-requests
 types-Deprecated
