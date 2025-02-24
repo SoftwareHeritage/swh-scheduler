@@ -453,6 +453,7 @@ class SchedulerBackend:
         query_args: List[Any] = []
 
         where_clauses = []
+        order_by: List[str]
 
         # list of (name, query) handled as CTEs before the main query
         common_table_expressions: List[Tuple[str, str]] = []
@@ -504,14 +505,14 @@ class SchedulerBackend:
             query_args.append(timestamp - not_found_cooldown)
 
         if policy == "oldest_scheduled_first":
-            order_by = "origin_visit_stats.last_scheduled NULLS FIRST"
+            order_by = ["origin_visit_stats.last_scheduled NULLS FIRST"]
         elif policy == "never_visited_oldest_update_first":
             # never visited origins have a NULL last_snapshot
             where_clauses.append("origin_visit_stats.last_snapshot IS NULL")
 
             # order by increasing last_update (oldest first)
             where_clauses.append("listed_origins.last_update IS NOT NULL")
-            order_by = "listed_origins.last_update"
+            order_by = ["listed_origins.last_update"]
         elif policy == "already_visited_order_by_lag":
             # TODO: store "visit lag" in a materialized view?
 
@@ -525,21 +526,19 @@ class SchedulerBackend:
             )
 
             # order by decreasing visit lag
-            order_by = (
+            order_by = [
                 "listed_origins.last_update - origin_visit_stats.last_successful DESC"
-            )
+            ]
         elif policy == "origins_without_last_update":
             where_clauses.append("last_update IS NULL")
-            order_by = ", ".join(
-                [
-                    # By default, sort using the queue position. If the queue
-                    # position is null, then the origin has never been visited,
-                    # which we want to handle first
-                    "origin_visit_stats.next_visit_queue_position nulls first",
-                    # Schedule unknown origins in the order we've seen them
-                    "listed_origins.first_seen",
-                ]
-            )
+            order_by = [
+                # By default, sort using the queue position. If the queue
+                # position is null, then the origin has never been visited,
+                # which we want to handle first
+                "origin_visit_stats.next_visit_queue_position nulls first",
+                # Schedule unknown origins in the order we've seen them
+                "listed_origins.first_seen",
+            ]
 
             if not dry_run:
                 # fmt: off
@@ -577,7 +576,7 @@ class SchedulerBackend:
                 where_clause += " OR origin_visit_stats.last_scheduled < %s"
                 query_args.append(lister.last_listing_finished_at)
             where_clauses.append(where_clause)
-            order_by = "origin_visit_stats.last_scheduled NULLS FIRST"
+            order_by = ["origin_visit_stats.last_scheduled NULLS FIRST"]
         else:
             raise UnknownPolicy(f"Unknown scheduling policy {policy}")
 
@@ -605,6 +604,8 @@ class SchedulerBackend:
             f"left join {table} {clause}" for table, clause in joins.items()
         )
 
+        order_by_clause = ", ".join(order_by)
+
         # fmt: off
         common_table_expressions.insert(0, ("selected_origins", f"""
             SELECT
@@ -615,7 +616,7 @@ class SchedulerBackend:
             WHERE
               ({") AND (".join(where_clauses)})
             ORDER BY
-              {order_by}
+              {order_by_clause}
             LIMIT %s
         """))
         # fmt: on
