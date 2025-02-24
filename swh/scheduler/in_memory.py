@@ -213,6 +213,7 @@ class InMemoryScheduler:
         failed_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=14),
         not_found_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=31),
         tablesample: Optional[float] = None,
+        dry_run: bool = False,
     ) -> List[ListedOrigin]:
         if timestamp is None:
             timestamp = utcnow()
@@ -393,7 +394,9 @@ class InMemoryScheduler:
             )
             for (o, s) in origins_stats
         ]
-        self.origin_visit_stats_upsert(ovs)
+
+        if not dry_run:
+            self.origin_visit_stats_upsert(ovs)
 
         return [o for (o, _) in origins_stats]
 

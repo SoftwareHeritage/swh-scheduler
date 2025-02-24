@@ -269,6 +269,131 @@ def send_from_scheduler_to_celery_cli(
     )
 
 
+@origin.command("peek-next")
+@click.option(
+    "--policy", "-p", default="oldest_scheduled_first", help="Scheduling policy"
+)
+@click.option(
+    "--tablesample",
+    help="Table sampling percentage",
+    type=float,
+)
+@click.option(
+    "--only-enabled/--only-disabled",
+    "enabled",
+    is_flag=True,
+    default=True,
+    help="""Determine whether we want to scheduled enabled or disabled origins. As default, we
+            want to reasonably deal with enabled origins. For some edge case though, we
+            might want the disabled ones.""",
+)
+@click.option(
+    "--lister-name",
+    default=None,
+    help="Limit origins to those listed from lister with provided name",
+)
+@click.option(
+    "--lister-instance-name",
+    default=None,
+    help="Limit origins to those listed from lister with instance name",
+)
+@click.option(
+    "--absolute-cooldown",
+    "absolute_cooldown_str",
+    default="12 hours",
+    help="Minimal interval between two visits of the same origin",
+)
+@click.option(
+    "--scheduled-cooldown",
+    "scheduled_cooldown_str",
+    default="7 days",
+    help="Minimal interval to wait before scheduling the same origins again",
+)
+@click.option(
+    "--not-found-cooldown",
+    "not_found_cooldown_str",
+    default="14 days",
+    help="The minimal interval to wait before rescheduling not_found origins",
+)
+@click.option(
+    "--failed-cooldown",
+    "failed_cooldown_str",
+    default="31 days",
+    help="Minimal interval to wait before rescheduling failed origins",
+)
+@click.option(
+    "--fields", "-f", default=None, help="Listed origin fields to print on output"
+)
+@click.option(
+    "--with-header/--without-header",
+    is_flag=True,
+    default=True,
+    help="Print the CSV header?",
+)
+@click.argument("type", type=str)
+@click.argument("count", type=int)
+@click.pass_context
+def peek_next(
+    ctx,
+    policy: str,
+    tablesample: Optional[float],
+    type: str,
+    count: int,
+    enabled: bool,
+    fields: Optional[str],
+    with_header: bool,
+    lister_name: Optional[str] = None,
+    lister_instance_name: Optional[str] = None,
+    absolute_cooldown_str: Optional[str] = None,
+    scheduled_cooldown_str: Optional[str] = None,
+    failed_cooldown_str: Optional[str] = None,
+    not_found_cooldown_str: Optional[str] = None,
+):
+    """Get information about the next ``count`` origins that will be scheduled
+    for ``type``."""
+    from .utils import parse_time_interval
+
+    if fields:
+        parsed_fields: Optional[List[str]] = fields.split(",")
+    else:
+        parsed_fields = None
+
+    absolute_cooldown = (
+        parse_time_interval(absolute_cooldown_str) if absolute_cooldown_str else None
+    )
+    scheduled_cooldown = (
+        parse_time_interval(scheduled_cooldown_str) if scheduled_cooldown_str else None
+    )
+    failed_cooldown = (
+        parse_time_interval(failed_cooldown_str) if failed_cooldown_str else None
+    )
+    not_found_cooldown = (
+        parse_time_interval(not_found_cooldown_str) if not_found_cooldown_str else None
+    )
+
+    scheduler = ctx.obj["scheduler"]
+
+    origins = scheduler.grab_next_visits(
+        visit_type=type,
+        count=count,
+        policy=policy,
+        tablesample=tablesample,
+        enabled=enabled,
+        lister_name=lister_name,
+        lister_instance_name=lister_instance_name,
+        absolute_cooldown=absolute_cooldown,
+        scheduled_cooldown=scheduled_cooldown,
+        failed_cooldown=failed_cooldown,
+        not_found_cooldown=not_found_cooldown,
+        dry_run=True,
+    )
+
+    for line in format_origins(
+        ctx, origins, fields=parsed_fields, with_header=with_header
+    ):
+        click.echo(line)
+
+
 @origin.command("update-metrics")
 @click.option("--lister", default=None, help="Only update metrics for this lister")
 @click.option(

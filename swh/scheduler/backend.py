@@ -437,6 +437,7 @@ class SchedulerBackend:
         failed_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=14),
         not_found_cooldown: Optional[datetime.timedelta] = datetime.timedelta(days=31),
         tablesample: Optional[float] = None,
+        dry_run: bool = False,
         db=None,
         cur=None,
     ) -> List[ListedOrigin]:
@@ -540,23 +541,25 @@ class SchedulerBackend:
                 ]
             )
 
-            # fmt: off
+            if not dry_run:
+                # fmt: off
 
-            # This policy requires updating the global queue position for this
-            # visit type
-            common_table_expressions.append(("update_queue_position", """
-                INSERT INTO
-                  visit_scheduler_queue_position(visit_type, position)
-                SELECT
-                  visit_type, COALESCE(MAX(next_visit_queue_position), 0)
-                FROM selected_origins
-                GROUP BY visit_type
-                ON CONFLICT(visit_type) DO UPDATE
-                  SET position=GREATEST(
-                    visit_scheduler_queue_position.position, EXCLUDED.position
-                  )
-            """))
-            # fmt: on
+                # This policy requires updating the global queue position for this
+                # visit type
+                common_table_expressions.append(("update_queue_position", """
+                    INSERT INTO
+                      visit_scheduler_queue_position(visit_type, position)
+                    SELECT
+                      visit_type, COALESCE(MAX(next_visit_queue_position), 0)
+                    FROM selected_origins
+                    GROUP BY visit_type
+                    ON CONFLICT(visit_type) DO UPDATE
+                      SET position=GREATEST(
+                        visit_scheduler_queue_position.position, EXCLUDED.position
+                      )
+                """))
+                # fmt: on
+
         elif policy == "first_visits_after_listing":
             assert lister_uuid is not None or (
                 lister_name is not None and lister_instance_name is not None
@@ -628,23 +631,24 @@ class SchedulerBackend:
         """))
         # fmt: on
 
-        # fmt: off
-        common_table_expressions.append(("update_stats", """
-            INSERT INTO
-              origin_visit_stats (url, visit_type, last_scheduled)
-            SELECT
-              url, visit_type, %s
-            FROM
-              deduplicated_selected_origins
-            ON CONFLICT (url, visit_type) DO UPDATE
-              SET last_scheduled = GREATEST(
-                origin_visit_stats.last_scheduled,
-                EXCLUDED.last_scheduled
-              )
-        """))
-        # fmt: on
+        if not dry_run:
+            # fmt: off
+            common_table_expressions.append(("update_stats", """
+                INSERT INTO
+                  origin_visit_stats (url, visit_type, last_scheduled)
+                SELECT
+                  url, visit_type, %s
+                FROM
+                  deduplicated_selected_origins
+                ON CONFLICT (url, visit_type) DO UPDATE
+                  SET last_scheduled = GREATEST(
+                    origin_visit_stats.last_scheduled,
+                    EXCLUDED.last_scheduled
+                  )
+            """))
+            # fmt: on
 
-        query_args.append(timestamp)
+            query_args.append(timestamp)
 
         formatted_ctes = ",\n".join(
             f"{name} AS (\n{cte}\n)" for name, cte in common_table_expressions
