@@ -506,6 +506,14 @@ class SchedulerBackend:
 
         if policy == "oldest_scheduled_first":
             order_by = ["origin_visit_stats.last_scheduled NULLS FIRST"]
+        elif policy == "stop_after_success":
+            where_clauses.append(
+                "origin_visit_stats.last_visit_status is distinct from 'successful'"
+            )
+            order_by = [
+                "listed_origins.last_update NULLS LAST",
+                "listed_origins.first_seen",
+            ]
         elif policy == "never_visited_oldest_update_first":
             # never visited origins have a NULL last_snapshot
             where_clauses.append("origin_visit_stats.last_snapshot IS NULL")

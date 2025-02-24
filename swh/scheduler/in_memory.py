@@ -23,7 +23,13 @@ from swh.scheduler.utils import utcnow
 
 from .exc import StaleData, UnknownPolicy
 from .interface import ListedOriginPageToken, PaginatedListedOriginList
-from .model import ListedOrigin, Lister, OriginVisitStats, SchedulerMetrics
+from .model import (
+    LastVisitStatus,
+    ListedOrigin,
+    Lister,
+    OriginVisitStats,
+    SchedulerMetrics,
+)
 
 logger = logging.getLogger(__name__)
 epoch = datetime.datetime.fromtimestamp(0, datetime.timezone.utc)
@@ -291,6 +297,24 @@ class InMemoryScheduler:
                 and e[1].last_scheduled.timestamp()
                 or -1
             )
+        elif policy == "stop_after_success":
+            origins_stats = [
+                (o, s)
+                for (o, s) in origins_stats
+                if (s is None or s.last_visit_status != LastVisitStatus.successful)
+            ]
+
+            def sort_key(origin_stats):
+                (origin, _stats) = origin_stats
+                return (
+                    # the next two statements implement `listed_origins.last_update NULLS LAST`
+                    0 if origin.last_update else 1,
+                    origin.last_update,
+                    # then order by listed_origins.first_seen
+                    origin.first_seen,
+                )
+
+            origins_stats.sort(key=sort_key)
         elif policy == "never_visited_oldest_update_first":
             # never visited origins have a NULL last_snapshot
             origins_stats = [
