@@ -194,7 +194,7 @@ capable of executing this new task-type instances.
 
 Celery workers for swh-scheduler based tasks should be started using the Celery
 app in ``swh.scheduler.celery_config``. This later, among other things, provides
-a loading mechanism for task types based on pkg_resources declared plugins under
+a loading mechanism for task types based on ``importlib.metadata``` declared plugins under
 the ``[swh.workers]`` entry point.
 
 TODO: add a fully working example of a dumb task.

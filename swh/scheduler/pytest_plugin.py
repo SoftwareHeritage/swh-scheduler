@@ -5,10 +5,10 @@
 
 from datetime import timedelta
 from functools import partial
+from importlib.metadata import entry_points
 
 from celery.contrib.testing import worker
 from celery.contrib.testing.app import TestApp, setup_default_app
-import pkg_resources
 import pytest
 from pytest_postgresql import factories
 
@@ -100,7 +100,7 @@ def swh_scheduler_celery_includes():
     startup."""
     task_modules = ["swh.scheduler.tests.tasks"]
 
-    for entrypoint in pkg_resources.iter_entry_points("swh.workers"):
+    for entrypoint in entry_points().select(group="swh.workers"):
         task_modules.extend(entrypoint.load()().get("task_modules", []))
     return task_modules
 

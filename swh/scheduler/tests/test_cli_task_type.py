@@ -1,4 +1,4 @@
-# Copyright (C) 2023  The Software Heritage developers
+# Copyright (C) 2023-2025  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -13,8 +13,8 @@ from swh.scheduler import get_scheduler
 from swh.scheduler.cli import cli
 
 FAKE_MODULE_ENTRY_POINTS = {
-    "lister.foo=swh.scheduler.tests.fixtures.lister.foo:register",
-    "loader.bar=swh.scheduler.tests.fixtures.loader.bar:register",
+    ("lister.foo", "swh.scheduler.tests.fixtures.lister.foo:register"),
+    ("loader.bar", "swh.scheduler.tests.fixtures.loader.bar:register"),
 }
 
 
@@ -26,11 +26,11 @@ def cli_runner():
 @pytest.fixture(autouse=True)
 def mock_plugin_worker_descriptions(mocker):
     """Register fake lister and loader for testing celery tasks registration."""
-    from pkg_resources import Distribution, EntryPoint
+    from importlib.metadata import EntryPoint
 
-    d = Distribution()
     entry_points = [
-        EntryPoint.parse(entry, dist=d) for entry in FAKE_MODULE_ENTRY_POINTS
+        EntryPoint(name=ep_name, value=ep_value, group="swh.workers")
+        for ep_name, ep_value in FAKE_MODULE_ENTRY_POINTS
     ]
     mocker.patch(
         "swh.scheduler.cli.task_type._plugin_worker_descriptions",

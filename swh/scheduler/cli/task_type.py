@@ -7,13 +7,13 @@ from __future__ import annotations
 
 from datetime import timedelta
 from importlib import import_module
+from importlib.metadata import entry_points
 import logging
 from typing import TYPE_CHECKING, Any, Dict
 
 # WARNING: do not import unnecessary things here to keep cli startup time under
 # control
 import click
-from pkg_resources import iter_entry_points
 
 from swh.scheduler.model import TaskType
 
@@ -44,7 +44,7 @@ DEFAULT_TASK_TYPE_PARAMETERS = {
 def _plugin_worker_descriptions():
     return {
         entry_point.name: entry_point
-        for entry_point in iter_entry_points("swh.workers")
+        for entry_point in entry_points().select(group="swh.workers")
     }
 
 

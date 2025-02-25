@@ -4,6 +4,7 @@
 # See top-level LICENSE file for more information
 
 import functools
+from importlib.metadata import entry_points
 import logging
 import os
 import sys
@@ -17,7 +18,6 @@ from celery.signals import celeryd_after_setup, setup_logging, task_prerun, work
 from celery.utils.log import ColorFormatter  # type: ignore[attr-defined]
 from celery.worker.control import Panel
 from kombu import Exchange, Queue
-import pkg_resources
 import requests
 
 from swh.core.config import load_named_config, merge_configs
@@ -318,7 +318,7 @@ if not CONFIG:
 
 CONFIG.setdefault("task_modules", [])
 # load tasks modules declared as plugin entry points
-for entrypoint in pkg_resources.iter_entry_points("swh.workers"):
+for entrypoint in entry_points().select(group="swh.workers"):
     worker_registrer_fn = entrypoint.load()
     # The registry function is expected to return a dict which the 'tasks' key
     # is a string (or a list of strings) with the name of the python module in
