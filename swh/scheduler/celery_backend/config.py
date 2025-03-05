@@ -15,7 +15,7 @@ import urllib.parse
 
 from celery import Celery
 from celery.signals import celeryd_after_setup, setup_logging, task_prerun, worker_init
-from celery.utils.log import ColorFormatter  # type: ignore[attr-defined]
+from celery.utils.log import ColorFormatter
 from celery.worker.control import Panel
 from kombu import Exchange, Queue
 import requests
