@@ -31,6 +31,39 @@ logger = logging.getLogger(__name__)
 MAX_NUM_TASKS = 10000
 
 
+def write_to_backends(
+    backend: SchedulerInterface, app, backend_tasks: List, celery_tasks: List
+):
+    """Utility function to unify the writing to rabbitmq and the scheduler backends in a
+    consistent way (towards transaction-like).
+
+    In the current state of affairs, the messages are written in postgresql first and
+    then sent to rabbitmq.
+
+    That could pose an issue in case we can write to postgresql and then fail to write
+    in the rabbitmq backend. As those tasks are then marked as "next_run_scheduled",
+    they won't be scheduled again. And as those messages never hit rabbitmq in the first
+    place, that leaves records in a pending state in the postgresql backend (history
+    log).
+
+    It's not an issue if we cannot write to postgresql, because then this code raises
+    and we do not send the messages to rabbitmq.
+
+    """
+    backend.mass_schedule_task_runs(backend_tasks)
+    logger.debug("Written %s celery tasks", len(backend_tasks))
+    for with_priority, backend_name, backend_id, args, kwargs in celery_tasks:
+        kw = dict(
+            task_id=backend_id,
+            args=args,
+            kwargs=kwargs,
+        )
+        if with_priority:
+            kw["queue"] = f"save_code_now:{backend_name}"
+        app.send_task(backend_name, **kw)
+    logger.debug("Sent %s celery tasks", len(backend_tasks))
+
+
 def run_ready_tasks(
     backend: SchedulerInterface,
     app,
@@ -150,19 +183,7 @@ def run_ready_tasks(
             )
 
             backend_tasks.append(data)
-        logger.debug("Sent %s celery tasks", len(backend_tasks))
-
-        backend.mass_schedule_task_runs(backend_tasks)
-        for with_priority, backend_name, backend_id, args, kwargs in celery_tasks:
-            kw = dict(
-                task_id=backend_id,
-                args=args,
-                kwargs=kwargs,
-            )
-            if with_priority:
-                kw["queue"] = f"save_code_now:{backend_name}"
-            app.send_task(backend_name, **kw)
-
+        write_to_backends(backend, app, backend_tasks, celery_tasks)
         all_backend_tasks.extend(backend_tasks)
 
 
