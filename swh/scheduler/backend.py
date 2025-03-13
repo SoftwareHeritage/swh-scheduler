@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2024  The Software Heritage developers
+# Copyright (C) 2015-2025  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -971,9 +971,14 @@ class SchedulerBackend:
 
     @db_transaction()
     def mass_schedule_task_runs(
-        self, task_runs: List[TaskRun], db=None, cur=None
+        self,
+        task_runs: List[TaskRun],
+        db=None,
+        cur=None,
     ) -> None:
         """Schedule a bunch of task runs.
+
+        If update_task_status is True, this also updates the associated tasks;x
 
         Args:
             task_runs: a list of TaskRun objects created at least with the following parameters:
@@ -982,6 +987,11 @@ class SchedulerBackend:
                 - backend_id
                 - scheduled
         """
+        # Mark the associated task as next_run_scheduled in the same transaction
+        query = """update task set status='next_run_scheduled'
+                   where id in %s"""
+        cur.execute(query, (tuple(tr.task for tr in task_runs),))
+
         cur.execute("select swh_scheduler_mktemp_task_run()")
         db.copy_to(
             (task_run.to_dict() for task_run in task_runs),

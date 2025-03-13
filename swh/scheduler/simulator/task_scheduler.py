@@ -1,4 +1,4 @@
-# Copyright (C) 2021-2024  The Software Heritage developers
+# Copyright (C) 2021-2025  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -30,7 +30,7 @@ def scheduler_runner_process(
             remaining = queue.slots_remaining()
             if remaining < min_batch_size:
                 continue
-            next_tasks = env.scheduler.grab_ready_tasks(
+            next_tasks = env.scheduler.peek_ready_tasks(
                 f"load-{visit_type}", num_tasks=remaining, timestamp=env.time
             )
             logger.debug(
@@ -45,6 +45,11 @@ def scheduler_runner_process(
                 for task in next_tasks
             ]
 
+            # Send to the queuing messaging system first
+            for sim_task in sim_tasks:
+                yield queue.put(sim_task)
+
+            # Then mark the sent tasks as scheduled
             env.scheduler.mass_schedule_task_runs(
                 [
                     TaskRun(
@@ -55,9 +60,6 @@ def scheduler_runner_process(
                     for task, sim_task in zip(next_tasks, sim_tasks)
                 ]
             )
-
-            for sim_task in sim_tasks:
-                yield queue.put(sim_task)
 
         yield env.timeout(10.0)
 

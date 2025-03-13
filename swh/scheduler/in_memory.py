@@ -1,4 +1,4 @@
-# Copyright (C) 2024  The Software Heritage developers
+# Copyright (C) 2024-2025  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -608,12 +608,15 @@ class InMemoryScheduler:
         self._task_runs.append(tr)
         return tr
 
-    def mass_schedule_task_runs(
-        self,
-        task_runs: List[TaskRun],
-    ) -> None:
+    def mass_schedule_task_runs(self, task_runs: List[TaskRun]) -> None:
         task_runs = [tr.evolve(status="scheduled") for tr in task_runs]
         self._task_runs.extend(task_runs)
+        # Update the associated tasks' status to next_run_scheduled
+        for tr in task_runs:
+            task_id = tr.task
+            for i, task in enumerate(self._tasks):
+                if task.id == task_id:
+                    self._tasks[i] = task.evolve(status="next_run_scheduled")
 
     def start_task_run(
         self,

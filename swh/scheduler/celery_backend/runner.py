@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2024 The Software Heritage developers
+# Copyright (C) 2015-2025 The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -130,7 +130,7 @@ def run_ready_tasks(
             if with_priority:
                 # grab max_queue_length (or 10) potential tasks with any priority for
                 # the same type (limit the result to avoid too long running queries)
-                grabbed_priority_tasks = backend.grab_ready_priority_tasks(
+                grabbed_priority_tasks = backend.peek_ready_priority_tasks(
                     task_type_name, num_tasks=max_queue_length or 10
                 )
                 if grabbed_priority_tasks:
@@ -151,7 +151,7 @@ def run_ready_tasks(
                 # full), to help postgresql use properly indexed queries.
                 if num_tasks > min(MAX_NUM_TASKS, max_queue_length) // 5:
                     # Only grab num_tasks tasks with no priority
-                    grabbed_tasks = backend.grab_ready_tasks(
+                    grabbed_tasks = backend.peek_ready_tasks(
                         task_type_name, num_tasks=num_tasks
                     )
                     if grabbed_tasks:
