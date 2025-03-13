@@ -834,7 +834,7 @@ class SchedulerBackend:
                 %s, %s, %s :: bigint)""",
             (task_type, timestamp, num_tasks),
         )
-        logger.debug("PEEK %s => %s" % (task_type, cur.rowcount))
+        logger.debug("PEEK %s => %s", task_type, cur.rowcount)
         return [Task(**mutate_task_dict(row)) for row in cur.fetchall()]
 
     @db_transaction()
@@ -865,7 +865,7 @@ class SchedulerBackend:
                  %s, %s, %s :: bigint)""",
             (task_type, timestamp, num_tasks),
         )
-        logger.debug("GRAB %s => %s" % (task_type, cur.rowcount))
+        logger.debug("GRAB %s => %s", task_type, cur.rowcount)
         return [Task(**mutate_task_dict(row)) for row in cur.fetchall()]
 
     @db_transaction()
@@ -1029,7 +1029,7 @@ class SchedulerBackend:
             if row["status"] is not None:
                 return TaskRun(**row)
 
-        logger.debug(
+        logger.warning(
             "Failed to mark task run %s as started",
             backend_id,
         )
@@ -1075,7 +1075,7 @@ class SchedulerBackend:
             if row["status"] is not None:
                 return TaskRun(**row)
 
-        logger.debug(
+        logger.warning(
             "Failed to mark task run %s as ended",
             backend_id,
         )
