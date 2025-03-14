@@ -302,7 +302,9 @@ def visit_scheduler_thread(
                 if msg is TERMINATE:
                     return
                 else:
-                    logger.warn("Received unexpected message %s in command queue", msg)
+                    logger.warning(
+                        "Received unexpected message %s in command queue", msg
+                    )
 
             # Refresh the task_type object from the database for new parameters, e.g.
             # the max queue length
@@ -369,7 +371,7 @@ def terminate_visit_scheduler_threads(threads: VisitSchedulerThreads) -> List[st
                 del threads[visit_type]
 
     if threads:
-        logger.warn(
+        logger.warning(
             "Could not reap the following threads after 10 attempts: %s",
             ", ".join(sorted(threads)),
         )

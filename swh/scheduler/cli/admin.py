@@ -206,7 +206,7 @@ def schedule_recurrent(ctx, visit_types: List[str]):
             dead_thread.join(timeout=1)
 
             if dead_thread.is_alive():
-                logger.warn(
+                logger.warning(
                     "The thread for %s is still alive after sending an exception?! "
                     "Respawning anyway.",
                     visit_type,
