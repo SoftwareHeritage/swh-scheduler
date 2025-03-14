@@ -22,8 +22,11 @@ def scheduler_runner_process(
     task_queues: Dict[str, Queue],
     min_batch_size: int,
 ) -> Iterator[Event]:
-    """Scheduler runner. Grabs next visits from the database according to the
-    scheduling policy, and fills the task_queues accordingly."""
+    """Simulate a scheduler runner process. This schedules tasks from the database
+    according to the scheduling policy, that means filling the task_queues first, then
+    update their status in the scheduler backend.
+
+    """
 
     while True:
         for visit_type, queue in task_queues.items():

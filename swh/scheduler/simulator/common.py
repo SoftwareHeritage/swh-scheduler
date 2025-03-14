@@ -77,8 +77,24 @@ class SimulationReport:
             [runtime for runtime in runtimes if runtime <= self.DURATION_THRESHOLD]
         )
 
+    def _convert_timestamps(self, datetimes):
+        timestamps = []
+        convert_timestamps = False
+        for dt in datetimes:
+            if isinstance(dt, datetime):
+                convert_timestamps = True
+                timestamps.append(float(dt.timestamp()))
+
+        # If no conversion is needed, keep the initial timestamps
+        if not convert_timestamps:
+            timestamps = datetimes
+
+        return timestamps
+
     def metrics_plot(self) -> str:
-        timestamps, metric_lists = zip(*self.scheduler_metrics)
+        datetimes, metric_lists = zip(*self.scheduler_metrics)
+        timestamps = self._convert_timestamps(datetimes)
+
         known = [sum(m.origins_known for m in metrics) for metrics in metric_lists]
         never_visited = [
             sum(m.origins_never_visited for m in metrics) for metrics in metric_lists
@@ -87,10 +103,13 @@ class SimulationReport:
         figure = plotille.Figure()
         figure.x_label = "simulated time"
         figure.y_label = "origins"
+
         figure.scatter(timestamps, known, label="Known origins")
         figure.scatter(timestamps, never_visited, label="Origins never visited")
 
-        visit_timestamps, n_visits = zip(*self.visit_metrics)
+        visit_datetimes, n_visits = zip(*self.visit_metrics)
+        visit_timestamps = self._convert_timestamps(visit_datetimes)
+
         figure.scatter(visit_timestamps, n_visits, label="Visits over time")
 
         return figure.show(legend=True)
