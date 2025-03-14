@@ -41,6 +41,15 @@ if TYPE_CHECKING:
     ),
 )
 @click.option(
+    "--task-type-pattern",
+    "task_type_patterns",
+    multiple=True,
+    default=[],
+    help=(
+        "Task type patterns allowed to be scheduled. Empty by default so no filtering."
+    ),
+)
+@click.option(
     "--with-priority/--without-priority",
     is_flag=True,
     default=False,
@@ -50,17 +59,23 @@ if TYPE_CHECKING:
     ),
 )
 @click.pass_context
-def runner(ctx, period, task_type_names, with_priority):
-    """Starts a swh-scheduler runner service.
+def runner(ctx, period, task_type_names, task_type_patterns, with_priority):
+    """Starts a swh-scheduler runner instance.
 
-    This process is responsible for checking for ready-to-run tasks and
-    schedule them.
+    This process is responsible for scheduling ready-to-run tasks.
+
+    It's possible to provide the task types allowed to be scheduled. It's either by
+    specifying their names or providing task type patterns or both. In which case, only
+    the allowed task types will be scheduled. If no task type names or patterns are
+    specified, all registered scheduler task types will be scheduled (if any tasks
+    matching the task types is ready).
 
     Expected configuration:
 
     \b
     * :ref:`cli-config-celery`
     * :ref:`cli-config-scheduler`
+
     """
     from swh.scheduler.celery_backend.config import build_app
     from swh.scheduler.celery_backend.runner import run_ready_tasks
@@ -83,7 +98,11 @@ def runner(ctx, period, task_type_names, with_priority):
         while True:
             logger.debug("Run ready tasks")
             try:
-                ntasks = len(run_ready_tasks(scheduler, app, task_types, with_priority))
+                ntasks = len(
+                    run_ready_tasks(
+                        scheduler, app, task_types, task_type_patterns, with_priority
+                    )
+                )
                 if ntasks:
                     logger.info("Scheduled %s tasks", ntasks)
             except Exception:

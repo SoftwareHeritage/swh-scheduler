@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2024 The Software Heritage developers
+# Copyright (C) 2019-2025 The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -111,8 +111,12 @@ def test_scheduler_fixture(
         AsyncResult(id=task.backend_id).get()
 
 
+@pytest.mark.parametrize("prefix_task_types", ([], ["swh-"], ["wrong-task-type-"]))
 def test_run_ready_task_standard(
-    swh_scheduler_celery_app, swh_scheduler_celery_worker, swh_scheduler
+    swh_scheduler_celery_app,
+    swh_scheduler_celery_worker,
+    swh_scheduler,
+    prefix_task_types,
 ):
     """Ensure scheduler runner schedules tasks ready for scheduling"""
     task_type_name, backend_name = "swh-test-add", TASK_ADD
@@ -138,20 +142,27 @@ def test_run_ready_task_standard(
         assert task.priority is None
         task_ids.add(task.id)
 
-    backend_tasks = run_ready_tasks(swh_scheduler, swh_scheduler_celery_app)
-    assert len(backend_tasks) == len(tasks)
+    # Giving a task type pattern not matching the current task_type_name won't schedule
+    # any tasks.
+    backend_tasks = run_ready_tasks(
+        swh_scheduler, swh_scheduler_celery_app, task_type_patterns=prefix_task_types
+    )
+    if prefix_task_types == prefix_task_types == ["wrong-task-type-"]:
+        assert len(backend_tasks) == 0
+    else:
+        assert len(backend_tasks) == len(tasks)
 
-    scheduled_tasks = swh_scheduler.search_tasks(task_type=task_type_name)
-    assert len(scheduled_tasks) == len(tasks)
-    for task in scheduled_tasks:
-        assert task.status == "next_run_scheduled"
-        assert task.id in task_ids
+        scheduled_tasks = swh_scheduler.search_tasks(task_type=task_type_name)
+        assert len(scheduled_tasks) == len(tasks)
+        for task in scheduled_tasks:
+            assert task.status == "next_run_scheduled"
+            assert task.id in task_ids
 
-    # Ensure each task is indeed scheduled to the queue backend
-    for i, (_, args) in enumerate(task_inputs):
-        task = backend_tasks[i]
-        value = AsyncResult(id=task.backend_id).get()
-        assert value == sum(args)
+        # Ensure each task is indeed scheduled to the queue backend
+        for i, (_, args) in enumerate(task_inputs):
+            task = backend_tasks[i]
+            value = AsyncResult(id=task.backend_id).get()
+            assert value == sum(args)
 
 
 def test_run_ready_task_with_priority(

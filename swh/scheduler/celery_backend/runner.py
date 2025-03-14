@@ -77,6 +77,7 @@ def run_ready_tasks(
     backend: SchedulerInterface,
     app,
     task_types: List[TaskType] = [],
+    task_type_patterns: List[str] = [],
     with_priority: bool = False,
 ) -> List[TaskRun]:
     """Schedule tasks ready to be scheduled.
@@ -91,35 +92,41 @@ def run_ready_tasks(
     Args:
         backend: scheduler backend to interact with (read/update tasks)
         app (App): Celery application to send tasks to
-        task_types: The list of task types dict to iterate over. By default, empty.
-          When empty, the full list of task types referenced in the scheduler will be
-          used.
+        task_types: The list of task types dict to iterate over. When empty (the
+          default), the full list of task types referenced in the scheduler backend will
+          be used.
+        task_type_patterns: List of task type patterns allowed to be scheduled. If task
+          type does not match, they are skipped from the scheduling. When empty (the
+          default), there is no filtering on the task types.
         with_priority: If True, only tasks with priority set will be fetched and
           scheduled. By default, False.
 
     Returns:
-        A list of dictionaries::
-
-          {
-            'task': the scheduler's task id,
-            'backend_id': Celery's task id,
-            'scheduler': utcnow()
-          }
-
-        The result can be used to block-wait for the tasks' results::
-
-          backend_tasks = run_ready_tasks(self.scheduler, app)
-          for task in backend_tasks:
-              AsyncResult(id=task['backend_id']).get()
+        A list of TaskRun scheduled
 
     """
     all_backend_tasks: List[TaskRun] = []
     while True:
+        task_types_to_schedule = []
+        # Initialize task types from scheduler backend when none is provided
         if not task_types:
             task_types = backend.get_task_types()
+
+        # Let's filter task types by patterns if any is provided
+        if task_type_patterns:
+            for task_type in task_types:
+                task_type_name = task_type.type
+                for pattern in task_type_patterns:
+                    if task_type_name.startswith(pattern):
+                        task_types_to_schedule.append(task_type)
+        else:
+            # Otherwise, no filter, let's keep all task types
+            task_types_to_schedule = task_types
+
+        # Finally, let's schedule the tasks matching the task types that are ready
         task_types_d = {}
         pending_tasks = []
-        for task_type in task_types:
+        for task_type in task_types_to_schedule:
             task_type_name = task_type.type
             task_types_d[task_type_name] = task_type
             max_queue_length = task_type.max_queue_length
