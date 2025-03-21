@@ -33,9 +33,9 @@ DEFAULT_TASK_TYPE_PARAMETERS = {
         backoff_factor=1.0,
     ),
     "*": dict(  # value if not suffix matches
-        default_interval=timedelta(days=1),
-        min_interval=timedelta(days=1),
-        max_interval=timedelta(days=1),
+        default_interval=timedelta(days=2),
+        min_interval=timedelta(days=2),
+        max_interval=timedelta(days=2),
         backoff_factor=1.0,
     ),
 }
