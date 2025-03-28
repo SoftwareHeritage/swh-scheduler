@@ -1,0 +1,6 @@
+# Requirements for swh.scheduler.pytest_plugin
+swh.core[db]
+celery
+
+pytest >= 8.1
+pytest-postgresql > 5
