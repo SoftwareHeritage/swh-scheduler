@@ -40,7 +40,7 @@ def test_tasks_from_template_priority():
         "low": 2,
     }
 
-    next_run = datetime.datetime.utcnow()
+    next_run = datetime.datetime.now(tz=datetime.timezone.utc)
     tasks = tasks_from_template(
         template,
         next_run,

@@ -3,7 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from celery import current_app
 import celery.app.task
@@ -13,7 +13,7 @@ from swh.core.statsd import Statsd
 
 
 def ts():
-    return int(datetime.utcnow().timestamp())
+    return int(datetime.now(tz=timezone.utc).timestamp())
 
 
 class SWHTask(celery.app.task.Task):
