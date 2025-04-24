@@ -104,7 +104,12 @@ def process_event(event, scheduler_backend):
         )
 
     elif event_type == "task-failed":
-        scheduler_backend.end_task_run(uuid, timestamp=utcnow(), status="failed")
+        metadata = {}
+        if "traceback" in event:
+            metadata["error"] = event["traceback"].rstrip().split("\n")[-1]
+        scheduler_backend.end_task_run(
+            uuid, timestamp=utcnow(), status="failed", metadata=metadata
+        )
 
 
 if __name__ == "__main__":
