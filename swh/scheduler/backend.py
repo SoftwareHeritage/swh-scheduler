@@ -1008,8 +1008,6 @@ class SchedulerBackend:
     ) -> None:
         """Schedule a bunch of task runs.
 
-        If update_task_status is True, this also updates the associated tasks;x
-
         Args:
             task_runs: a list of TaskRun objects created at least with the following parameters:
 
@@ -1017,11 +1015,6 @@ class SchedulerBackend:
                 - backend_id
                 - scheduled
         """
-        # Mark the associated task as next_run_scheduled in the same transaction
-        query = """update task set status='next_run_scheduled'
-                   where id = ANY(%s)"""
-        cur.execute(query, ([tr.task for tr in task_runs],))
-
         cur.execute("select swh_scheduler_mktemp_task_run()")
         db.copy_to(
             (task_run.to_dict() for task_run in task_runs),

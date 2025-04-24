@@ -12,8 +12,10 @@ in charge of finalizing the task results.
 
 """
 
+from __future__ import annotations
+
 import logging
-from typing import Dict, List, Tuple
+from typing import TYPE_CHECKING, Dict, List, Tuple
 
 from deprecated import deprecated
 from kombu.utils.uuid import uuid
@@ -21,9 +23,13 @@ from kombu.utils.uuid import uuid
 from swh.core.statsd import statsd
 from swh.scheduler import get_scheduler
 from swh.scheduler.celery_backend.config import get_available_slots
-from swh.scheduler.interface import SchedulerInterface
 from swh.scheduler.model import TaskRun, TaskType
 from swh.scheduler.utils import utcnow
+
+if TYPE_CHECKING:
+    from celery import Celery
+
+    from swh.scheduler.interface import SchedulerInterface
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +38,10 @@ MAX_NUM_TASKS = 10000
 
 
 def write_to_backends(
-    backend: SchedulerInterface, app, backend_tasks: List, celery_tasks: List
+    backend: SchedulerInterface,
+    app: Celery,
+    backend_tasks: List[TaskRun],
+    celery_tasks: List[Tuple[bool, str, str, List, Dict]],
 ):
     """Utility function to unify the writing to rabbitmq and the scheduler backends in a
     consistent way (towards atomicity).
@@ -59,23 +68,27 @@ def write_to_backends(
     went fine). Edge cases scenario like down site will behave as before.
 
     """
+    backend.mass_schedule_task_runs(backend_tasks)
     for with_priority, backend_name, backend_id, args, kwargs in celery_tasks:
-        kw = dict(
-            task_id=backend_id,
+        queue = f"save_code_now:{backend_name}" if with_priority else None
+        app.send_task(
+            backend_name,
             args=args,
             kwargs=kwargs,
+            task_id=backend_id,
+            queue=queue,
         )
-        if with_priority:
-            kw["queue"] = f"save_code_now:{backend_name}"
-        app.send_task(backend_name, **kw)
     logger.debug("Sent %s celery tasks", len(backend_tasks))
-    backend.mass_schedule_task_runs(backend_tasks)
+    backend.set_status_tasks(
+        task_ids=[tr.task for tr in backend_tasks if tr.task is not None],
+        status="next_run_scheduled",
+    )
     logger.debug("Written %s celery tasks", len(backend_tasks))
 
 
 def run_ready_tasks(
     backend: SchedulerInterface,
-    app,
+    app: Celery,
     task_types: List[TaskType] = [],
     task_type_patterns: List[str] = [],
     with_priority: bool = False,
