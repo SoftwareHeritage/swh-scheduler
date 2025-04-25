@@ -29,9 +29,10 @@ pytest = {file = ["requirements-pytest.txt"]}
 testing = {file = [
     "requirements-test.txt",
     "requirements-pytest.txt",
-    "requirements-journal.txt",
     "requirements-simulator.txt",
     ]}
+testing-journal = {file = ["requirements-test-journal.txt"]}
+
 
 [project.entry-points."swh.cli.subcommands"]
 "swh.scheduler" = "swh.scheduler.cli"

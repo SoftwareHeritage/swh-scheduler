@@ -7,11 +7,9 @@ import os
 from typing import Dict, List
 
 from click.testing import CliRunner, Result
-from confluent_kafka import Producer
 import pytest
 import yaml
 
-from swh.journal.serializers import value_to_kafka
 from swh.scheduler import get_scheduler
 from swh.scheduler.cli import cli
 from swh.scheduler.tests.test_journal_client import VISIT_STATUSES_1
@@ -51,6 +49,7 @@ def invoke(args: List[str], config_path: str) -> Result:
     return runner.invoke(cli, ["-C" + config_path] + args)
 
 
+@pytest.mark.requires_journal
 def test_cli_journal_client_origin_visit_status_misconfiguration_no_scheduler(
     swh_scheduler_cfg, tmp_path
 ):
@@ -69,6 +68,7 @@ def test_cli_journal_client_origin_visit_status_misconfiguration_no_scheduler(
     assert result.exit_code != 0
 
 
+@pytest.mark.requires_journal
 def test_cli_journal_client_origin_visit_status_misconfiguration_missing_journal_conf(
     swh_scheduler_cfg, tmp_path
 ):
@@ -88,10 +88,15 @@ def test_cli_journal_client_origin_visit_status_misconfiguration_missing_journal
     assert result.exit_code != 0
 
 
+@pytest.mark.requires_journal
 def test_cli_journal_client_origin_visit_status(
     swh_scheduler_cfg,
     swh_scheduler_cfg_path,
 ):
+    from confluent_kafka import Producer
+
+    from swh.journal.serializers import value_to_kafka
+
     kafka_server = swh_scheduler_cfg["journal"]["brokers"][0]
     swh_scheduler = get_scheduler(**swh_scheduler_cfg["scheduler"])
     producer = Producer(

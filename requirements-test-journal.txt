@@ -1,0 +1,1 @@
+swh.journal[pytest] >= 2.0.0
