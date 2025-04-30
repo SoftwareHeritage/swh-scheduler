@@ -844,15 +844,15 @@ class InMemoryScheduler:
         if lister_id:
             origins = [lo for lo in origins if lo.lister_id == lister_id]
 
-        rows = []
+        rows_by_listed_and_visit_type = {}
         keys = []
         for lo in origins:
             keys.append((lo.lister_id, lo.visit_type))
             ovs = self._origin_visit_stats.get((lo.url, lo.visit_type), None)
-            rows.append(
+            rows_by_listed_and_visit_type.setdefault(
+                (lo.lister_id, lo.visit_type), []
+            ).append(
                 (
-                    lo.lister_id,
-                    lo.visit_type,
                     lo.url,
                     lo.enabled,
                     ovs and ovs.last_snapshot,
@@ -862,9 +862,7 @@ class InMemoryScheduler:
             )
         metrics: Dict[Tuple[UUID, str], SchedulerMetrics] = {}
         for lister_id, visit_type in keys:
-            _rows = [
-                row[2:] for row in rows if row[0] == lister_id and row[1] == visit_type
-            ]
+            _rows = rows_by_listed_and_visit_type.get((lister_id, visit_type), [])
             origins_known = len(_rows)
             origins_enabled = len([row for row in _rows if row[1]])
             origins_never_visited = len(
