@@ -844,8 +844,8 @@ class InMemoryScheduler:
         if lister_id:
             origins = [lo for lo in origins if lo.lister_id == lister_id]
 
-        rows_by_listed_and_visit_type = {}
-        keys = []
+        rows_by_listed_and_visit_type: Dict[Tuple[UUID, str], List] = {}
+        keys: List[Tuple[UUID, str]] = []
         for lo in origins:
             keys.append((lo.lister_id, lo.visit_type))
             ovs = self._origin_visit_stats.get((lo.url, lo.visit_type), None)
