@@ -52,7 +52,7 @@ def listed_origins_by_type(
             return f"https://{visit_type}.example.com/src_{i:04d}"
         return None
 
-    count_per_type = 1000
+    count_per_type = 100
     assert stored_lister.id
     return {
         visit_type: [
