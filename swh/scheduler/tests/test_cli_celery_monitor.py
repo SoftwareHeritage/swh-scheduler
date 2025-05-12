@@ -12,7 +12,7 @@ from swh.scheduler.cli import cli
 
 
 def invoke(*args, catch_exceptions=False):
-    result = CliRunner(mix_stderr=False).invoke(
+    result = CliRunner().invoke(
         cli,
         ["celery-monitor", *args],
         catch_exceptions=catch_exceptions,
@@ -26,8 +26,8 @@ def test_celery_monitor():
 
     result = invoke()
 
-    assert "Commands:" in result.stdout
-    assert "Options:" in result.stdout
+    assert "Commands:" in result.output
+    assert "Options:" in result.output
 
 
 def test_celery_monitor_ping(
