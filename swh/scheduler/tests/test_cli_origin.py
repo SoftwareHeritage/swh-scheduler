@@ -24,9 +24,10 @@ def invoke(
 def test_cli_origin(swh_scheduler):
     """Check that swh scheduler origin returns its help text"""
 
-    result = invoke(swh_scheduler)
+    result = invoke(swh_scheduler, catch_exceptions=True)
 
-    assert "Commands:" in result.stdout
+    assert "Commands:" in result.stderr
+    assert result.exit_code == 2
 
 
 def test_format_origins_basic(listed_origins):
