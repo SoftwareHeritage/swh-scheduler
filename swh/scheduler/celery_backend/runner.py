@@ -82,6 +82,9 @@ def write_to_backends(
     backend.set_status_tasks(
         task_ids=[tr.task for tr in backend_tasks if tr.task is not None],
         status="next_run_scheduled",
+        # ensure to not update task status if its task run completed prior
+        # that call to set_status_tasks
+        except_completed_tasks=True,
     )
     logger.debug("Written %s celery tasks", len(backend_tasks))
 

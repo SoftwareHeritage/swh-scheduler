@@ -2,6 +2,7 @@
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
+
 import datetime
 import json
 import logging
@@ -440,10 +441,16 @@ class InMemoryScheduler:
         task_ids: List[int],
         status: TaskStatus = "disabled",
         next_run: Optional[datetime.datetime] = None,
+        except_completed_tasks: bool = False,
     ) -> None:
         if not task_ids:
             return
         tasks = [t for t in self._tasks if t.id in task_ids]
+        if except_completed_tasks:
+            now = utcnow()
+            tasks = [
+                t for t in self._tasks if t.status != "completed" and t.next_run < now
+            ]
 
         updated_tasks = [t.evolve(status=status) for t in tasks]
         if next_run:
@@ -674,6 +681,73 @@ class InMemoryScheduler:
         ]
         self._task_runs = [tr for tr in self._task_runs if tr not in task_runs]
         self._task_runs.extend(updated_task_runs)
+
+        # update task status as done by the update_task_on_task_end trigger from
+        # the postgresql backend
+        tasks = self.get_tasks([task_run.task for task_run in updated_task_runs])
+        task_types = [self.get_task_type(task.type) for task in tasks]
+        updated_tasks = []
+        for task_run, task, task_type in zip(updated_task_runs, tasks, task_types):
+            assert task is not None
+            assert task_type is not None
+            if task_run.status == "permfailed":
+                updated_tasks.append(task.evolve(status="disabled"))
+            elif task_run.status in ("eventful", "uneventful"):
+                if task.policy == "oneshot":
+                    updated_tasks.append(task.evolve(status="completed"))
+                elif (
+                    task.policy == "recurring"
+                    and task_type.backoff_factor
+                    and task_type.min_interval
+                    and task_type.max_interval
+                    and task.current_interval
+                ):
+                    if task_run.status == "uneventful":
+                        adjustment_factor = 1 / task_type.backoff_factor
+                    else:
+                        adjustment_factor = 1 / task_type.backoff_factor
+                    new_interval = max(
+                        task_type.min_interval,
+                        min(
+                            task_type.max_interval,
+                            adjustment_factor * task.current_interval,
+                        ),
+                    )
+                    updated_tasks.append(
+                        task.evolve(
+                            status="next_run_not_scheduled",
+                            next_run=task_run.ended + new_interval,
+                            current_interval=new_interval,
+                            retries_left=task_type.num_retries or 0,
+                        )
+                    )
+            elif task_run.status in ("failed", "lost"):
+                if task.retries_left and task.retries_left > 0:
+                    updated_tasks.append(
+                        task.evolve(
+                            status="next_run_not_scheduled",
+                            next_run=task_run.ended
+                            + (task_type.retry_delay or datetime.timedelta(hours=1)),
+                            retries_left=task.retries_left - 1,
+                        )
+                    )
+                else:
+                    if task.policy == "oneshot":
+                        updated_tasks.append(task.evolve(status="disabled"))
+                    elif task.policy == "recurring":
+                        updated_tasks.append(
+                            task.evolve(
+                                status="next_run_not_scheduled",
+                                next_run=task_run.ended + task.current_interval,
+                                retries_left=task_type.num_retries or 0,
+                            )
+                        )
+
+        if updated_tasks:
+            updated_task_ids = [updated_task.id for updated_task in updated_tasks]
+            self._tasks = [t for t in self._tasks if t.id not in updated_task_ids]
+            self._tasks.extend(updated_tasks)
+
         if updated_task_runs:
             return updated_task_runs[0]
 

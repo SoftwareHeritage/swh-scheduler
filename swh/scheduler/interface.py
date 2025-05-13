@@ -106,6 +106,7 @@ class SchedulerInterface(Protocol):
         task_ids: List[int],
         status: TaskStatus = "disabled",
         next_run: Optional[datetime.datetime] = None,
+        except_completed_tasks: bool = False,
     ) -> None:
         """Set the tasks' status whose ids are listed.
 
@@ -113,6 +114,8 @@ class SchedulerInterface(Protocol):
             task_ids: list of tasks' identifiers
             status: the status to set for the tasks
             next_run: if provided, also set the next_run date
+            except_completed_tasks: if :const:`True`, do not update the statuses
+                of already completed tasks
 
         """
         ...

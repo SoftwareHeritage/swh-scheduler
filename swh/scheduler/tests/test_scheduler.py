@@ -1766,3 +1766,61 @@ class TestScheduler:
         assert_metrics_equal(
             [metric for metric in updated if metric.visit_type == visit_type], retrieved
         )
+
+    def test_set_status_tasks_except_for_completed_ones(self, swh_scheduler):
+        self._create_task_types(swh_scheduler)
+        _time = utcnow()
+
+        # create some recurring and oneshot tasks
+        recurring = tasks_from_template(TEMPLATES["test-git"], _time, 4)
+        oneshots = tasks_from_template(TEMPLATES["test-hg"], _time, 4)
+        pending_tasks = swh_scheduler.create_tasks(recurring + oneshots)
+        task_ids = [task.id for task in pending_tasks]
+
+        # schedule them
+        task_runs = [
+            TaskRun(
+                task=task.id,
+                backend_id=str(uuid.uuid4()),
+                scheduled=utcnow(),
+            )
+            for task in pending_tasks
+        ]
+        swh_scheduler.mass_schedule_task_runs(task_runs)
+
+        # mark the task runs as started
+        for task_run in task_runs:
+            swh_scheduler.start_task_run(
+                task_run.backend_id,
+                timestamp=utcnow(),
+            )
+
+        # mark a couple of task runs as ended
+        for task_run in task_runs:
+            if task_run.task % 2 == 0:
+                swh_scheduler.end_task_run(
+                    task_run.backend_id,
+                    status="eventful",
+                    timestamp=utcnow(),
+                )
+
+        # update task statuses except for those that are completed
+        swh_scheduler.set_status_tasks(
+            task_ids, status="next_run_scheduled", except_completed_tasks=True
+        )
+
+        # check completed tasks did not get their statuses updated
+        scheduled_tasks = swh_scheduler.get_tasks(task_ids)
+        for scheduled_task in scheduled_tasks:
+            if scheduled_task.policy == "oneshot":
+                if scheduled_task.id % 2 == 0:
+                    assert scheduled_task.status == "completed"
+                else:
+                    assert scheduled_task.status == "next_run_scheduled"
+            elif scheduled_task.policy == "recurring":
+                if scheduled_task.id % 2 == 0:
+                    assert scheduled_task.status == "next_run_not_scheduled"
+                    assert scheduled_task.next_run > utcnow()
+                else:
+                    assert scheduled_task.status == "next_run_scheduled"
+                    assert scheduled_task.next_run < utcnow()

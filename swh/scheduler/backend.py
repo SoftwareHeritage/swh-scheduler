@@ -708,6 +708,7 @@ class SchedulerBackend:
         task_ids: List[int],
         status: TaskStatus = "disabled",
         next_run: Optional[datetime.datetime] = None,
+        except_completed_tasks: bool = False,
         db=None,
         cur=None,
     ) -> None:
@@ -717,6 +718,8 @@ class SchedulerBackend:
             task_ids: list of tasks' identifiers
             status: the status to set for the tasks
             next_run: if provided, also set the next_run date
+            except_completed_tasks: if :const:`True`, do not update the statuses
+                of already completed tasks
 
         """
         if not task_ids:
@@ -728,6 +731,9 @@ class SchedulerBackend:
             args.append(next_run)
         query.append(" WHERE id = ANY(%s)")
         args.append(task_ids)
+        if except_completed_tasks:
+            query.append(" AND status != 'completed' AND next_run < %s")
+            args.append(utcnow())
 
         cur.execute("".join(query), args)
 
