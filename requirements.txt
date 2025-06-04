@@ -5,7 +5,7 @@
 attrs
 attrs-strict
 celery >= 4.3, != 5.0.3
-click >= 8.2.0
+click >= 8.2.0, != 8.2.1
 flask
 humanize
 importlib_metadata
