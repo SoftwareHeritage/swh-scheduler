@@ -13,6 +13,7 @@ import yaml
 
 from swh.scheduler.celery_backend.recurrent_visits import (
     DEFAULT_DVCS_POLICY,
+    DEFAULT_ONE_SHOT_POLICY,
     VisitSchedulerThreads,
     grab_next_visits_policy_weights,
     send_visits_for_visit_type,
@@ -21,6 +22,7 @@ from swh.scheduler.celery_backend.recurrent_visits import (
     visit_scheduler_thread,
 )
 from swh.scheduler.model import TaskType
+from swh.scheduler.tests.common import ONE_SHOT_TASK_TYPES
 
 from .test_cli import invoke
 
@@ -147,6 +149,7 @@ def test_cli_schedule_recurrent_no_origins_scheduled_backoff_in_config(
 
 def test_recurrent_visit_scheduling(
     swh_scheduler,
+    task_types,
     caplog,
     listed_origins_by_type,
     all_task_types,
@@ -269,3 +272,40 @@ def test_spawn_visit_scheduler_thread_noop(scheduler_config, visit_types, mocker
     assert not len(actual_threads)
 
     assert mock_build_app.called
+
+
+def test_spawn_visit_scheduler_thread_one_shot_task_types(
+    task_types, scheduler_config, visit_types, mocker
+):
+    """Origins with one shot task types should be scheduled with the
+    stop_after_success policy."""
+    threads: VisitSchedulerThreads = {}
+    exc_queue = Queue()
+    mock_build_app = mocker.patch("swh.scheduler.celery_backend.config.build_app")
+    mock_build_app.return_value = mocker.MagicMock()
+
+    from swh.scheduler.celery_backend import recurrent_visits
+
+    spy_send_visits_for_type = mocker.spy(
+        recurrent_visits, "send_visits_for_visit_type"
+    )
+
+    assert all(visit_type in visit_types for visit_type in ONE_SHOT_TASK_TYPES)
+
+    assert len(threads) == 0
+    for visit_type in visit_types:
+        spawn_visit_scheduler_thread(threads, exc_queue, scheduler_config, visit_type)
+
+    assert len(threads) == len(visit_types)
+
+    while len(spy_send_visits_for_type.mock_calls) != len(visit_types):
+        time.sleep(1)
+
+    actual_threads = terminate_visit_scheduler_threads(threads)
+    assert not len(actual_threads)
+    assert mock_build_app.called
+
+    for send_visits_for_type_call in spy_send_visits_for_type.mock_calls:
+        _, _, kwargs = send_visits_for_type_call
+        if kwargs["visit_type"] in ONE_SHOT_TASK_TYPES:
+            assert kwargs["policy_cfg"] == DEFAULT_ONE_SHOT_POLICY

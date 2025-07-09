@@ -4,6 +4,7 @@
 # See top-level LICENSE file for more information
 
 from datetime import datetime, timezone
+from itertools import chain
 import os
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -12,7 +13,7 @@ from unittest.mock import patch
 import pytest
 
 from swh.scheduler.model import ListedOrigin, Lister
-from swh.scheduler.tests.common import LISTERS, TASK_TYPES
+from swh.scheduler.tests.common import LISTERS, ONE_SHOT_TASK_TYPES, TASK_TYPES
 
 DATADIR = Path(__file__).parent.absolute() / "tests/data"
 
@@ -50,7 +51,7 @@ def stored_lister(swh_scheduler) -> Lister:
 @pytest.fixture
 def visit_types() -> List[str]:
     """Possible visit types in `ListedOrigin`s"""
-    return list(TASK_TYPES)
+    return list(TASK_TYPES) + list(ONE_SHOT_TASK_TYPES)
 
 
 @pytest.fixture
@@ -118,7 +119,7 @@ def datadir():
 @pytest.fixture
 def task_types(swh_scheduler):
     all_task_types = {}
-    for task_type in TASK_TYPES.values():
+    for task_type in chain(TASK_TYPES.values(), ONE_SHOT_TASK_TYPES.values()):
         swh_scheduler.create_task_type(task_type)
         all_task_types[task_type.type] = task_type
     return all_task_types

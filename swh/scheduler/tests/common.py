@@ -52,6 +52,59 @@ TASK_TYPES = {
     ),
 }
 
+ONE_SHOT_TASK_TYPES = {
+    "tarball-directory": TaskType(
+        type="load-tarball-directory",
+        description="Load Directory packaged in a tarball",
+        backend_name="swh.loader.core.tasks.LoadTarballDirectory",
+        default_interval=datetime.timedelta(days=1),
+        min_interval=datetime.timedelta(days=1),
+        max_interval=datetime.timedelta(days=1),
+        backoff_factor=1.0,
+        max_queue_length=5000,
+    ),
+    "content": TaskType(
+        type="load-content",
+        description="Load Content package",
+        backend_name="swh.loader.core.tasks.LoadContent",
+        default_interval=datetime.timedelta(days=1),
+        min_interval=datetime.timedelta(days=1),
+        max_interval=datetime.timedelta(days=1),
+        backoff_factor=1.0,
+        max_queue_length=20000,
+    ),
+    "git-checkout": TaskType(
+        type="load-git-checkout",
+        description="Load a git tree at a specific commit, tag or branch",
+        backend_name="swh.loader.git.tasks.LoadGitCheckout",
+        default_interval=datetime.timedelta(days=1),
+        min_interval=datetime.timedelta(days=1),
+        max_interval=datetime.timedelta(days=1),
+        backoff_factor=1.0,
+        max_queue_length=1000,
+    ),
+    "hg-checkout": TaskType(
+        type="load-hg-checkout",
+        description="Import a mercurial tree into swh",
+        backend_name="swh.loader.mercurial.tasks.LoadMercurialCheckout",
+        default_interval=datetime.timedelta(days=1),
+        min_interval=datetime.timedelta(days=1),
+        max_interval=datetime.timedelta(days=1),
+        backoff_factor=1.0,
+        max_queue_length=1000,
+    ),
+    "svn-export": TaskType(
+        type="load-svn-export",
+        description="Load a svn tree at a specific svn revision",
+        backend_name="swh.loader.svn.tasks.LoadSvnExport",
+        default_interval=datetime.timedelta(days=1),
+        min_interval=datetime.timedelta(days=1),
+        max_interval=datetime.timedelta(days=1),
+        backoff_factor=1.0,
+        max_queue_length=1000,
+    ),
+}
+
 
 def _task_from_template(
     template: Task,

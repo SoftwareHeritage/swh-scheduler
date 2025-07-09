@@ -1,16 +1,20 @@
-# Copyright (C) 2021-2024  The Software Heritage developers
+# Copyright (C) 2021-2025  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import secrets
 from typing import Tuple
 from unittest.mock import MagicMock
 
 import pytest
 
+from swh.model.hashutil import hash_to_bytes
 from swh.scheduler.cli.origin import format_origins
-from swh.scheduler.tests.common import TASK_TYPES
+from swh.scheduler.model import LastVisitStatus, OriginVisitStats
+from swh.scheduler.tests.common import ONE_SHOT_TASK_TYPES, TASK_TYPES
 from swh.scheduler.tests.test_cli import invoke as basic_invoke
+from swh.scheduler.utils import utcnow
 
 
 def invoke(
@@ -279,3 +283,86 @@ def test_send_origins_from_file_to_celery_cli(
     )
 
     assert set(actual_scheduled_tasks) == set(expected_tasks)
+
+
+@pytest.mark.parametrize("visit_type", list(ONE_SHOT_TASK_TYPES))
+def test_peek_next_stop_after_success(
+    swh_scheduler, listed_origins_by_type, visit_type
+):
+    """Origins with one shot task types should not be rescheduled after a
+    successful visit.
+    """
+    for origins in listed_origins_by_type.values():
+        swh_scheduler.record_listed_origins(origins)
+
+    nb_origins = len(listed_origins_by_type[visit_type])
+
+    peek_next_cmd = (
+        "peek-next",
+        # ensure no cooldowns
+        "--absolute-cooldown",
+        "",
+        "--scheduled-cooldown",
+        "",
+        "--without-header",
+        "-f",
+        "url,visit_type",
+        "-p",
+        "stop_after_success",
+        visit_type,
+        str(nb_origins // 2),
+    )
+
+    # first call to peek-next should dry-run schedule the first half of origins
+    result = invoke(swh_scheduler, peek_next_cmd)
+
+    output_lines_first_call = result.output.strip().split("\n")
+    assert all(visit_type in line for line in output_lines_first_call)
+    assert len(output_lines_first_call) == nb_origins // 2
+
+    # simulate successful visits of first batch of origins
+    swh_scheduler.origin_visit_stats_upsert(
+        OriginVisitStats(
+            url=origin_url,
+            visit_type=visit_type,
+            last_scheduled=utcnow(),
+            last_visit=utcnow(),
+            last_successful=utcnow(),
+            last_visit_status=LastVisitStatus.successful,
+            last_snapshot=hash_to_bytes(secrets.token_hex(nbytes=20)),
+        )
+        for origin_url, visit_type in map(
+            lambda lo: lo.split(","), output_lines_first_call
+        )
+    )
+
+    # second call to peek-next should dry-run schedule the second half of origins
+    result = invoke(swh_scheduler, peek_next_cmd)
+
+    output_lines_second_call = result.output.strip().split("\n")
+
+    assert output_lines_second_call != output_lines_first_call
+    assert all(visit_type in line for line in output_lines_second_call)
+    assert len(output_lines_second_call) == nb_origins // 2
+
+    # simulate successful visits of second batch of origins
+    swh_scheduler.origin_visit_stats_upsert(
+        OriginVisitStats(
+            url=origin_url,
+            visit_type=visit_type,
+            last_scheduled=utcnow(),
+            last_visit=utcnow(),
+            last_successful=utcnow(),
+            last_visit_status=LastVisitStatus.successful,
+            last_snapshot=hash_to_bytes(secrets.token_hex(nbytes=20)),
+        )
+        for origin_url, visit_type in map(
+            lambda lo: lo.split(","), output_lines_second_call
+        )
+    )
+
+    # third call should no longer schedule origins as they all were
+    # successfully visited
+    result = invoke(swh_scheduler, peek_next_cmd)
+
+    assert result.output == ""

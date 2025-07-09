@@ -321,12 +321,12 @@ def visit_scheduler_thread(
                 raise ValueError(f"Unknown task type: {task_name}")
 
             next_iteration = send_visits_for_visit_type(
-                scheduler,
-                app,
-                visit_type,
-                task_type,
-                policy_cfg.get(visit_type, policy_cfg["default"]),
-                config.get(
+                scheduler=scheduler,
+                app=app,
+                visit_type=visit_type,
+                task_type=task_type,
+                policy_cfg=policy_cfg.get(visit_type, policy_cfg["default"]),
+                no_origins_scheduled_backoff=config.get(
                     "no_origins_scheduled_backoff", DEFAULT_NO_ORIGINS_SCHEDULED_BACKOFF
                 ),
             )
