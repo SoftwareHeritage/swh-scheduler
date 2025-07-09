@@ -1,4 +1,4 @@
-# Copyright (C) 2021-2024 The Software Heritage developers
+# Copyright (C) 2021-2025 The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -48,6 +48,9 @@ DEFAULT_GIT_POLICY = [
     {"policy": "never_visited_oldest_update_first", "weight": 49, "tablesample": 0.1},
     {"policy": "origins_without_last_update", "weight": 2, "tablesample": 0.1},
 ]
+DEFAULT_ONE_SHOT_POLICY = [
+    {"policy": "stop_after_success", "weight": 100},
+]
 
 DEFAULT_POLICY_CONFIG: Dict[str, List[Dict[str, Any]]] = {
     "default": DEFAULT_POLICY,
@@ -56,6 +59,11 @@ DEFAULT_POLICY_CONFIG: Dict[str, List[Dict[str, Any]]] = {
     "cvs": DEFAULT_DVCS_POLICY,
     "bzr": DEFAULT_DVCS_POLICY,
     "git": DEFAULT_GIT_POLICY,
+    "content": DEFAULT_ONE_SHOT_POLICY,
+    "tarball-directory": DEFAULT_ONE_SHOT_POLICY,
+    "git-checkout": DEFAULT_ONE_SHOT_POLICY,
+    "hg-checkout": DEFAULT_ONE_SHOT_POLICY,
+    "svn-export": DEFAULT_ONE_SHOT_POLICY,
 }
 
 """Scheduling policies to use to retrieve visits for the given visit types, with their
