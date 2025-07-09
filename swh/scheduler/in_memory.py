@@ -79,7 +79,7 @@ class InMemoryScheduler:
         self,
         lister_ids: List[str],
     ) -> List[Lister]:
-        return [_l for _l in self._listers if _l.id in lister_ids]
+        return [_l for _l in self._listers if str(_l.id) in lister_ids]
 
     def get_lister(
         self,
@@ -420,9 +420,9 @@ class InMemoryScheduler:
         ]
 
         if not dry_run:
-            self.origin_visit_stats_upsert(ovs)
+            self.origin_visit_stats_upsert(ovs[:count])
 
-        return [o for (o, _) in origins_stats]
+        return [o for (o, _) in origins_stats[:count]]
 
     def create_tasks(
         self,
@@ -920,7 +920,7 @@ class InMemoryScheduler:
             return []
         return [
             self._origin_visit_stats[key]
-            for key in ids
+            for key in map(tuple, ids)
             if key in self._origin_visit_stats
         ]
 

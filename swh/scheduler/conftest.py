@@ -26,6 +26,21 @@ for var in [x for x in os.environ.keys() if x.startswith("CELERY")]:
 os.environ["LC_ALL"] = "C.UTF-8"
 
 
+@pytest.fixture(params=["postgresql", "memory"])
+def swh_scheduler_class(request):
+    return request.param
+
+
+@pytest.fixture
+def swh_scheduler_config(swh_scheduler_class, postgresql_scheduler):
+    if swh_scheduler_class == "postgresql":
+        return {
+            "db": postgresql_scheduler.info.dsn,
+        }
+    else:
+        return {}
+
+
 @pytest.fixture
 def stored_lister(swh_scheduler) -> Lister:
     """Store a lister in the scheduler and return its information"""

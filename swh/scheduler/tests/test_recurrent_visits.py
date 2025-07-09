@@ -34,6 +34,11 @@ def _compute_backend_name(visit_type: str) -> str:
 
 
 @pytest.fixture
+def swh_scheduler_class():
+    return "postgresql"
+
+
+@pytest.fixture
 def swh_scheduler(swh_scheduler):
     """Override default fixture of the scheduler to install some more task types."""
     for visit_type in ["test-git", "test-hg", "test-svn"]:

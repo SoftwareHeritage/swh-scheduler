@@ -28,6 +28,11 @@ scheduler:
 
 
 @pytest.fixture
+def swh_scheduler_class():
+    return "postgresql"
+
+
+@pytest.fixture
 def swh_scheduler(swh_scheduler):
     for tt in TASK_TYPES.values():
         swh_scheduler.create_task_type(tt)

@@ -19,6 +19,11 @@ FAKE_MODULE_ENTRY_POINTS = {
 
 
 @pytest.fixture
+def swh_scheduler_class():
+    return "postgresql"
+
+
+@pytest.fixture
 def cli_runner():
     return CliRunner()
 
