@@ -426,7 +426,7 @@ VISIT_STATUSES = [
                 "type": "git",
                 "visit": 1,
                 "status": "created",
-                "snapshot": None,
+                "snapshot": hash_to_bytes("d81cc0710eb6cf9efd5b920a8453e1e07157b6cd"),
             },
             {
                 "origin": "foo",
@@ -440,7 +440,7 @@ VISIT_STATUSES = [
                 "type": "git",
                 "visit": 2,
                 "status": "created",
-                "snapshot": None,
+                "snapshot": hash_to_bytes("d81cc0710eb6cf9efd5b920a8453e1e07157b6cd"),
             },
             {
                 "origin": "foo",
