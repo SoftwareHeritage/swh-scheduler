@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2024  The Software Heritage developers
+# Copyright (C) 2016-2025  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -12,7 +12,6 @@ import time
 from typing import TYPE_CHECKING, List, Tuple
 
 import click
-import sentry_sdk
 
 from . import cli
 
@@ -77,6 +76,8 @@ def runner(ctx, period, task_type_names, task_type_patterns, with_priority):
     * :ref:`cli-config-scheduler`
 
     """
+    import sentry_sdk
+
     from swh.scheduler.celery_backend.config import build_app
     from swh.scheduler.celery_backend.runner import run_ready_tasks
 
@@ -174,6 +175,8 @@ def schedule_recurrent(ctx, visit_types: List[str]):
     """
     from queue import Queue
 
+    import sentry_sdk
+
     from swh.scheduler.celery_backend.recurrent_visits import (
         VisitSchedulerThreads,
         logger,
@@ -259,6 +262,7 @@ def runner_first_visits(ctx, period):
     forever with a given period.
 
     """
+    import sentry_sdk
 
     from swh.scheduler.celery_backend.first_visits import schedule_first_visits
 

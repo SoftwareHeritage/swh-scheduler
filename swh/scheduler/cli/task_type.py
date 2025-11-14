@@ -6,16 +6,12 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from importlib import import_module
-from importlib.metadata import entry_points
 import logging
 from typing import TYPE_CHECKING, Any, Dict
 
 # WARNING: do not import unnecessary things here to keep cli startup time under
 # control
 import click
-
-from swh.scheduler.model import TaskType
 
 if TYPE_CHECKING:
     from swh.scheduler.task import SWHTask
@@ -42,6 +38,8 @@ DEFAULT_TASK_TYPE_PARAMETERS = {
 
 
 def _plugin_worker_descriptions():
+    from importlib.metadata import entry_points
+
     return {
         entry_point.name: entry_point
         for entry_point in entry_points().select(group="swh.workers")
@@ -124,6 +122,8 @@ def register_task_types(ctx, plugins):
     ...) plugins.
 
     """
+    from importlib import import_module
+
     import celery.app.task
 
     scheduler = ctx.obj["scheduler"]
@@ -180,6 +180,8 @@ def ensure_task_type(
         scheduler: the scheduler object used to access the scheduler db
 
     """
+    from swh.scheduler.model import TaskType
+
     task_type_params: Dict[str, Any] = dict(
         type=task_type_name,
         backend_name=swhtask.name,
@@ -248,6 +250,8 @@ def add_task_type(
     max_interval,
     backoff_factor,
 ):
+    from swh.scheduler.model import TaskType
+
     """Create a new task type"""
     task_type = TaskType(
         type=type,

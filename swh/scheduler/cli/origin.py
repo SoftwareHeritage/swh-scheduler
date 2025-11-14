@@ -1,4 +1,4 @@
-# Copyright (C) 2021-2024  The Software Heritage developers
+# Copyright (C) 2021-2025  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING
 import click
 
 from . import cli
-from ..utils import create_origin_tasks
 
 if TYPE_CHECKING:
     from typing import Dict, Iterable, List, Optional
@@ -127,7 +126,7 @@ def grab_next(
 def schedule_next(ctx, policy: TaskPolicy, type: str, count: int):
     """Send the next COUNT origin visits of the TYPE loader to the scheduler as
     one-shot tasks."""
-    from ..utils import utcnow
+    from ..utils import create_origin_tasks, utcnow
     from .utils import pretty_print_task
 
     scheduler = ctx.obj["scheduler"]
