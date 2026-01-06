@@ -185,7 +185,7 @@ Visit Scheduler
 ---------------
 
 The visit of an Origin consists in running one of the existing a :ref:`loader
-<swh-loager-core>` on the given Origin URL. The visit type will determine which
+<swh-loader-core>` on the given Origin URL. The visit type will determine which
 loader is executed (e.g. the `git` visit type will select the :ref:`git loader
 <swh-loader-git>` to perform the loading task).
 
