@@ -1,4 +1,4 @@
-# Copyright (C) 2021-2024  The Software Heritage developers
+# Copyright (C) 2021-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -6,7 +6,7 @@
 """Agents using the new origin-aware scheduler."""
 
 import logging
-from typing import Any, Dict, Generator, Iterator, List
+from typing import Any, Dict, Generator, List
 
 from simpy import Event
 
@@ -22,7 +22,7 @@ def scheduler_runner_process(
     task_queues: Dict[str, Queue],
     policy: str,
     min_batch_size: int,
-) -> Iterator[Event]:
+) -> Generator[Event, Any, Any]:
     """Scheduler runner. Grabs next visits from the database according to the
     scheduling policy, and fills the task_queues accordingly."""
 

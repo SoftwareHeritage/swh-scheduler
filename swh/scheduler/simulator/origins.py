@@ -1,4 +1,4 @@
-# Copyright (C) 2021  The Software Heritage developers
+# Copyright (C) 2021-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -16,7 +16,7 @@ of commits since the previous visit of the origin (possibly 0)."""
 from datetime import datetime, timedelta, timezone
 import hashlib
 import logging
-from typing import Dict, Generator, Iterator, List, Optional, Tuple
+from typing import Any, Dict, Generator, List, Optional, Tuple
 import uuid
 
 import attr
@@ -190,7 +190,7 @@ def lister_process(
 
 def load_task_process(
     env: Environment, task: Task, status_queue: Queue
-) -> Iterator[Event]:
+) -> Generator[Event, Any, Any]:
     """A loading task. This pushes OriginVisitStatus objects to the
     status_queue to simulate the visible outcomes of the task.
 

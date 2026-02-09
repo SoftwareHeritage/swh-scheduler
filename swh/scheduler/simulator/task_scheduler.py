@@ -1,4 +1,4 @@
-# Copyright (C) 2021-2025  The Software Heritage developers
+# Copyright (C) 2021-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -6,7 +6,7 @@
 """Agents using the "old" task-based scheduler."""
 
 import logging
-from typing import Dict, Generator, Iterator
+from typing import Any, Dict, Generator
 
 from simpy import Event
 
@@ -21,7 +21,7 @@ def scheduler_runner_process(
     env: Environment,
     task_queues: Dict[str, Queue],
     min_batch_size: int,
-) -> Iterator[Event]:
+) -> Generator[Event, Any, Any]:
     """Simulate a scheduler runner process. This schedules tasks from the database
     according to the scheduling policy, that means filling the task_queues first, then
     update their status in the scheduler backend.
