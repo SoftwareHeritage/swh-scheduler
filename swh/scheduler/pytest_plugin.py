@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2024  The Software Heritage developers
+# Copyright (C) 2020-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -6,6 +6,7 @@
 from datetime import timedelta
 from functools import partial
 from importlib.metadata import entry_points
+import os
 
 from celery.contrib.testing import worker
 from celery.contrib.testing.app import TestApp, setup_default_app
@@ -113,5 +114,10 @@ def swh_scheduler_celery_worker(
     """Spawn a worker"""
     for module in swh_scheduler_celery_includes:
         swh_scheduler_celery_app.loader.import_task_module(module)
-    with worker.start_worker(swh_scheduler_celery_app, pool="solo") as w:
+    with worker.start_worker(
+        swh_scheduler_celery_app,
+        pool="solo",
+        # ping check can timeout when running tests in parallel with pytest-xdist
+        perform_ping_check=os.environ.get("PYTEST_XDIST_WORKER", "") == "",
+    ) as w:
         yield w
