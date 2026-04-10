@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025  The Software Heritage developers
+# Copyright (C) 2023-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -148,5 +148,5 @@ def test_register_task_types_filter(
 def test_cli_task_type_raise(cli_runner, cli_command):
     """Without a proper configuration, the cli raises"""
     result = cli_runner.invoke(cli, ["task-type", cli_command])
-    assert "Scheduler class" in result.output
+    assert "Error: missing 'scheduler' configuration" in result.output
     assert result.exit_code != 0

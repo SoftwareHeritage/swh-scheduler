@@ -1,4 +1,4 @@
-# Copyright (C) 2024  The Software Heritage developers
+# Copyright (C) 2024-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -8,7 +8,6 @@ from typing import Dict
 import pytest
 import yaml
 
-from swh.scheduler import DEFAULT_CONFIG
 from swh.scheduler.cli.config import read_config
 
 
@@ -58,14 +57,3 @@ def test_read_config_from_environment(
     assert isinstance(actual_config, Dict)
 
     assert actual_config == local_sched_config
-
-
-def test_read_config_default(local_sched_configfile):
-    """Loading configuration from default configuration should be ok."""
-
-    actual_config = read_config()
-
-    assert actual_config is not None
-    assert isinstance(actual_config, Dict)
-
-    assert actual_config["scheduler"] == DEFAULT_CONFIG["scheduler"][1]

@@ -1,24 +1,30 @@
-# Copyright (C) 2020  The Software Heritage developers
+# Copyright (C) 2020-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
 import logging
+import tempfile
 
 from click.testing import CliRunner
 import pytest
+import yaml
 
 from swh.scheduler.cli import cli
 
 
 def invoke(*args, catch_exceptions=False):
-    result = CliRunner().invoke(
-        cli,
-        ["celery-monitor", *args],
-        catch_exceptions=catch_exceptions,
-    )
+    with tempfile.NamedTemporaryFile() as config_file:
+        config_file.write(yaml.dump({"scheduler": {"cls": "memory"}}).encode())
+        config_file.seek(0)
 
-    return result
+        result = CliRunner().invoke(
+            cli,
+            ["--config-file", config_file.name, "celery-monitor", *args],
+            catch_exceptions=catch_exceptions,
+        )
+
+        return result
 
 
 def test_celery_monitor():

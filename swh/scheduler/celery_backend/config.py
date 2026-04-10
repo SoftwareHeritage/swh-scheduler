@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2025  The Software Heritage developers
+# Copyright (C) 2015-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -22,7 +22,6 @@ import requests
 
 from swh.core.config import load_named_config, merge_configs
 from swh.core.sentry import init_sentry
-from swh.scheduler import CONFIG as SWH_CONFIG
 
 DEFAULT_CONFIG_NAME = "worker"
 CONFIG_NAME_ENVVAR = "SWH_WORKER_INSTANCE"
@@ -303,9 +302,7 @@ if CONFIG_NAME:
     # SWH_CONFIG_FILENAME environment variable.
     # This is expected to have a [celery] section in which we have the
     # celery specific configuration.
-    SWH_CONFIG.clear()
-    SWH_CONFIG.update(load_named_config(CONFIG_NAME))
-    CONFIG = SWH_CONFIG.get("celery", {})
+    CONFIG = load_named_config(CONFIG_NAME).get("celery", {})
 
 if not CONFIG:
     # otherwise, back to compat config loading mechanism

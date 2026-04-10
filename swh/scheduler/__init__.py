@@ -5,29 +5,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict
-
-# TODO: get rid of these default config
-DEFAULT_CONFIG_RAW = {
-    "scheduler": {
-        "cls": "postgresql",
-        "db": "dbname=softwareheritage-scheduler-dev",
-    }
-}
-
-DEFAULT_CONFIG = {
-    "scheduler": ("dict", DEFAULT_CONFIG_RAW["scheduler"]),
-}
-
-# current configuration. To be set by the config loading mechanism
-CONFIG: Dict[str, Any] = {}
-
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from swh.scheduler.interface import SchedulerInterface
 
 
-def get_scheduler(cls: str, **kwargs) -> "SchedulerInterface":
+def get_scheduler(cls: str, **kwargs) -> SchedulerInterface:
     """
     Get a scheduler object of class `cls` with arguments `**kwargs`.
 

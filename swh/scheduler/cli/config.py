@@ -1,4 +1,4 @@
-# Copyright (C) 2024  The Software Heritage developers
+# Copyright (C) 2024-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -16,19 +16,17 @@ if TYPE_CHECKING:
 
 
 def read_config(config_file: Optional[Any] = None) -> Dict:
-    """Read configuration from config_file if provided, from the SWH_CONFIG_FILENAME if
-    set or fallback to the DEFAULT_CONFIG.
-
+    """Read configuration from config_file if provided or from
+    the SWH_CONFIG_FILENAME if set.
     """
     from os import environ
 
     from swh.core import config
-    from swh.scheduler import DEFAULT_CONFIG, DEFAULT_CONFIG_RAW
 
     if config_file:
-        conf = config.read(config_file, DEFAULT_CONFIG)
+        conf = config.read(config_file)
     elif "SWH_CONFIG_FILENAME" in environ:
-        conf = config.load_from_envvar(DEFAULT_CONFIG_RAW)
+        conf = config.load_from_envvar()
     else:
-        conf = config.read(None, DEFAULT_CONFIG)
+        conf = {}
     return conf
