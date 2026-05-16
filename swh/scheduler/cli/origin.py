@@ -1,4 +1,4 @@
-# Copyright (C) 2021-2025  The Software Heritage developers
+# Copyright (C) 2021-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -470,7 +470,7 @@ listed origins in the scheduler database."
 
 def _print_status_summary(
     lister_name: str, instance_name: str, status_counters: Dict, watch: bool = False
-) -> None:
+) -> float:
     """Print a status of the ingestion and a small success rate summary."""
     if watch:
         suffix_str = " ingestion is still in progress..."
@@ -484,6 +484,7 @@ scheduled ingests in the scheduler."
 
     success_rate = status_counters["successful"] / status_counters["total"] * 100
     print(f"{'success rate':<12}: {success_rate:.2f}%")
+    return success_rate
 
 
 @origin.command("check-ingested-origins")
@@ -508,11 +509,24 @@ scheduled ingests in the scheduler."
     default="30 minutes",
     help="Watch period ingestion.",
 )
+@click.option(
+    "--minimum-success",
+    "minimum_success_rate",
+    type=float,
+    default=0.0,
+    help="Minimum success rate as a decimal percentage.",
+)
 @click.argument("lister_name", nargs=1, required=True)
 @click.argument("instance_name", nargs=1, required=True)
 @click.pass_context
 def check_ingested_origins_cli(
-    ctx, with_listing, watch, watch_period, lister_name, instance_name
+    ctx,
+    with_listing,
+    watch,
+    watch_period,
+    lister_name,
+    instance_name,
+    minimum_success_rate,
 ):
     """
     Check the origins marked as ingested in the scheduler database.
@@ -563,7 +577,9 @@ def check_ingested_origins_cli(
         headers = ("url", "last_visit_status", "last_visit")
         print(tabulate(ingested_origins_table, headers))
 
-    _print_status_summary(lister_name, instance_name, status_counters)
+    success_rate = _print_status_summary(lister_name, instance_name, status_counters)
+    if success_rate < minimum_success_rate:
+        ctx.fail("There are too many ingestion failures.")
 
 
 @origin.command("send-origins-from-file-to-celery")
