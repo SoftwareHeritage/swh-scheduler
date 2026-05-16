@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2024  The Software Heritage developers
+# Copyright (C) 2016-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -389,11 +389,29 @@ def list_pending_tasks(ctx, task_types, num_tasks, before):
     default=False,
     help="Also list past executions of each task.",
 )
+@click.option(
+    "--list-runs-metadata",
+    "-m",
+    is_flag=True,
+    default=False,
+    help="Also list past executions of each task, with metadata.",
+)
 @click.pass_context
 def list_tasks(
-    ctx, task_id, task_type, limit, status, policy, priority, before, after, list_runs
+    ctx,
+    task_id,
+    task_type,
+    limit,
+    status,
+    policy,
+    priority,
+    before,
+    after,
+    list_runs,
+    list_runs_metadata,
 ):
     """List tasks."""
+    from json import dumps
     from operator import attrgetter
 
     from .utils import pretty_print_run, pretty_print_task
@@ -425,7 +443,7 @@ def list_tasks(
         after=after,
         limit=limit,
     )
-    if list_runs:
+    if list_runs or list_runs_metadata:
         runs = {t.id: [] for t in tasks}
         for r in scheduler.get_task_runs([task.id for task in tasks]):
             runs[r.task].append(r)
@@ -439,6 +457,8 @@ def list_tasks(
             output.append(click.style("  Executions:", bold=True))
             for run in sorted(runs[task.id], key=attrgetter("id")):
                 output.append(pretty_print_run(run, indent=4))
+                if list_runs_metadata:
+                    output.append(dumps(run["metadata"], indent=4))
 
     click.echo("\n".join(output))
 
