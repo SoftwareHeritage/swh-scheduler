@@ -175,6 +175,7 @@ def _init_sentry(sentry_dsn: Optional[str] = None, main_package: Optional[str] =
         integrations=integrations,
         main_package=main_package,
         deferred_init=sentry_dsn is None,
+        send_default_pii=True,
     )
 
 

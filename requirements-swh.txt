@@ -1,2 +1,2 @@
-swh.core[db,http] >= 4.0.0
+swh.core[db,http] >= 4.6.2
 swh.storage >= 3.0.0
