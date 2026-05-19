@@ -1,8 +1,9 @@
-# Copyright (C) 2021-2025  The Software Heritage developers
+# Copyright (C) 2021-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+from importlib.metadata import version
 import secrets
 from typing import Tuple
 from unittest.mock import MagicMock
@@ -99,6 +100,10 @@ def test_grab_next(swh_scheduler, listed_origins_by_type):
     )
 
 
+@pytest.mark.skipif(
+    version("click") == "8.4.0",
+    reason="A regression from click 8.4.0 in click.echo_with_pager makes that test fail.",
+)
 def test_schedule_next(swh_scheduler, listed_origins_by_type):
     for task_type in TASK_TYPES.values():
         swh_scheduler.create_task_type(task_type)

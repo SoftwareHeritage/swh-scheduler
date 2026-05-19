@@ -1,9 +1,10 @@
-# Copyright (C) 2019-2024  The Software Heritage developers
+# Copyright (C) 2019-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
 import datetime
+from importlib.metadata import version
 from itertools import islice
 import logging
 import random
@@ -58,6 +59,10 @@ def invoke(scheduler, catch_exceptions, args, config=CLI_CONFIG, **kwargs):
     return result
 
 
+@pytest.mark.skipif(
+    version("click") == "8.4.0",
+    reason="A regression from click 8.4.0 in click.echo_with_pager makes that test fail.",
+)
 def test_schedule_tasks(swh_scheduler):
     csv_data = (
         b'swh-test-ping;[["arg1", "arg2"]];{"key": "value"};'
@@ -101,6 +106,10 @@ Task 2
     assert re.fullmatch(expected, result.output, re.MULTILINE), result.output
 
 
+@pytest.mark.skipif(
+    version("click") == "8.4.0",
+    reason="A regression from click 8.4.0 in click.echo_with_pager makes that test fail.",
+)
 def test_schedule_tasks_using_celery_backend_name(swh_scheduler):
     csv_data = (
         b'swh.loader.git.tasks.UpdateGitRepository;[["arg1", "arg2"]];{"key": "value"};'
@@ -144,6 +153,10 @@ Task 2
     assert re.fullmatch(expected, result.output, re.MULTILINE), result.output
 
 
+@pytest.mark.skipif(
+    version("click") == "8.4.0",
+    reason="A regression from click 8.4.0 in click.echo_with_pager makes that test fail.",
+)
 def test_schedule_tasks_columns(swh_scheduler):
     with tempfile.NamedTemporaryFile(suffix=".csv") as csv_fd:
         csv_fd.write(b'swh-test-ping;oneshot;["arg1", "arg2"];{"key": "value"}\n')
