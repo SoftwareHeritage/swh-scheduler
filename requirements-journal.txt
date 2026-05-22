@@ -1,1 +1,1 @@
-swh.journal
+swh.journal@git+https://gitlab.softwareheritage.org/swh/devel/swh-journal.git@refs/merge-requests/284/head
