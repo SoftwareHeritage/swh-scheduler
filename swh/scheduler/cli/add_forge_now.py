@@ -1,4 +1,4 @@
-# Copyright (C) 2022  The Software Heritage developers
+# Copyright (C) 2022-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -86,7 +86,7 @@ def register_lister_cli(
     if not task_types:
         ctx.fail(f"Unknown lister type {lister_name}.")
 
-    (args, kw) = parse_options(options)
+    args, kw = parse_options(options)
 
     max_pages = kw.get("max_pages", 2)
     max_origins_per_page = kw.get("max_origins_per_page", 5)

@@ -168,7 +168,7 @@ def schedule_task(ctx, task_type_name, options, policy, priority, next_run):
     if not task_type:
         ctx.fail(f"Unknown task name {task_type_name}.")
 
-    (args, kw) = parse_options(options)
+    args, kw = parse_options(options)
     task_add(
         scheduler,
         task_type_name=task_type_name,
@@ -261,7 +261,7 @@ def schedule_origin_metadata_index(
     if dry_run:
         scheduler = None
 
-    (args, kw) = parse_options(options)
+    args, kw = parse_options(options)
     if args:
         raise click.ClickException("Only keywords arguments are allowed.")
 

@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2025  The Software Heritage developers
+# Copyright (C) 2015-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -467,25 +467,21 @@ class SchedulerBackend:
 
         if absolute_cooldown:
             # Don't schedule visits if they've been scheduled since the absolute cooldown
-            where_clauses.append(
-                """origin_visit_stats.last_scheduled IS NULL
+            where_clauses.append("""origin_visit_stats.last_scheduled IS NULL
                    OR origin_visit_stats.last_scheduled < %s
-                """
-            )
+                """)
             query_args.append(timestamp - absolute_cooldown)
 
         if scheduled_cooldown:
             # Don't re-schedule visits if they're already scheduled but we haven't
             # recorded a result yet, unless they've been scheduled more than a week
             # ago (it probably means we've lost them in flight somewhere).
-            where_clauses.append(
-                """origin_visit_stats.last_scheduled IS NULL
+            where_clauses.append("""origin_visit_stats.last_scheduled IS NULL
                 OR origin_visit_stats.last_scheduled < GREATEST(
                   %s,
                   origin_visit_stats.last_visit
                 )
-            """
-            )
+            """)
             query_args.append(timestamp - scheduled_cooldown)
 
         if failed_cooldown:

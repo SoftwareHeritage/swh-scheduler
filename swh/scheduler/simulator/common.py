@@ -1,4 +1,4 @@
-# Copyright (C) 2021  The Software Heritage developers
+# Copyright (C) 2021-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -145,14 +145,12 @@ class SimulationReport:
         full_visits = self.visit_runtimes.get(("full", True), [])
         long_tasks = sum(runtime > self.DURATION_THRESHOLD for runtime in full_visits)
 
-        output = textwrap.dedent(
-            f"""\
+        output = textwrap.dedent(f"""\
                 Total visits: {self.total_visits}
                 Uneventful visits: {self.uneventful_visits}
                 Eventful visits: {len(full_visits)}
                 Very long running tasks: {long_tasks}
-                """
-        )
+                """)
         if with_plots:
             histogram = self.runtime_histogram("full", True)
             plot = self.metrics_plot()
@@ -160,11 +158,9 @@ class SimulationReport:
                 "Visit time histogram for eventful visits:"
                 + histogram
                 + "\n"
-                + textwrap.dedent(
-                    """\
+                + textwrap.dedent("""\
                     Metrics over time:
-                    """
-                )
+                    """)
                 + plot
             )
         return output

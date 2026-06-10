@@ -208,7 +208,7 @@ def load_task_process(
     yield status_queue.put(TaskEvent(task=task, status=status))
 
     origin_model = OriginModel(task.visit_type, task.origin)
-    (run_time, end_status, snapshot) = origin_model.load_task_characteristics(env.time)
+    run_time, end_status, snapshot = origin_model.load_task_characteristics(env.time)
     yield env.timeout(run_time)
 
     logger.debug("%s task %s origin=%s: End", env.time, task.visit_type, task.origin)

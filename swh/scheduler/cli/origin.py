@@ -462,10 +462,8 @@ def check_listed_origins_cli(ctx, list, lister_name, instance_name):
 
     if list:
         print(tabulate(listed_origins_table, headers))
-    print(
-        f"\nForge {instance_name} ({lister_name}) has {len(listed_origins)} \
-listed origins in the scheduler database."
-    )
+    print(f"\nForge {instance_name} ({lister_name}) has {len(listed_origins)} \
+listed origins in the scheduler database.")
 
 
 def _print_status_summary(
@@ -699,7 +697,7 @@ def send_origins_from_file_to_celery(
         lines=file_input,
     )
 
-    (extra_args, extra_kwargs) = parse_options(options)
+    extra_args, extra_kwargs = parse_options(options)
 
     if debug:
         print(f"Task extra_args: {extra_args}")

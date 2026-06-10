@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2025  The Software Heritage developers
+# Copyright (C) 2016-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -83,9 +83,7 @@ def list_task_types(ctx, verbose, task_type, task_name):
 
     click.echo("Known task types:")
     if verbose:
-        tmpl = (
-            click.style("{type}: ", bold=True)
-            + """{backend_name}
+        tmpl = click.style("{type}: ", bold=True) + """{backend_name}
   {description}
   interval: {default_interval} [{min_interval}, {max_interval}]
   backoff_factor: {backoff_factor}
@@ -93,7 +91,6 @@ def list_task_types(ctx, verbose, task_type, task_name):
   num_retries: {num_retries}
   retry_delay: {retry_delay}
 """
-        )
     else:
         tmpl = "{type}:\n  {description}"
     for tasktype in sorted(

@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2024  The Software Heritage developers
+# Copyright (C) 2019-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -351,10 +351,8 @@ def check_listed_origins(
     )
 
     if listed_origins_lister is None:
-        exit(
-            f"Forge {instance_name} ({lister_name}) isn't registered \
-in the scheduler database."
-        )
+        exit(f"Forge {instance_name} ({lister_name}) isn't registered \
+in the scheduler database.")
     else:
         lister_id = listed_origins_lister.id
 
@@ -365,10 +363,8 @@ in the scheduler database."
     ).results
 
     if len(listed_origins) == 0:
-        exit(
-            f"Forge {instance_name} ({lister_name}) has {len(listed_origins)} \
-listed origin in the scheduler database."
-        )
+        exit(f"Forge {instance_name} ({lister_name}) has {len(listed_origins)} \
+listed origin in the scheduler database.")
 
     return listed_origins
 
@@ -393,10 +389,8 @@ def count_ingested_origins(
         ingested_origins_table = []
 
     if status_counters["total"] == 0:
-        exit(
-            f"Forge {instance_name} has {len(ingested_origins)} \
-scheduled ingest in the scheduler database."
-        )
+        exit(f"Forge {instance_name} has {len(ingested_origins)} \
+scheduled ingest in the scheduler database.")
 
     for ingested_origin in ingested_origins:
         if ingested_origin.last_visit_status is not None:
