@@ -11,6 +11,7 @@ import random
 import re
 import tempfile
 from unittest.mock import patch
+import uuid
 
 from click.testing import CliRunner
 import pytest
@@ -18,6 +19,7 @@ import pytest
 from swh.core.api.classes import stream_results
 from swh.model.model import Origin
 from swh.scheduler.cli import cli
+from swh.scheduler.model import TaskRun
 from swh.scheduler.tests.common import TASK_TYPES
 from swh.scheduler.utils import create_task, utcnow
 
@@ -808,6 +810,72 @@ Task 1
 """.lstrip()
     assert result.exit_code == 0, result.output
     assert re.fullmatch(expected, result.output, re.MULTILINE), result.output
+
+
+def test_list_tasks_with_runs_metadata(swh_scheduler):
+    task = create_task("swh-test-ping", "oneshot", key="value1")
+    task = swh_scheduler.create_tasks([task])[0]
+
+    scheduled = utcnow()
+    started = scheduled + datetime.timedelta(minutes=5)
+    ended = started + datetime.timedelta(minutes=5)
+    metadata = {"worker": "worker01"}
+    task_run = TaskRun(
+        task=task.id,
+        backend_id=str(uuid.uuid4()),
+        scheduled=scheduled,
+        started=started,
+        ended=ended,
+        status="eventful",
+        metadata=metadata,
+    )
+    swh_scheduler.mass_schedule_task_runs([task_run])
+    swh_scheduler.start_task_run(
+        task_run.backend_id, timestamp=started, metadata=metadata
+    )
+    swh_scheduler.end_task_run(
+        task_run.backend_id,
+        timestamp=ended,
+        status="eventful",
+        metadata=metadata,
+    )
+
+    result = invoke(
+        swh_scheduler,
+        False,
+        [
+            "task",
+            "list",
+            "--list-runs-metadata",
+        ],
+    )
+
+    expected = f"""
+Found 1 tasks
+
+Task 1
+  Next run: today ({task.next_run.isoformat()})
+  Interval: 1 day, 0:00:00
+  Type: swh-test-ping
+  Policy: oneshot
+  Status: completed
+  Priority:\x20
+  Args:
+  Keyword args:
+    key: 'value1'
+
+  Executions:
+    {task_run.backend_id} [{task_run.status}]
+      scheduled: {task_run.scheduled.isoformat()}
+      started: {task_run.started.isoformat()}
+      ended: {task_run.ended.isoformat()}
+      metadata:
+        {{
+            "worker": "worker01"
+        }}
+""".lstrip()
+    assert result.exit_code == 0, result.output
+    assert result.output == expected
 
 
 def _fill_storage_with_origins(storage, nb_origins):

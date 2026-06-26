@@ -442,6 +442,7 @@ def list_tasks(
     """List tasks."""
     from json import dumps
     from operator import attrgetter
+    import textwrap
 
     from .utils import pretty_print_run, pretty_print_task
 
@@ -491,8 +492,11 @@ def list_tasks(
             output.append(click.style("  Executions:", bold=True))
             for run in sorted(runs[task.id], key=attrgetter("id")):
                 output.append(pretty_print_run(run, indent=4))
-                if list_runs_metadata:
-                    output.append(dumps(run["metadata"], indent=4))
+                if run.metadata:
+                    output.append(click.style("      metadata:"))
+                    output.append(
+                        textwrap.indent(dumps(run.metadata, indent=4), " " * 8)
+                    )
 
     click.echo("\n".join(output))
 
