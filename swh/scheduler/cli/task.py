@@ -8,7 +8,7 @@ from __future__ import annotations
 # WARNING: do not import unnecessary things here to keep cli startup time under
 # control
 import locale
-from typing import TYPE_CHECKING, Iterator, List, Optional
+from typing import IO, TYPE_CHECKING, Any, Dict, Iterator, List, Literal, Optional
 
 import click
 
@@ -17,8 +17,17 @@ from . import cli
 if TYPE_CHECKING:
     import datetime
 
+    from click import Context
+
     # importing swh.storage.interface triggers the load of 300+ modules, so...
     import swh.model.model
+    from swh.scheduler.interface import (
+        SchedulerInterface,
+        TaskPolicy,
+        TaskPriority,
+        TaskRun,
+        TaskStatus,
+    )
     from swh.storage.interface import StorageInterface
 
 
@@ -53,7 +62,7 @@ def task(ctx):
 @click.option("--delimiter", "-d", default=",")
 @click.argument("file", type=click.File(encoding="utf-8"))
 @click.pass_context
-def schedule_tasks(ctx, columns, delimiter, file):
+def schedule_tasks(ctx: Context, columns: List[str], delimiter: str, file: IO[Any]):
     """Schedule tasks from a CSV input file.
 
     The following columns are expected, and can be set through the -c option:
@@ -92,7 +101,7 @@ def schedule_tasks(ctx, columns, delimiter, file):
 
     tasks = []
     now = utcnow()
-    scheduler = ctx.obj["scheduler"]
+    scheduler: SchedulerInterface = ctx.obj["scheduler"]
 
     celery_backend_to_type = {
         tt.backend_name: tt.type for tt in scheduler.get_task_types()
@@ -100,7 +109,7 @@ def schedule_tasks(ctx, columns, delimiter, file):
 
     reader = csv.reader(file, delimiter=delimiter)
     for line in reader:
-        task_params = dict(zip(columns, line))
+        task_params: Dict[str, Any] = dict(zip(columns, line))
         args = json.loads(task_params.pop("args", "[]"))
         kwargs = json.loads(task_params.pop("kwargs", "{}"))
         task_params["arguments"] = TaskArguments(
@@ -137,9 +146,16 @@ def schedule_tasks(ctx, columns, delimiter, file):
 @click.option(
     "--priority", "-P", default=None, type=click.Choice(["low", "normal", "high"])
 )
-@click.option("--next-run", "-n", default=None)
+@click.option("--next-run", "-n", required=False, type=DATETIME)
 @click.pass_context
-def schedule_task(ctx, task_type_name, options, policy, priority, next_run):
+def schedule_task(
+    ctx: Context,
+    task_type_name: str,
+    options: List[str],
+    policy: Literal["recurring", "oneshot"],
+    priority: Literal["low", "normal", "high"],
+    next_run: Optional[datetime.datetime],
+):
     """Schedule one task from arguments.
 
     The first argument is the name of the task type. Flag options (policy, priority) are
@@ -162,7 +178,7 @@ def schedule_task(ctx, task_type_name, options, policy, priority, next_run):
     """
     from .utils import parse_options, task_add
 
-    scheduler = ctx.obj["scheduler"]
+    scheduler: SchedulerInterface = ctx.obj["scheduler"]
 
     task_type = scheduler.get_task_type(task_type_name)
     if not task_type:
@@ -236,7 +252,14 @@ def iter_origins(  # use string annotations to prevent some pkg loading
 )
 @click.pass_context
 def schedule_origin_metadata_index(
-    ctx, type, options, storage_url, origin_batch_size, page_token, limit, dry_run
+    ctx: Context,
+    type: str,
+    options: List[str],
+    storage_url: str,
+    origin_batch_size: int,
+    page_token: str,
+    limit: int,
+    dry_run: bool,
 ):
     """Schedules tasks for origins that are already known.
 
@@ -256,7 +279,7 @@ def schedule_origin_metadata_index(
 
     from .utils import parse_options, schedule_origin_batches
 
-    scheduler = ctx.obj["scheduler"]
+    scheduler: Optional[SchedulerInterface] = ctx.obj["scheduler"]
     storage = get_storage("remote", url=storage_url)
     if dry_run:
         scheduler = None
@@ -291,7 +314,12 @@ def schedule_origin_metadata_index(
     help="List all jobs supposed to run before the given date",
 )
 @click.pass_context
-def list_pending_tasks(ctx, task_types, num_tasks, before):
+def list_pending_tasks(
+    ctx: Context,
+    task_types: List[str],
+    num_tasks: int,
+    before: Optional[datetime.datetime],
+):
     """List tasks with no priority that are going to be run.
 
     You can override the number of tasks to fetch with the --limit flag.
@@ -299,7 +327,7 @@ def list_pending_tasks(ctx, task_types, num_tasks, before):
     """
     from .utils import pretty_print_task
 
-    scheduler = ctx.obj["scheduler"]
+    scheduler: SchedulerInterface = ctx.obj["scheduler"]
 
     output = []
     for task_type in task_types:
@@ -323,6 +351,7 @@ def list_pending_tasks(ctx, task_types, num_tasks, before):
     default=None,
     multiple=True,
     metavar="ID",
+    type=click.INT,
     help="List only tasks whose id is ID.",
 )
 @click.option(
@@ -398,17 +427,17 @@ def list_pending_tasks(ctx, task_types, num_tasks, before):
 )
 @click.pass_context
 def list_tasks(
-    ctx,
-    task_id,
-    task_type,
-    limit,
-    status,
-    policy,
-    priority,
-    before,
-    after,
-    list_runs,
-    list_runs_metadata,
+    ctx: Context,
+    task_id: List[int],
+    task_type: List[str],
+    limit: int,
+    status: Optional[List[TaskStatus]],
+    policy: Optional[TaskPolicy],
+    priority: Optional[List[TaskPriority]],
+    before: Optional[datetime.datetime],
+    after: Optional[datetime.datetime],
+    list_runs: bool,
+    list_runs_metadata: bool,
 ):
     """List tasks."""
     from json import dumps
@@ -416,7 +445,7 @@ def list_tasks(
 
     from .utils import pretty_print_run, pretty_print_task
 
-    scheduler = ctx.obj["scheduler"]
+    scheduler: SchedulerInterface = ctx.obj["scheduler"]
 
     if not task_type:
         task_type = [x.type for x in scheduler.get_task_types()]
@@ -444,14 +473,19 @@ def list_tasks(
         limit=limit,
     )
     if list_runs or list_runs_metadata:
-        runs = {t.id: [] for t in tasks}
-        for r in scheduler.get_task_runs([task.id for task in tasks]):
-            runs[r.task].append(r)
+        runs: Dict[int, List[TaskRun]] = {t.id: [] for t in tasks if t.id is not None}
+        for r in scheduler.get_task_runs(
+            [task.id for task in tasks if task.id is not None]
+        ):
+            if r.task is not None:
+                runs[r.task].append(r)
     else:
         runs = {}
 
     output.append("Found %d tasks\n" % (len(tasks)))
     for task in sorted(tasks, key=attrgetter("id")):
+        if task.id is None:
+            continue
         output.append(pretty_print_task(task, full=True))
         if runs.get(task.id):
             output.append(click.style("  Executions:", bold=True))
@@ -475,7 +509,7 @@ def list_tasks(
     help="Re spawn the selected tasks at this date",
 )
 @click.pass_context
-def respawn_tasks(ctx, task_ids: List[str], next_run: datetime.datetime):
+def respawn_tasks(ctx: Context, task_ids: List[str], next_run: datetime.datetime):
     """Respawn tasks.
 
     Respawn tasks given by their ids (see the 'task list' command to
@@ -488,7 +522,7 @@ def respawn_tasks(ctx, task_ids: List[str], next_run: datetime.datetime):
     """
     from swh.scheduler.utils import utcnow
 
-    scheduler = ctx.obj["scheduler"]
+    scheduler: SchedulerInterface = ctx.obj["scheduler"]
     if next_run is None:
         next_run = utcnow()
     output = []
