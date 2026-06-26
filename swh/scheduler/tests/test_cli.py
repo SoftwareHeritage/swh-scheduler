@@ -617,13 +617,26 @@ Task 3
 
 
 def test_list_tasks_type(swh_scheduler):
-    task1 = create_task("swh-test-ping", "oneshot", key="value1")
+    task1 = create_task("swh-test-ping", "oneshot", key="value1", priority="high")
     task2 = create_task("swh-test-multiping", "oneshot", key="value2")
-    task3 = create_task("swh-test-ping", "oneshot", key="value3")
+    task3 = create_task("swh-test-ping", "oneshot", key="value3", priority="high")
     swh_scheduler.create_tasks([task1, task2, task3])
 
     result = invoke(
-        swh_scheduler, False, ["task", "list", "--task-type", "swh-test-ping"]
+        swh_scheduler,
+        False,
+        [
+            "task",
+            "list",
+            "--task-type",
+            "swh-test-ping",
+            "--policy",
+            "oneshot",
+            "--priority",
+            "high",
+            "--status",
+            "next_run_not_scheduled",
+        ],
     )
 
     expected = r"""
@@ -635,7 +648,7 @@ Task 1
   Type: swh-test-ping
   Policy: oneshot
   Status: next_run_not_scheduled
-  Priority:\x20
+  Priority: high
   Args:
   Keyword args:
     key: 'value1'
@@ -646,7 +659,7 @@ Task 3
   Type: swh-test-ping
   Policy: oneshot
   Status: next_run_not_scheduled
-  Priority:\x20
+  Priority: high
   Args:
   Keyword args:
     key: 'value3'

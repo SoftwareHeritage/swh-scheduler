@@ -758,10 +758,10 @@ class SchedulerBackend:
     @db_transaction()
     def search_tasks(
         self,
-        task_id: Optional[int] = None,
-        task_type: Optional[str] = None,
-        status: Optional[TaskStatus] = None,
-        priority: Optional[TaskPriority] = None,
+        task_id: Union[Optional[int], List[int]] = None,
+        task_type: Union[Optional[str], List[str]] = None,
+        status: Union[Optional[TaskStatus], List[TaskStatus]] = None,
+        priority: Union[Optional[TaskPriority], List[TaskPriority]] = None,
         policy: Optional[TaskPolicy] = None,
         before: Optional[datetime.datetime] = None,
         after: Optional[datetime.datetime] = None,
@@ -812,9 +812,9 @@ class SchedulerBackend:
             if isinstance(priority, str):
                 where.append("priority = %s")
             else:
-                priority = tuple(priority)
+                priority = list(priority)
                 where.append("priority = ANY(%s)")
-            args.append(list(priority))
+            args.append(priority)
         if policy:
             where.append("policy = %s")
             args.append(policy)

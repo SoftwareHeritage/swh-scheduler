@@ -6,7 +6,7 @@
 import datetime
 import json
 import logging
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 from uuid import UUID
 from uuid import uuid4 as uuid
 
@@ -490,10 +490,10 @@ class InMemoryScheduler:
 
     def search_tasks(
         self,
-        task_id: Optional[int] = None,
-        task_type: Optional[str] = None,
-        status: Optional[TaskStatus] = None,
-        priority: Optional[TaskPriority] = None,
+        task_id: Union[Optional[int], List[int]] = None,
+        task_type: Union[Optional[str], List[str]] = None,
+        status: Union[Optional[TaskStatus], List[TaskStatus]] = None,
+        priority: Union[Optional[TaskPriority], List[TaskPriority]] = None,
         policy: Optional[TaskPolicy] = None,
         before: Optional[datetime.datetime] = None,
         after: Optional[datetime.datetime] = None,

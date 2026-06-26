@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2024  The Software Heritage developers
+# Copyright (C) 2015-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -132,10 +132,10 @@ class SchedulerInterface(Protocol):
     @remote_api_endpoint("task/search")
     def search_tasks(
         self,
-        task_id: Optional[int] = None,
-        task_type: Optional[str] = None,
-        status: Optional[TaskStatus] = None,
-        priority: Optional[TaskPriority] = None,
+        task_id: Union[Optional[int], List[int]] = None,
+        task_type: Union[Optional[str], List[str]] = None,
+        status: Union[Optional[TaskStatus], List[TaskStatus]] = None,
+        priority: Union[Optional[TaskPriority], List[TaskPriority]] = None,
         policy: Optional[TaskPolicy] = None,
         before: Optional[datetime.datetime] = None,
         after: Optional[datetime.datetime] = None,
