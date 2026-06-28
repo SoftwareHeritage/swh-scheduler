@@ -13,6 +13,7 @@ from typing import IO, TYPE_CHECKING, Any, Dict, Iterator, List, Literal, Option
 import click
 
 from . import cli
+from .click_utils import DATETIME
 
 if TYPE_CHECKING:
     import datetime
@@ -33,7 +34,6 @@ if TYPE_CHECKING:
 
 locale.setlocale(locale.LC_ALL, "")
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
-DATETIME = click.DateTime()
 
 
 @cli.group("task")

@@ -7,7 +7,9 @@ swh.storage[pytest] >= 3.1.0
 
 celery-types
 types-confluent-kafka
+types-dateparser
 types-pika
+types-python-dateutil
 types-pyyaml
 types-requests
 types-Deprecated

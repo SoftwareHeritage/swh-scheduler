@@ -6,11 +6,13 @@ attrs
 attrs-strict
 celery >= 4.3, != 5.0.3
 click >= 8.2.0, != 8.2.1
+dateparser
 flask
 humanize
 pika >= 1.1.0
 psycopg
 psycopg_pool
+python-dateutil
 pyyaml
 requests
 tabulate
