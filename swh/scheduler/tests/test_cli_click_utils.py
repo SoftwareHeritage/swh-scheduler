@@ -26,17 +26,19 @@ iso_timespecs = "days hours minutes seconds milliseconds microseconds".split()
 
 @pytest.mark.parametrize(
     "dt",
-    list(iso(spec) for spec in iso_timespecs)
-    + [
-        # ISO 8601 UTC with Z
-        datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-        # RFC 822/2822/5322
-        format_datetime(datetime.now(timezone.utc)),
-        # dateutil can handle this
-        "1st Jan 2027",
-        # dateparser can handle this
-        "yesterday",
-    ],
+    sorted(
+        list(iso(spec) for spec in iso_timespecs)
+        + [
+            # ISO 8601 UTC with Z
+            datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            # RFC 822/2822/5322
+            format_datetime(datetime.now(timezone.utc)),
+            # dateutil can handle this
+            "1st Jan 2027",
+            # dateparser can handle this
+            "yesterday",
+        ]
+    ),
 )
 def test_date_formats(dt):
     assert DATETIME.convert(dt, None, None)
