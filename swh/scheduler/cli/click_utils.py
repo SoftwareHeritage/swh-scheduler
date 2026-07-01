@@ -4,13 +4,9 @@
 # See top-level LICENSE file for more information
 
 from datetime import datetime
-from email.utils import parsedate_to_datetime
 from typing import Any, Callable, Optional
 
 import click
-from dateparser import parse as dateparser
-from dateutil.parser import ParserError as DateUtilParserError
-from dateutil.parser import parse as dateutil
 
 
 class DateConvert:
@@ -23,16 +19,27 @@ class DateConvert:
 
 
 class DateTimeMoreParsers(click.types.DateTime):
-    def __init__(self):
-        super().__init__()
-        self.formats += [
+
+    def convert(
+        self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]
+    ) -> datetime:
+        from email.utils import parsedate_to_datetime
+
+        from dateparser import parse as dateparser
+        from dateutil.parser import parse as dateutil
+
+        self.formats += [  # type: ignore[operator]
             DateConvert("ISO 8601", datetime.fromisoformat),
             DateConvert("RFC 822/2822/5322", parsedate_to_datetime),
             DateConvert("dateutil", lambda value: dateutil(value, fuzzy=True)),
             DateConvert("dateparser", dateparser),
         ]
 
+        return super().convert(value, param, ctx)
+
     def _try_to_convert_date(self, value: Any, parser: Any) -> Optional[datetime]:
+        from dateutil.parser import ParserError as DateUtilParserError
+
         if isinstance(parser, str):
             return super()._try_to_convert_date(value, parser)
         elif isinstance(parser, DateConvert):
