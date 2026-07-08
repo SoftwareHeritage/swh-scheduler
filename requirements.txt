@@ -18,4 +18,3 @@ requests
 tabulate
 sentry-sdk
 setuptools
-typing-extensions
