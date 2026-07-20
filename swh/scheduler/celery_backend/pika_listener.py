@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2021  The Software Heritage developers
+# Copyright (C) 2020-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -97,7 +97,9 @@ def process_event(event, scheduler_backend):
         metadata = {}
         if status == "failed" and isinstance(result, dict):
             if "error" in result:
-                metadata["error"] = result["error"]
+                # strip null bytes to avoid psycopg.errors.UntranslatableCharacter
+                # being raised
+                metadata["error"] = result["error"].strip("\x00")
 
         scheduler_backend.end_task_run(
             uuid, timestamp=utcnow(), status=status, metadata=metadata
@@ -106,7 +108,9 @@ def process_event(event, scheduler_backend):
     elif event_type == "task-failed":
         metadata = {}
         if "traceback" in event:
-            metadata["error"] = event["traceback"].rstrip().split("\n")[-1]
+            metadata["error"] = (
+                event["traceback"].rstrip().split("\n")[-1].strip("\x00")
+            )
         scheduler_backend.end_task_run(
             uuid, timestamp=utcnow(), status="failed", metadata=metadata
         )

@@ -1008,7 +1008,7 @@ class SchedulerBackend:
 
         cur.execute(
             "select * from swh_scheduler_schedule_task_run(%s, %s, %s, %s)",
-            (task_id, backend_id, metadata, timestamp),
+            (task_id, backend_id, Jsonb(metadata), timestamp),
         )
 
         row = cur.fetchone()
