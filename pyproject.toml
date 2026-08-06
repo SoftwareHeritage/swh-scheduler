@@ -18,23 +18,6 @@ classifiers = [
 ]
 dynamic = ["version", "dependencies", "optional-dependencies"]
 
-[tool.setuptools.packages.find]
-include = ["swh.*"]
-
-[tool.setuptools.dynamic]
-dependencies = { file = ["requirements.txt", "requirements-swh.txt"] }
-
-[tool.setuptools.dynamic.optional-dependencies]
-journal = { file = ["requirements-journal.txt"] }
-simulator = { file = ["requirements-simulator.txt"] }
-pytest = { file = ["requirements-pytest.txt"] }
-testing = { file = [
-    "requirements-test.txt",
-    "requirements-pytest.txt",
-    "requirements-simulator.txt",
-] }
-testing-journal = { file = ["requirements-test-journal.txt"] }
-
 
 [project.entry-points."swh.cli.subcommands"]
 "swh.scheduler" = "swh.scheduler.cli"
@@ -45,6 +28,7 @@ testing-journal = { file = ["requirements-test-journal.txt"] }
 "remote" = "swh.scheduler.api.client:RemoteScheduler"
 "memory" = "swh.scheduler.in_memory:InMemoryScheduler"
 
+
 [project.urls]
 "Homepage" = "https://gitlab.softwareheritage.org/swh/devel/swh-scheduler"
 "Bug Reports" = "https://gitlab.softwareheritage.org/swh/devel/swh-scheduler/-/issues"
@@ -53,11 +37,29 @@ testing-journal = { file = ["requirements-test-journal.txt"] }
 "Source" = "https://gitlab.softwareheritage.org/swh/devel/swh-scheduler.git"
 
 [build-system]
-requires = ["setuptools", "setuptools-scm"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling", "hatch-requirements-txt", "hatch-vcs"]
+build-backend = "hatchling.build"
 
-[tool.setuptools_scm]
-fallback_version = "0.0.1"
+[tool.hatch.metadata.hooks.requirements_txt]
+files = ["requirements.txt", "requirements-swh.txt"]
+
+[tool.hatch.metadata.hooks.requirements_txt.optional-dependencies]
+journal = ["requirements-journal.txt"]
+simulator = ["requirements-simulator.txt"]
+pytest = ["requirements-pytest.txt"]
+testing = [
+    "requirements-test.txt",
+    "requirements-pytest.txt",
+    "requirements-simulator.txt",
+]
+testing-journal = ["requirements-test-journal.txt"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["swh"]
+
+[tool.hatch.version]
+source = "vcs"
+fallback-version = "0.0.1"
 
 [tool.black]
 target-version = ['py311', 'py312', 'py313']
