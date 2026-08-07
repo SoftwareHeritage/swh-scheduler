@@ -20,7 +20,8 @@ from celery.worker.control import Panel
 from kombu import Exchange, Queue
 import requests
 
-from swh.core.config import load_named_config, merge_configs
+from swh.core.config import merge_configs
+from swh.core.config import read as load_config
 from swh.core.sentry import init_sentry
 
 DEFAULT_CONFIG_NAME = "worker"
@@ -303,7 +304,7 @@ if CONFIG_NAME:
     # SWH_CONFIG_FILENAME environment variable.
     # This is expected to have a [celery] section in which we have the
     # celery specific configuration.
-    CONFIG = load_named_config(CONFIG_NAME).get("celery", {})
+    CONFIG = load_config(CONFIG_NAME).get("celery", {})
 
 if not CONFIG:
     # otherwise, back to compat config loading mechanism
@@ -313,7 +314,7 @@ if not CONFIG:
         CONFIG_NAME = DEFAULT_CONFIG_NAME
 
     # Load the Celery config
-    CONFIG = load_named_config(CONFIG_NAME, DEFAULT_CONFIG)
+    CONFIG = load_config(CONFIG_NAME, DEFAULT_CONFIG)
 
 CONFIG.setdefault("task_modules", [])
 # load tasks modules declared as plugin entry points
