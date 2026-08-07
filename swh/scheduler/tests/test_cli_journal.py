@@ -1,4 +1,4 @@
-# Copyright (C) 2021  The Software Heritage developers
+# Copyright (C) 2021-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -46,7 +46,7 @@ def swh_scheduler_cfg_path(swh_scheduler_cfg, tmp_path):
 def invoke(args: List[str], config_path: str) -> Result:
     """Invoke swh scheduler journal subcommands"""
     runner = CliRunner()
-    return runner.invoke(cli, ["-C" + config_path] + args)
+    return runner.invoke(cli, args, env={"SWH_CONFIG_FILENAME": config_path})
 
 
 @pytest.mark.requires_journal

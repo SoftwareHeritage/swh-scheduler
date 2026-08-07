@@ -9,7 +9,7 @@ import logging
 
 import click
 
-from swh.core.cli import CONTEXT_SETTINGS, AliasedGroup
+from swh.core.cli import CONTEXT_SETTINGS, AliasedGroup, setup_config
 from swh.core.cli import swh as swh_cli_group
 
 # If you're looking for subcommand imports, they are further down this file to
@@ -27,6 +27,7 @@ from swh.core.cli import swh as swh_cli_group
         exists=True,
         dir_okay=False,
     ),
+    deprecated=True,
     help=(
         "Configuration file. This has a higher priority than SWH_CONFIG_FILENAME "
         "environment variable if set. "
@@ -63,15 +64,12 @@ def cli(ctx, config_file, database, url, no_stdout):
             pass
 
     from swh.scheduler import get_scheduler
-    from swh.scheduler.cli.config import read_config
 
-    ctx.ensure_object(dict)
+    setup_config(ctx, config_file)
+    conf = ctx.obj["config"]
 
     logger = logging.getLogger(__name__)
     scheduler = None
-
-    # Read configuration out of config_file or SWH_CONFIG_FILENAME environment variable
-    conf = read_config(config_file)
 
     if "scheduler" not in conf:
         ctx.fail("missing 'scheduler' configuration")
@@ -93,7 +91,6 @@ def cli(ctx, config_file, database, url, no_stdout):
         ctx.obj["scheduler_exc"] = e
 
     ctx.obj["scheduler"] = scheduler
-    ctx.obj["config"] = conf
 
 
 from . import (  # noqa

@@ -51,10 +51,11 @@ def invoke(scheduler, catch_exceptions, args, config=CLI_CONFIG, **kwargs):
         config_fd.write(config)
         config_fd.seek(0)
         get_scheduler_mock.return_value = scheduler
-        args = [
-            "-C" + config_fd.name,
-        ] + args
-        result = runner.invoke(cli, args, obj={"log_level": logging.WARNING}, **kwargs)
+        env = kwargs.pop("env", {})
+        env["SWH_CONFIG_FILENAME"] = config_fd.name
+        result = runner.invoke(
+            cli, args, obj={"log_level": logging.WARNING}, env=env, **kwargs
+        )
     if not catch_exceptions and result.exception:
         print(result.output)
         raise result.exception
