@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2024  The Software Heritage developers
+# Copyright (C) 2020-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -182,6 +182,13 @@ class ListedOrigin(BaseSchedulerModel):
         validator=[type_validator()],
         default=None,
     )
+    """Time of the last update to the origin **recorded by the remote**, as
+    reported by the forge or package repository.
+
+    This is *not* a Software Heritage visit time: it says when the origin last
+    changed upstream, not when we last looked at it. For a long-dead forge it
+    may predate our first visit by years. Visit times live in
+    ``origin_visit_status``."""
 
     is_fork = attr.ib(type=Optional[bool], validator=[type_validator()], default=None)
     forked_from_url = attr.ib(
@@ -196,12 +203,19 @@ class ListedOrigin(BaseSchedulerModel):
         default=None,
         metadata={"auto_now_add": True},
     )
+    """Time at which the origin was first seen by a lister."""
+
     last_seen = attr.ib(
         type=Optional[datetime.datetime],
         validator=[type_validator()],
         default=None,
         metadata={"auto_now": True},
     )
+    """Time at which the origin was last seen by the lister.
+
+    This records the most recent *listing* that mentioned this origin: again
+    not a visit time, and not an upstream modification time. See
+    :py:attr:`last_update` for the latter."""
 
 
 class LastVisitStatus(Enum):
