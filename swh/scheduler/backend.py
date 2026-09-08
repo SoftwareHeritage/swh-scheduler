@@ -305,7 +305,11 @@ class SchedulerBackend:
 
     @db_transaction()
     def record_listed_origins(
-        self, listed_origins: Iterable[ListedOrigin], db=None, cur=None
+        self,
+        listed_origins: Iterable[ListedOrigin],
+        update_last_seen: bool = True,
+        db=None,
+        cur=None,
     ) -> List[ListedOrigin]:
         """Record a set of origins that a lister has listed.
 
@@ -316,7 +320,9 @@ class SchedulerBackend:
 
         pk_cols = ListedOrigin.primary_key_columns()
         select_cols = ListedOrigin.select_columns()
-        insert_cols, insert_meta = ListedOrigin.insert_columns_and_metavars()
+        insert_cols, insert_meta = ListedOrigin.insert_columns_and_metavars(
+            update_auto_now=update_last_seen
+        )
 
         deduplicated_origins = {
             tuple(getattr(origin, k) for k in pk_cols): origin

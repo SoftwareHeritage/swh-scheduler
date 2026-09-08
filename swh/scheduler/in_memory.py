@@ -134,6 +134,7 @@ class InMemoryScheduler:
     def record_listed_origins(
         self,
         listed_origins: Iterable[ListedOrigin],
+        update_last_seen: bool = True,
     ) -> List[ListedOrigin]:
 
         pk_cols = ListedOrigin.primary_key_columns()
@@ -149,11 +150,14 @@ class InMemoryScheduler:
 
         ret = []
         now = utcnow()
+        updated_last_seen = {}
+        if update_last_seen:
+            updated_last_seen["last_seen"] = now
         for pk, o in deduplicated_origins.items():
             if pk in all_origins:
-                all_origins[pk] = o.evolve(last_seen=now)
+                all_origins[pk] = o.evolve(**updated_last_seen)
             else:
-                all_origins[pk] = o.evolve(last_seen=now, first_seen=now)
+                all_origins[pk] = o.evolve(first_seen=now, **updated_last_seen)
             ret.append(all_origins[pk])
         self._listed_origins = list(all_origins.values())
         return ret

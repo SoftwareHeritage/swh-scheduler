@@ -435,13 +435,15 @@ class SchedulerInterface(Protocol):
 
     @remote_api_endpoint("origins/record")
     def record_listed_origins(
-        self, listed_origins: Iterable[ListedOrigin]
+        self, listed_origins: Iterable[ListedOrigin], update_last_seen: bool = True
     ) -> List[ListedOrigin]:
         """Record a set of origins that a lister has listed.
 
         This performs an "upsert": origins with the same (lister_id, url,
         visit_type) values are updated with new values for
         extra_loader_arguments, last_update and last_seen.
+
+        The `last_seen` field is automatically updated when `update_last_seen` is True.
         """
         ...
 

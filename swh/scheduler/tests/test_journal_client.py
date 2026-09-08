@@ -1,4 +1,4 @@
-# Copyright (C) 2021-2024  The Software Heritage developers
+# Copyright (C) 2021-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -955,7 +955,9 @@ def test_disable_failing_origins(swh_scheduler):
     origin = ListedOrigin(
         url="bar", enabled=True, visit_type="svn", lister_id=lister.id
     )
-    swh_scheduler.record_listed_origins([origin])
+    returned = swh_scheduler.record_listed_origins([origin])
+
+    original_last_seen = returned[0].last_seen
 
     visit_statuses = [
         {
@@ -1013,3 +1015,4 @@ def test_disable_failing_origins(swh_scheduler):
         assert origin.lister_id == lister.id
         assert origin.url == "bar"
         assert origin.visit_type == "svn"
+        assert origin.last_seen == original_last_seen

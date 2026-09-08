@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2024  The Software Heritage developers
+# Copyright (C) 2020-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -48,7 +48,9 @@ class BaseSchedulerModel:
 
     _pk_cols: Optional[Tuple[str, ...]] = None
     _select_cols: Optional[Tuple[str, ...]] = None
-    _insert_cols_and_metavars: Optional[Tuple[Tuple[str, ...], Tuple[str, ...]]] = None
+    _insert_cols_and_metavars: Optional[
+        Dict[bool, Tuple[Tuple[str, ...], Tuple[str, ...]]]
+    ] = None
 
     @classmethod
     def primary_key_columns(cls) -> Tuple[str, ...]:
@@ -77,13 +79,18 @@ class BaseSchedulerModel:
         return cls._select_cols
 
     @classmethod
-    def insert_columns_and_metavars(cls) -> Tuple[Tuple[str, ...], Tuple[str, ...]]:
+    def insert_columns_and_metavars(
+        cls, update_auto_now=True
+    ) -> Tuple[Tuple[str, ...], Tuple[str, ...]]:
         """Get the database columns and metavars needed for an `insert` or `update` on
            this object type.
 
         This implements support for the `auto_*` field metadata attributes.
         """
         if cls._insert_cols_and_metavars is None:
+            cls._insert_cols_and_metavars = {}
+
+        if cls._insert_cols_and_metavars.get(update_auto_now) is None:
             zipped_cols_and_metavars: List[Tuple[str, str]] = []
 
             for field in attr.fields(cls):
@@ -92,7 +99,7 @@ class BaseSchedulerModel:
                     for flag in ("auto_now_add", "auto_primary_key")
                 ):
                     continue
-                elif field.metadata.get("auto_now"):
+                elif update_auto_now and field.metadata.get("auto_now"):
                     zipped_cols_and_metavars.append((field.name, "now()"))
                 else:
                     zipped_cols_and_metavars.append((field.name, f"%({field.name})s"))
@@ -100,9 +107,9 @@ class BaseSchedulerModel:
             zipped_cols_and_metavars.sort()
 
             cols, metavars = zip(*zipped_cols_and_metavars)
-            cls._insert_cols_and_metavars = cols, metavars
+            cls._insert_cols_and_metavars[update_auto_now] = cols, metavars
 
-        return cls._insert_cols_and_metavars
+        return cls._insert_cols_and_metavars[update_auto_now]
 
     def evolve(self: SchedulerModelType, **kwargs) -> SchedulerModelType:
         """Alias to call :func:`attr.evolve` on this object, returning a new object."""

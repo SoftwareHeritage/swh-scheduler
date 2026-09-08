@@ -1,4 +1,4 @@
-# Copyright (C) 2021  The Software Heritage developers
+# Copyright (C) 2021-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -303,8 +303,9 @@ def process_journal_objects(
         for url in disabled_urls:
             origins = scheduler.get_listed_origins(url=url).results
             if len(origins) > 0:
-                origin = attr.evolve(origins[0], enabled=False)
-                disabled_origins.append(origin)
+                for origin in origins:
+                    if origin.enabled:
+                        disabled_origins.append(origin.evolve(enabled=False))
 
         if disabled_origins:
-            scheduler.record_listed_origins(disabled_origins)
+            scheduler.record_listed_origins(disabled_origins, update_last_seen=False)
